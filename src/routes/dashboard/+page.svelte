@@ -29,7 +29,7 @@
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
-        <h1 class="text-4xl font-greycliffbold text-charcoal">
+        <h1 class="text-4xl font-greycliffbold">
             {$storeName} Merchant Suite
         </h1>
         {#if $merchantLogo}
@@ -40,7 +40,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
         <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
             <div class="card-body items-center text-center">
-                <h2 class="card-title text-2xl font-greycliffmed text-charcoal">Point of Sale</h2>
+                <h2 class="card-title text-2xl font-greycliffmed">Point of Sale</h2>
                 <p>Create charges and accept payments in Solana.</p>
                 <div class="card-actions justify-center mt-4">
                     <button on:click={() => goto('/pos')} class="btn btn-primary">Go to POS</button>
@@ -50,7 +50,7 @@
 
         <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
             <div class="card-body items-center text-center">
-                <h2 class="card-title text-2xl font-greycliffmed text-charcoal">Invoicing</h2>
+                <h2 class="card-title text-2xl font-greycliffmed">Invoicing</h2>
                 <p>Manage your customer invoices.</p>
                 <div class="card-actions justify-center mt-4">
                     <button on:click={() => goto('/invoicing')} class="btn btn-primary">Manage Invoices</button>
@@ -60,7 +60,7 @@
 
         <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
             <div class="card-body items-center text-center">
-                <h2 class="card-title text-2xl font-greycliffmed text-charcoal">Inventory</h2>
+                <h2 class="card-title text-2xl font-greycliffmed">Inventory</h2>
                 <p>Keep track of your product inventory.</p>
                 <div class="card-actions justify-center mt-4">
                     <button on:click={() => goto('/inventory')} class="btn btn-primary">Manage Inventory</button>
@@ -70,7 +70,7 @@
         
         <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
             <div class="card-body items-center text-center">
-                <h2 class="card-title text-2xl font-greycliffmed text-charcoal">Analytics</h2>
+                <h2 class="card-title text-2xl font-greycliffmed">Analytics</h2>
                 <p>View your sales data and analytics.</p>
                 <div class="card-actions justify-center mt-4">
                     <button on:click={() => goto('/analytics')} class="btn btn-primary">View Analytics</button>
@@ -80,7 +80,7 @@
     </div>
 
     <div class="text-center mt-12">
-        <p class="text-sm text-gray-500">Enjoying PoSolana? Consider supporting the developer.</p>
+        <p class="text-sm">Enjoying PoSolana? Consider supporting the developer.</p>
         <div class="input-group mt-2 justify-center">
             <input type="text" value={devWallet} readonly class="input input-bordered w-full max-w-xs text-xs" />
             <button class="btn btn-square" on:click={copyAddress}>
