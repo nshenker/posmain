@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import { storeName, merchantLogo, publicKey } from '../stores.js';
     import { goto } from '$app/navigation';
+    import { browser } from '$app/environment';
     import CreateCharge from "./CreateCharge.svelte";
     import Settings from "./Settings.svelte";
     import Transactions from "./Transactions.svelte";
@@ -10,7 +11,9 @@
 
     onMount(() => {
         if (!$publicKey) {
-            alert("Please set your merchant wallet address first.");
+            if (browser) {
+                alert("Please set your merchant wallet address first.");
+            }
             goto('/');
         }
     });
