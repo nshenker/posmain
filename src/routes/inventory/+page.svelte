@@ -44,23 +44,28 @@
     }
 
     function openEditModal(item) {
-        // Create a copy to avoid mutating the original item directly
+        // Create a copy to edit, preventing direct changes to the store
         editingItem = { ...item };
         editModal.showModal();
     }
 
-    function saveChanges() {
+    function handleSaveChanges() {
         if (!editingItem) return;
 
-        $inventory = $inventory.map(item => {
-            if (item.id === editingItem.id) {
-                return editingItem; // Replace the old item with the edited one
-            }
-            return item;
-        });
+        // Find the index of the item in the store
+        const index = $inventory.findIndex(item => item.id === editingItem.id);
+        
+        if (index !== -1) {
+            // Create a new array for reactivity
+            const updatedInventory = [...$inventory];
+            // Replace the item at the index with our edited copy
+            updatedInventory[index] = editingItem;
+            // Update the store
+            $inventory = updatedInventory;
+        }
 
         editModal.close();
-        editingItem = null;
+        editingItem = null; // Clear the editing state
     }
 </script>
 
@@ -68,30 +73,30 @@
     <div class="modal-box">
         <h3 class="font-bold text-lg">Edit Item</h3>
         {#if editingItem}
-        <div class="py-4 space-y-4">
-            <div class="form-control">
-                <label class="label"><span class="label-text">Item Name</span></label>
-                <input type="text" placeholder="Item Name" class="input input-bordered" bind:value={editingItem.name} />
-            </div>
-            <div class="form-control">
-                <label class="label"><span class="label-text">Price</span></label>
-                <div class="input-group">
-                    <input type="number" placeholder="Price" class="input input-bordered w-full" bind:value={editingItem.price} min="0" step="0.01" />
-                    <select class="select select-bordered" bind:value={editingItem.currency}>
-                        {#each $mints as mint}
-                        <option value={mint.name}>{mint.name}</option>
-                        {/each}
-                    </select>
+        <form on:submit|preventDefault={handleSaveChanges}>
+            <div class="py-4 space-y-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Item Name</span></label>
+                    <input type="text" placeholder="Item Name" class="input input-bordered" bind:value={editingItem.name} required />
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Price</span></label>
+                    <div class="input-group">
+                        <input type="number" placeholder="Price" class="input input-bordered w-full" bind:value={editingItem.price} min="0" step="0.01" required />
+                        <select class="select select-bordered" bind:value={editingItem.currency}>
+                            {#each $mints as mint}
+                            <option value={mint.name}>{mint.name}</option>
+                            {/each}
+                        </select>
+                    </div>
                 </div>
             </div>
-        </div>
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" on:click={() => editModal.close()}>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
         {/if}
-        <div class="modal-action">
-            <form method="dialog">
-                <button class="btn btn-ghost">Cancel</button>
-            </form>
-            <button class="btn btn-primary" on:click={saveChanges}>Save Changes</button>
-        </div>
     </div>
 </dialog>
 
@@ -127,7 +132,7 @@
                             <tr class="hover">
                                 <td class="font-greycliffmed">{item.name}</td>
                                 <td class="text-center font-mono">{item.quantity}</td>
-                                <td class="text-right font-mono">{item.price.toFixed(2)} {item.currency}</td>
+                                <td class="text-right font-mono">{(item.price || 0).toFixed(2)} {item.currency}</td>
                                 <td class="text-center space-x-1">
                                     <button class="btn btn-xs btn-outline btn-success" on:click={() => updateQuantity(item.id, 1)}>+</button>
                                     <button class="btn btn-xs btn-outline btn-warning" on:click={() => updateQuantity(item.id, -1)}>-</button>
