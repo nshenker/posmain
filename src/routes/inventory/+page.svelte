@@ -4,15 +4,10 @@
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
 
-    let newItem = {
-        name: '',
-        quantity: null,
-        price: null,
-        currency: 'USDC'
-    };
-    
-    // This will hold the item being edited. The modal's visibility is tied to this.
-    let editingItem = null; 
+    // Component state
+    let newItem = { name: '', quantity: null, price: null, currency: 'USDC' };
+    let editingItem = null;
+    let editModalElement: HTMLDialogElement;
 
     onMount(() => {
         if (browser && !$publicKey) {
@@ -21,6 +16,7 @@
         }
     });
 
+    // --- Core Functions ---
     function addItem() {
         const { name, quantity, price, currency } = newItem;
         if (name.trim() && quantity > 0 && price >= 0) {
@@ -43,31 +39,31 @@
         );
     }
 
-    // Function to set the item to be edited, which will open the modal
-    function startEditing(item) {
-        // Create a copy to avoid unintended side-effects
-        editingItem = { ...item };
+    // --- Edit Modal Logic ---
+    function startEditing(itemToEdit) {
+        // Create a copy of the item to edit
+        editingItem = { ...itemToEdit };
+        // Directly command the modal to open
+        if (editModalElement) {
+            editModalElement.showModal();
+        }
     }
 
-    // Function to save changes and close the modal
     function handleSaveChanges() {
         if (!editingItem) return;
-
-        $inventory = $inventory.map(item => 
-            item.id === editingItem.id ? editingItem : item
-        );
-        
-        // Close the modal by resetting the editing item
-        editingItem = null; 
+        $inventory = $inventory.map(item => item.id === editingItem.id ? editingItem : item);
+        closeEditModal();
     }
-
-    // Function to cancel editing and close the modal
-    function cancelEditing() {
+    
+    function closeEditModal() {
+        if (editModalElement) {
+            editModalElement.close();
+        }
         editingItem = null;
     }
 </script>
 
-<dialog class="modal" open={!!editingItem}>
+<dialog bind:this={editModalElement} class="modal">
     <div class="modal-box">
         <h3 class="font-bold text-lg">Edit Item</h3>
         {#if editingItem}
@@ -88,14 +84,13 @@
                 </div>
             </div>
             <div class="modal-action">
-                <button type="button" class="btn btn-ghost" on:click={cancelEditing}>Cancel</button>
+                <button type="button" class="btn btn-ghost" on:click={closeEditModal}>Cancel</button>
                 <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
         {/if}
     </div>
 </dialog>
-
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
