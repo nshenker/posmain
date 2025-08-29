@@ -4,20 +4,21 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
+    import { showToast } from '../toastStore.js';
 
     // --- State for the invoice form ---
     let currentInvoice = createNewInvoice();
     let selectedItemId = '';
     let selectedItemQty = 1;
     let customItem = { name: '', quantity: 1, price: null, currency: 'USDC' };
-    
+
     // --- Module variables for dynamically imported libraries ---
     let createQR, encodeURL, BigNumber, web3;
     let librariesLoaded = false;
     
     onMount(async () => {
         if (browser && !$publicKey) {
-            alert("Please set your merchant wallet address first.");
+            showToast("Please set your merchant wallet address first.", "error");
             goto('/');
             return;
         }
@@ -36,7 +37,7 @@
                 librariesLoaded = true;
             } catch (e) {
                 console.error("Failed to load Solana libraries", e);
-                if (browser) alert("Error: Could not load payment libraries. Please refresh the page.");
+                if (browser) showToast("Error: Could not load payment libraries. Please refresh the page.", "error");
             }
         }
     });
@@ -60,7 +61,7 @@
 
     function handleAddItemFromInventory() {
         const itemToAdd = $inventory.find(i => i.id === selectedItemId);
-        if (!itemToAdd) { if (browser) alert('Please select an item.'); return; }
+        if (!itemToAdd) { if (browser) showToast('Please select an item.', 'error'); return; }
         addItemToInvoice(itemToAdd, selectedItemQty);
         selectedItemId = ''; selectedItemQty = 1;
     }
@@ -71,7 +72,7 @@
             addItemToInvoice({ id: `custom-${Date.now()}`, name: name.trim(), price, currency }, quantity);
             customItem = { name: '', quantity: 1, price: null, currency: 'USDC' };
         } else {
-            if (browser) alert("Please provide a valid name, quantity, and price.");
+            if (browser) showToast("Please provide a valid name, quantity, and price.", "error");
         }
     }
 
@@ -87,8 +88,8 @@
     }
 
     function saveInvoice() {
-        if (!currentInvoice.customerName.trim()) { if (browser) alert('Please enter a customer name.'); return; }
-        if (currentInvoice.items.length === 0) { if (browser) alert('Please add at least one item.'); return; }
+        if (!currentInvoice.customerName.trim()) { if (browser) showToast('Please enter a customer name.', 'error'); return; }
+        if (currentInvoice.items.length === 0) { if (browser) showToast('Please add at least one item.', 'error'); return; }
 
         const invoiceToSave = { ...currentInvoice, id: currentInvoice.id || Date.now(), status: 'Saved', total };
         const existingIndex = $invoices.findIndex(inv => inv.id === invoiceToSave.id);
@@ -102,8 +103,7 @@
                 $inventory.update(invs => invs.map(i => i.id === item.id ? { ...i, quantity: i.quantity - item.quantity } : i));
             }
         });
-        
-        if (browser) alert(`Invoice ${invoiceToSave.number} saved!`);
+        if (browser) showToast(`Invoice ${invoiceToSave.number} saved!`, 'success');
         currentInvoice = createNewInvoice();
     }
 
@@ -126,11 +126,10 @@
 
     function generateQrCode() {
         const qrCodeElement = document.getElementById('qr-code-invoice');
-        if (!librariesLoaded) { if (browser) alert("Payment libraries are still loading. Please wait a moment and try again."); return; }
+        if (!librariesLoaded) { if (browser) showToast("Payment libraries are still loading. Please wait a moment and try again.", 'error'); return; }
         if (!qrCodeElement || total <= 0) return;
-
         const selectedToken = $mints.find(m => m.name === currentInvoice.paymentCurrency);
-        if (!selectedToken) { if (browser) alert("Selected payment currency is invalid."); return; }
+        if (!selectedToken) { if (browser) showToast("Selected payment currency is invalid.", "error"); return; }
 
         const url = encodeURL({
             recipient: new web3.PublicKey($publicKey),
@@ -141,7 +140,6 @@
             message: `Payment for ${currentInvoice.customerName}`,
             memo: `Invoice #${currentInvoice.number}`
         });
-        
         const qr = createQR(url, 200, 'transparent');
         qrCodeElement.innerHTML = '';
         qr.append(qrCodeElement);
