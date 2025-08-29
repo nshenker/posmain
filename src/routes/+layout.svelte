@@ -6,6 +6,8 @@
 	import Fullscreen from "svelte-fullscreen";
     import ThemeSwitcher from "./ThemeSwitcher.svelte";
     import { goto } from '$app/navigation';
+    import { Toaster } from 'svelte-french-toast';
+    import Toast from './Toast.svelte';
 
     theme.subscribe(value => {
         if (browser) {
@@ -23,6 +25,8 @@
 {#if browser}
     <Fullscreen let:onRequest let:onExit bind:fullscreen={$fullScreen}>
         <div class="bg-base-200 min-h-screen">
+            <Toaster />
+            <Toast />
             <div class="fixed top-0 left-0 right-0 z-50 bg-base-100 shadow-md no-print">
                 <div class="navbar px-4">
                     <div class="navbar-start">
