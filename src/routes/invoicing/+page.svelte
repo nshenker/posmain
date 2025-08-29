@@ -5,6 +5,7 @@
     import BigNumber from 'bignumber.js';
     import dayjs from 'dayjs';
     import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
 
     let currentInvoice = createNewInvoice();
     let selectedItemId = '';
@@ -12,10 +13,18 @@
     let customItem = { name: '', quantity: 1, price: null, currency: 'USDC' };
     let qrCodeElement;
 
+    onMount(() => {
+        if (!$publicKey) {
+            alert("Please set your merchant wallet address first.");
+            goto('/');
+            return;
+        }
+        qrCodeElement = document.getElementById('qr-code-invoice');
+    });
+
     $: subtotal = currentInvoice.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
     $: taxAmount = currentInvoice.applyTax ? subtotal * (currentInvoice.taxRate / 100) : 0;
     $: total = subtotal + taxAmount;
-    $: generateQrCode(); // Regenerate QR code whenever total or invoice number changes
 
     function createNewInvoice() {
         const nextInvoiceNumber = $invoices.length + 1;
@@ -24,7 +33,7 @@
             customerName: '', issueDate: dayjs().format('YYYY-MM-DD'),
             dueDate: dayjs().add(14, 'day').format('YYYY-MM-DD'),
             items: [], taxRate: 8.875, applyTax: true, status: 'Draft',
-            paymentCurrency: 'USDC' // Default payment currency for the invoice
+            paymentCurrency: 'USDC'
         };
     }
 
@@ -84,17 +93,20 @@
     
     function printInvoice() { window.print(); }
 
-    async function generateQrCode() {
+    function generateQrCode() {
         if (!qrCodeElement || total <= 0) return;
 
         const selectedToken = $mints.find(m => m.name === currentInvoice.paymentCurrency);
-        if (!selectedToken) return;
+        if (!selectedToken) {
+            alert("Selected payment currency is invalid.");
+            return;
+        }
 
         const url = encodeURL({
             recipient: new web3.PublicKey($publicKey),
             amount: new BigNumber(total),
             splToken: new web3.PublicKey(selectedToken.mint),
-            reference: new web3.PublicKey(web3.Keypair.generate().publicKey), // Unique ref per generation
+            reference: new web3.PublicKey(web3.Keypair.generate().publicKey),
             label: `Invoice ${currentInvoice.number}`,
             message: `Payment for ${currentInvoice.customerName}`,
             memo: `Invoice #${currentInvoice.number}`
@@ -104,11 +116,6 @@
         qrCodeElement.innerHTML = '';
         qr.append(qrCodeElement);
     }
-
-    onMount(() => {
-        qrCodeElement = document.getElementById('qr-code-invoice');
-        generateQrCode();
-    });
 </script>
 
 <style>
@@ -124,7 +131,6 @@
     <header class="text-center py-6 no-print">
         <h1 class="text-4xl font-greycliffbold text-charcoal">Invoicing</h1>
     </header>
-
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="no-print space-y-6">
             <div class="card bg-base-100 shadow-xl border"><div class="card-body p-6">
@@ -164,7 +170,7 @@
             <div class="mt-6 flex flex-wrap gap-4 justify-center">
                 <button class="btn btn-success btn-wide" on:click={saveInvoice}>Save Invoice</button>
                 <button class="btn btn-info btn-wide" on:click={printInvoice}>Print</button>
-                <button class="btn btn-outline btn-wide" on:click={() => currentInvoice = createNewInvoice()}>New Invoice</button>
+                <button class="btn btn-outline btn-wide" on:click={() => {currentInvoice = createNewInvoice()}}>New Invoice</button>
             </div>
         </div>
 
@@ -187,32 +193,9 @@
                     </table>
                 </div>
                 <div class="flex justify-between items-end mt-6">
-                    <div class="text-center">
-                        <div id="qr-code-invoice"></div>
-                        <button class="btn btn-primary btn-sm mt-2 no-print" on:click={generateQrCode}>Pay with Solana</button>
+                    <div class="text-center no-print">
+                        <div id="qr-code-invoice" class="mb-2"></div>
+                        <button class="btn btn-primary btn-sm" on:click={generateQrCode}>Pay with Solana</button>
                     </div>
                     <div class="w-full max-w-xs text-right">
-                        <div class="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-                        {#if currentInvoice.applyTax}<div class="flex justify-between mt-1"><span>Tax ({currentInvoice.taxRate}%):</span><span>${taxAmount.toFixed(2)}</span></div>{/if}
-                        <div class="divider my-1"></div>
-                        <div class="flex justify-between font-bold text-lg text-black"><span>Total ({currentInvoice.paymentCurrency}):</span><span>${total.toFixed(2)}</span></div>
-                    </div>
-                </div>
-            </div></div>
-        </div>
-    </div>
-
-    <div class="card w-full bg-base-100 shadow-xl border mt-8 no-print"><div class="card-body p-6">
-        <h2 class="card-title text-xl font-greycliffmed">Saved Invoices</h2>
-        <div class="overflow-x-auto">
-            <table class="table w-full"><thead><tr><th>#</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody>
-                    {#each $invoices as invoice (invoice.id)}
-                    <tr class="hover"><td>{invoice.number}</td><td>{invoice.customerName}</td><td>{dayjs(invoice.issueDate).format('YYYY-MM-DD')}</td><td class="text-right font-mono">${invoice.total.toFixed(2)}</td><td><span class="badge badge-info badge-outline">{invoice.status}</span></td><td><button class="btn btn-xs" on:click={() => loadInvoice(invoice.id)}>View</button></td></tr>
-                    {/each}
-                    {#if $invoices.length === 0}<tr><td colspan="6" class="text-center text-gray-400 py-4">No saved invoices.</td></tr>{/if}
-                </tbody>
-            </table>
-        </div>
-    </div></div>
-</div>
+                        <div class="flex justify-between"><span>
