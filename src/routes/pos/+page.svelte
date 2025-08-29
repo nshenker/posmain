@@ -1,12 +1,19 @@
 <script lang='ts'>
-    import { onMount, onDestroy } from "svelte";
-    import * as web3 from '@solana/web3.js';
-	import { storeName, merchantLogo } from '../stores.js';
+    import { onMount } from "svelte";
+    import { storeName, merchantLogo, publicKey } from '../stores.js';
+    import { goto } from '$app/navigation';
     import CreateCharge from "./CreateCharge.svelte";
     import Settings from "./Settings.svelte";
     import Transactions from "./Transactions.svelte";
-	let activeTab = 1;
+	
+    let activeTab = 1;
 
+    onMount(() => {
+        if (!$publicKey) {
+            alert("Please set your merchant wallet address first.");
+            goto('/');
+        }
+    });
 </script>
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -18,7 +25,6 @@
             <img src={$merchantLogo} alt="Merchant Logo" class="h-24 mx-auto mt-4">
         {/if}
     </header>
-
     <div class="btm-nav md:hidden">
         <button class:active={activeTab === 1} on:click={() => (activeTab = 1)}>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
@@ -33,13 +39,11 @@
             <span class="btm-nav-label">Settings</span>
         </button>
     </div>
-
     <div role="tablist" class="tabs tabs-bordered justify-center hidden md:flex">
         <button role="tab" class="tab tab-lg" on:click={()=>(activeTab=1)} class:tab-active={activeTab === 1}>Create Charge</button>
         <button role="tab" class="tab tab-lg" on:click={()=>(activeTab=2)} class:tab-active={activeTab === 2}>Transactions</button>
         <button role="tab" class="tab tab-lg" on:click={()=>(activeTab=3)} class:tab-active={activeTab === 3}>Settings</button>
     </div>
-
     <div class="mt-4 flex justify-center">
         {#if activeTab == 1}
             <CreateCharge/>
@@ -49,10 +53,7 @@
             <Settings/>
         {/if}
     </div>
-
     <footer class="footer footer-center p-4 text-base-content rounded-md hidden md:block">
-        <div>
-            <span class="text-sm text-gray-400">Shanksy © 2025</span>
-        </div>
+        <div><span class="text-sm text-gray-400">Shanksy © 2025</span></div>
     </footer>
 </div>
