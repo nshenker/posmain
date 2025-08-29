@@ -10,10 +10,8 @@
     let activeTab = 1;
 
     onMount(() => {
-        if (!$publicKey) {
-            if (browser) {
-                alert("Please set your merchant wallet address first.");
-            }
+        if (browser && !$publicKey) {
+            alert("Please set your merchant wallet address first.");
             goto('/');
         }
     });
@@ -56,7 +54,4 @@
             <Settings/>
         {/if}
     </div>
-    <footer class="footer footer-center p-4 text-base-content rounded-md hidden md:block">
-        <div><span class="text-sm text-gray-400">Shanksy © 2025</span></div>
-    </footer>
 </div>
