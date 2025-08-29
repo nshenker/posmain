@@ -52,10 +52,10 @@
     <div class="card w-full max-w-4xl bg-base-100 shadow-xl border border-gray-200 mx-auto">
         <div class="card-body p-8">
             <h2 class="card-title text-xl font-greycliffmed text-charcoal mb-4">Add New Item</h2>
-            <form on:submit|preventDefault={addItem} class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <form on:submit|preventDefault={addItem} class="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <input type="text" placeholder="Item Name" class="input input-bordered md:col-span-2" bind:value={newItem.name} />
-                <input type="number" placeholder="Quantity" class="input input-bordered" bind:value={newItem.quantity} min="1" step="1" />
-                <div class="input-group">
+                <input type="number" placeholder="Quantity" class="input input-bordered md:col-span-1" bind:value={newItem.quantity} min="1" step="1" />
+                <div class="input-group md:col-span-2">
                     <input type="number" placeholder="Price" class="input input-bordered w-full" bind:value={newItem.price} min="0" step="0.01" />
                     <select class="select select-bordered" bind:value={newItem.currency}>
                         {#each $mints as mint}
@@ -63,7 +63,7 @@
                         {/each}
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary">Add Item</button>
+                <button type="submit" class="btn btn-primary md:col-span-1">Add Item</button>
             </form>
         </div>
     </div>
