@@ -1,8 +1,5 @@
 <script lang='ts'>
     import { inventory, invoices, storeName, publicKey, mints } from '../stores.js';
-    import { createQR, encodeURL } from "@solana/pay";
-    import * as web3 from '@solana/web3.js';
-    import BigNumber from 'bignumber.js';
     import dayjs from 'dayjs';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
@@ -12,15 +9,12 @@
     let selectedItemId = '';
     let selectedItemQty = 1;
     let customItem = { name: '', quantity: 1, price: null, currency: 'USDC' };
-    let qrCodeElement;
 
     onMount(() => {
         if (!$publicKey) {
             if (browser) alert("Please set your merchant wallet address first.");
             goto('/');
-            return;
         }
-        qrCodeElement = document.getElementById('qr-code-invoice');
     });
 
     $: subtotal = currentInvoice.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
@@ -33,8 +27,7 @@
             id: null, number: `INV-${String(nextInvoiceNumber).padStart(4, '0')}`,
             customerName: '', issueDate: dayjs().format('YYYY-MM-DD'),
             dueDate: dayjs().add(14, 'day').format('YYYY-MM-DD'),
-            items: [], taxRate: 8.875, applyTax: true, status: 'Draft',
-            paymentCurrency: 'USDC'
+            items: [], taxRate: 8.875, applyTax: true, status: 'Draft'
         };
     }
 
@@ -93,30 +86,6 @@
     }
     
     function printInvoice() { if (browser) window.print(); }
-
-    function generateQrCode() {
-        if (!qrCodeElement || total <= 0) return;
-
-        const selectedToken = $mints.find(m => m.name === currentInvoice.paymentCurrency);
-        if (!selectedToken) {
-            if (browser) alert("Selected payment currency is invalid.");
-            return;
-        }
-
-        const url = encodeURL({
-            recipient: new web3.PublicKey($publicKey),
-            amount: new BigNumber(total),
-            splToken: new web3.PublicKey(selectedToken.mint),
-            reference: new web3.PublicKey(web3.Keypair.generate().publicKey),
-            label: `Invoice ${currentInvoice.number}`,
-            message: `Payment for ${currentInvoice.customerName}`,
-            memo: `Invoice #${currentInvoice.number}`
-        });
-        
-        const qr = createQR(url, 200, 'transparent');
-        qrCodeElement.innerHTML = '';
-        qr.append(qrCodeElement);
-    }
 </script>
 
 <style>
@@ -143,12 +112,6 @@
                 </div>
                 <div class="form-control mt-2">
                     <label class="label cursor-pointer"><span class="label-text">Apply Tax ({currentInvoice.taxRate}%)</span><input type="checkbox" class="toggle toggle-primary" bind:checked={currentInvoice.applyTax} /></label>
-                </div>
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Payment Currency</span></label>
-                    <select class="select select-bordered" bind:value={currentInvoice.paymentCurrency}>
-                        {#each $mints as mint}<option value={mint.name}>{mint.name}</option>{/each}
-                    </select>
                 </div>
             </div></div>
             <div class="card bg-base-100 shadow-xl border"><div class="card-body p-6">
@@ -193,16 +156,12 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="flex justify-between items-end mt-6">
-                    <div class="text-center no-print">
-                        <div id="qr-code-invoice" class="mb-2"></div>
-                        <button class="btn btn-primary btn-sm" on:click={generateQrCode}>Pay with Solana</button>
-                    </div>
+                <div class="flex justify-end mt-6">
                     <div class="w-full max-w-xs text-right">
                         <div class="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
                         {#if currentInvoice.applyTax}<div class="flex justify-between mt-1"><span>Tax ({currentInvoice.taxRate}%):</span><span>${taxAmount.toFixed(2)}</span></div>{/if}
                         <div class="divider my-1"></div>
-                        <div class="flex justify-between font-bold text-lg text-black"><span>Total ({currentInvoice.paymentCurrency}):</span><span>${total.toFixed(2)}</span></div>
+                        <div class="flex justify-between font-bold text-lg text-black"><span>Total:</span><span>${total.toFixed(2)}</span></div>
                     </div>
                 </div>
             </div></div>
