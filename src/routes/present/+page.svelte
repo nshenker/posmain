@@ -10,7 +10,7 @@
     let statusMessage = "Awaiting Payment...";
     const POLLING_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
-    let sol_rpc = process.env.SOLANA_RPC ? process.env.SOLANA_RPC : "https://api.mainnet-beta.solana.com";
+    let sol_rpc = process.env.SOLANA_RPC ? process.env.SOLANA_RPC : "https://mainnet.helius-rpc.com/?api-key=a4483877-5ea8-4b2f-8789-4e27103248a0";
 	let connection = new web3.Connection(sol_rpc);
     let currentMint = $mints.find(item => item.name == $selectedMint);
     let splToken = new web3.PublicKey(currentMint.mint);
