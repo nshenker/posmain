@@ -1,8 +1,9 @@
 <script lang='ts'>
     import { onMount } from "svelte";
     import { goto } from '$app/navigation';
-	import { pmtAmt, selectedMint } from '../stores.js';
+	import { pmtAmt, selectedMint, invoices } from '../stores.js';
     import Keyboard from "svelte-keyboard";
+    import { browser } from '$app/environment';
 	import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
 
@@ -28,17 +29,13 @@
         if (parseFloat($pmtAmt.replace(/,/g, '')) > 0) {
             goto('/present');
         } else {
-            alert("Please enter an amount greater than zero.");
+            if(browser) alert("Please enter an amount greater than zero.");
         }
 	}
 
     const onKeydown = (event) => {
         const detail = event.detail;
-
-        if ($pmtAmt === "0.00" && detail !== ".") {
-            left = "";
-        }
-
+        if ($pmtAmt === "0.00" && detail !== ".") left = "";
         if (detail === "<") {
             if (decimalsActive) {
                 right = right.slice(0, -1);
@@ -55,7 +52,6 @@
                 right += detail;
             }
         }
-        
         const fullAmount = `${left || '0'}${right ? '.' + right : ''}`;
         $pmtAmt = parseFloat(fullAmount).toLocaleString("en", {
             minimumFractionDigits: 2,
