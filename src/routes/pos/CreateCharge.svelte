@@ -1,9 +1,8 @@
 <script lang='ts'>
     import { onMount } from "svelte";
     import { goto } from '$app/navigation';
-	import { pmtAmt, selectedMint, invoices } from '../stores.js';
+	import { pmtAmt, selectedMint } from '../stores.js';
     import Keyboard from "svelte-keyboard";
-    import dayjs from 'dayjs';
 	import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
 
@@ -17,7 +16,6 @@
     let left = "";
     let right = "";
     let decimalsActive = false;
-    let invoiceModal: HTMLDialogElement;
 
     onMount(() => {
         $pmtAmt = "0.00";
@@ -25,26 +23,6 @@
         right = "";
         decimalsActive = false;
     });
-
-    function loadInvoice(invoice) {
-        if (typeof invoice.total !== 'number') {
-            alert('This invoice has outdated data and cannot be loaded. Please re-create it in the invoicing section.');
-            return;
-        }
-        
-        const amountStr = invoice.total.toFixed(2);
-        const parts = amountStr.split('.');
-        left = parts[0];
-        right = parts[1] || "";
-        decimalsActive = right.length > 0;
-        
-        $pmtAmt = parseFloat(amountStr).toLocaleString("en", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2 
-        });
-        $selectedMint = invoice.paymentCurrency;
-        invoiceModal.close(); // Close modal after selection
-    }
 
     function createQRCode() {
         if (parseFloat($pmtAmt.replace(/,/g, '')) > 0) {
@@ -57,20 +35,18 @@
     const onKeydown = (event) => {
         const detail = event.detail;
 
-        if ($pmtAmt === "0.00") {
+        if ($pmtAmt === "0.00" && detail !== ".") {
             left = "";
-            right = "";
-            decimalsActive = false;
         }
 
-        if (detail == "<") {
-            if (!decimalsActive) {
-                left = left.slice(0, -1);
-            } else {
+        if (detail === "<") {
+            if (decimalsActive) {
                 right = right.slice(0, -1);
                 if (right === "") decimalsActive = false;
+            } else {
+                left = left.slice(0, -1);
             }
-        } else if (detail == ".") {
+        } else if (detail === ".") {
             if (!decimalsActive) decimalsActive = true;
         } else {
             if (!decimalsActive) {
@@ -87,38 +63,6 @@
         });
     }
 </script>
-
-<dialog bind:this={invoiceModal} class="modal">
-    <div class="modal-box w-11/12 max-w-2xl">
-        <h3 class="font-bold text-lg">Select an Invoice to Load</h3>
-        <div class="py-4 overflow-y-auto h-96">
-            <table class="table table-zebra w-full">
-                <tbody>
-                    {#each $invoices.filter(inv => inv.status === 'Saved' && typeof inv.total === 'number') as invoice (invoice.id)}
-                    <tr class="hover cursor-pointer" on:click={() => loadInvoice(invoice)}>
-                        <td>
-                            <div class="font-bold">{invoice.customerName}</div>
-                            <div class="text-sm opacity-50">{invoice.number}</div>
-                        </td>
-                        <td class="text-right">
-                            {invoice.total.toFixed(2)}
-                            <span class="badge badge-ghost badge-sm">{invoice.paymentCurrency}</span>
-                        </td>
-                    </tr>
-                    {/each}
-                    {#if $invoices.filter(inv => inv.status === 'Saved').length === 0}
-                        <tr><td colspan="2" class="text-center text-gray-400 py-4">No saved invoices.</td></tr>
-                    {/if}
-                </tbody>
-            </table>
-        </div>
-        <div class="modal-action">
-            <form method="dialog">
-                <button class="btn">Close</button>
-            </form>
-        </div>
-    </div>
-</dialog>
 
 <div class="card w-full max-w-md bg-base-100 shadow-xl border border-gray-200">
     <div class="card-body p-8 items-center text-center">
@@ -139,10 +83,8 @@
         <div class="mt-4 w-full max-w-xs">
             <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
         </div>
-        <div class="card-actions justify-center mt-6 w-full">
+        <div class="card-actions justify-center mt-6">
             <button on:click={createQRCode} class="btn btn-primary btn-wide text-white font-greycliffbold normal-case">Create QR Code</button>
         </div>
-        <div class="divider">OR</div>
-        <button class="btn btn-outline btn-wide" on:click={() => invoiceModal.showModal()}>Load from Invoice</button>
     </div>
 </div>
