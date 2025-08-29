@@ -11,12 +11,12 @@
         currency: 'USDC'
     };
     
-    let editingItem = null;
-    let editModal: HTMLDialogElement;
+    // This will hold the item being edited. The modal's visibility is tied to this.
+    let editingItem = null; 
 
     onMount(() => {
-        if (!$publicKey) {
-            if (browser) alert("Please set your merchant wallet address first.");
+        if (browser && !$publicKey) {
+            alert("Please set your merchant wallet address first.");
             goto('/');
         }
     });
@@ -43,56 +43,52 @@
         );
     }
 
-    function openEditModal(item) {
-        // Create a copy to edit, preventing direct changes to the store
+    // Function to set the item to be edited, which will open the modal
+    function startEditing(item) {
+        // Create a copy to avoid unintended side-effects
         editingItem = { ...item };
-        editModal.showModal();
     }
 
+    // Function to save changes and close the modal
     function handleSaveChanges() {
         if (!editingItem) return;
 
-        // Find the index of the item in the store
-        const index = $inventory.findIndex(item => item.id === editingItem.id);
+        $inventory = $inventory.map(item => 
+            item.id === editingItem.id ? editingItem : item
+        );
         
-        if (index !== -1) {
-            // Create a new array for reactivity
-            const updatedInventory = [...$inventory];
-            // Replace the item at the index with our edited copy
-            updatedInventory[index] = editingItem;
-            // Update the store
-            $inventory = updatedInventory;
-        }
+        // Close the modal by resetting the editing item
+        editingItem = null; 
+    }
 
-        editModal.close();
-        editingItem = null; // Clear the editing state
+    // Function to cancel editing and close the modal
+    function cancelEditing() {
+        editingItem = null;
     }
 </script>
 
-<dialog bind:this={editModal} class="modal">
+<dialog class="modal" open={!!editingItem}>
     <div class="modal-box">
         <h3 class="font-bold text-lg">Edit Item</h3>
         {#if editingItem}
-        <form on:submit|preventDefault={handleSaveChanges}>
-            <div class="py-4 space-y-4">
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Item Name</span></label>
-                    <input type="text" placeholder="Item Name" class="input input-bordered" bind:value={editingItem.name} required />
-                </div>
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Price</span></label>
-                    <div class="input-group">
-                        <input type="number" placeholder="Price" class="input input-bordered w-full" bind:value={editingItem.price} min="0" step="0.01" required />
-                        <select class="select select-bordered" bind:value={editingItem.currency}>
-                            {#each $mints as mint}
-                            <option value={mint.name}>{mint.name}</option>
-                            {/each}
-                        </select>
-                    </div>
+        <form on:submit|preventDefault={handleSaveChanges} class="py-4 space-y-4">
+            <div class="form-control">
+                <label class="label"><span class="label-text">Item Name</span></label>
+                <input type="text" placeholder="Item Name" class="input input-bordered" bind:value={editingItem.name} required />
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text">Price</span></label>
+                <div class="input-group">
+                    <input type="number" placeholder="Price" class="input input-bordered w-full" bind:value={editingItem.price} min="0" step="0.01" required />
+                    <select class="select select-bordered" bind:value={editingItem.currency}>
+                        {#each $mints as mint}
+                        <option value={mint.name}>{mint.name}</option>
+                        {/each}
+                    </select>
                 </div>
             </div>
             <div class="modal-action">
-                <button type="button" class="btn btn-ghost" on:click={() => editModal.close()}>Cancel</button>
+                <button type="button" class="btn btn-ghost" on:click={cancelEditing}>Cancel</button>
                 <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
@@ -136,7 +132,7 @@
                                 <td class="text-center space-x-1">
                                     <button class="btn btn-xs btn-outline btn-success" on:click={() => updateQuantity(item.id, 1)}>+</button>
                                     <button class="btn btn-xs btn-outline btn-warning" on:click={() => updateQuantity(item.id, -1)}>-</button>
-                                    <button class="btn btn-xs btn-outline btn-info" on:click={() => openEditModal(item)}>Edit</button>
+                                    <button class="btn btn-xs btn-outline btn-info" on:click={() => startEditing(item)}>Edit</button>
                                     <button class="btn btn-xs btn-outline btn-error" on:click={() => removeItem(item.id)}>Remove</button>
                                 </td>
                             </tr>
