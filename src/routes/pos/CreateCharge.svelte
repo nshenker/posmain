@@ -27,6 +27,12 @@
     });
 
     function loadInvoice(invoice) {
+        // Defensive check to prevent a crash if 'total' is missing from old invoice data
+        if (typeof invoice.total !== 'number') {
+            alert('This invoice has outdated data and cannot be loaded. Please re-create it in the invoicing section.');
+            return;
+        }
+        
         const amountStr = invoice.total.toFixed(2);
         const parts = amountStr.split('.');
         left = parts[0];
@@ -114,7 +120,7 @@
             <div class="overflow-y-auto h-96">
                 <table class="table table-zebra w-full">
                     <tbody>
-                        {#each $invoices.filter(inv => inv.status === 'Saved') as invoice (invoice.id)}
+                        {#each $invoices.filter(inv => inv.status === 'Saved' && typeof inv.total === 'number') as invoice (invoice.id)}
                         <tr class="hover" on:click={() => loadInvoice(invoice)}>
                             <td>
                                 <div class="font-bold">{invoice.customerName}</div>
