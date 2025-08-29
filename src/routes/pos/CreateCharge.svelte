@@ -27,7 +27,6 @@
     });
 
     function loadInvoice(invoice) {
-        // When loading from invoice, we need to parse the amount for the keypad logic
         const amountStr = invoice.total.toFixed(2);
         const parts = amountStr.split('.');
         left = parts[0];
@@ -51,6 +50,13 @@
 
     const onKeydown = (event) => {
         const detail = event.detail;
+
+        if ($pmtAmt === "0.00") {
+            left = "";
+            right = "";
+            decimalsActive = false;
+        }
+
         if (detail == "<") {
             if (!decimalsActive) {
                 left = left.slice(0, -1);
