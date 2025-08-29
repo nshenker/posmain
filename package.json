@@ -33,6 +33,7 @@
 		"dayjs": "^1.11.7",
 		"focus-svelte": "^0.3.4",
 		"kioskboard": "^2.3.0",
+		"svelte-french-toast": "^1.2.0",
 		"svelte-fullscreen": "^2.0.0",
 		"svelte-inline-svg": "^1.2.0",
 		"svelte-keyboard": "^0.5.5"
