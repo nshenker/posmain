@@ -4,10 +4,12 @@
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
 
-    // Component state
-    let newItem = { name: '', quantity: null, price: null, currency: 'USDC' };
-    let editingItem = null;
-    let editModalElement: HTMLDialogElement;
+    let newItem = {
+        name: '',
+        quantity: null,
+        price: null,
+        currency: 'USDC'
+    };
 
     onMount(() => {
         if (browser && !$publicKey) {
@@ -16,7 +18,6 @@
         }
     });
 
-    // --- Core Functions ---
     function addItem() {
         const { name, quantity, price, currency } = newItem;
         if (name.trim() && quantity > 0 && price >= 0) {
@@ -38,59 +39,7 @@
             item.id === itemId ? { ...item, quantity: Math.max(0, item.quantity + amount) } : item
         );
     }
-
-    // --- Edit Modal Logic ---
-    function startEditing(itemToEdit) {
-        // Create a copy of the item to edit
-        editingItem = { ...itemToEdit };
-        // Directly command the modal to open
-        if (editModalElement) {
-            editModalElement.showModal();
-        }
-    }
-
-    function handleSaveChanges() {
-        if (!editingItem) return;
-        $inventory = $inventory.map(item => item.id === editingItem.id ? editingItem : item);
-        closeEditModal();
-    }
-    
-    function closeEditModal() {
-        if (editModalElement) {
-            editModalElement.close();
-        }
-        editingItem = null;
-    }
 </script>
-
-<dialog bind:this={editModalElement} class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg">Edit Item</h3>
-        {#if editingItem}
-        <form on:submit|preventDefault={handleSaveChanges} class="py-4 space-y-4">
-            <div class="form-control">
-                <label class="label"><span class="label-text">Item Name</span></label>
-                <input type="text" placeholder="Item Name" class="input input-bordered" bind:value={editingItem.name} required />
-            </div>
-            <div class="form-control">
-                <label class="label"><span class="label-text">Price</span></label>
-                <div class="input-group">
-                    <input type="number" placeholder="Price" class="input input-bordered w-full" bind:value={editingItem.price} min="0" step="0.01" required />
-                    <select class="select select-bordered" bind:value={editingItem.currency}>
-                        {#each $mints as mint}
-                        <option value={mint.name}>{mint.name}</option>
-                        {/each}
-                    </select>
-                </div>
-            </div>
-            <div class="modal-action">
-                <button type="button" class="btn btn-ghost" on:click={closeEditModal}>Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-            </div>
-        </form>
-        {/if}
-    </div>
-</dialog>
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
@@ -127,7 +76,6 @@
                                 <td class="text-center space-x-1">
                                     <button class="btn btn-xs btn-outline btn-success" on:click={() => updateQuantity(item.id, 1)}>+</button>
                                     <button class="btn btn-xs btn-outline btn-warning" on:click={() => updateQuantity(item.id, -1)}>-</button>
-                                    <button class="btn btn-xs btn-outline btn-info" on:click={() => startEditing(item)}>Edit</button>
                                     <button class="btn btn-xs btn-outline btn-error" on:click={() => removeItem(item.id)}>Remove</button>
                                 </td>
                             </tr>
