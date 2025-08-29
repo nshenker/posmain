@@ -2,17 +2,16 @@
     import { inventory, invoices, storeName } from '../stores.js';
     import dayjs from 'dayjs';
 
-    // --- State for the invoice form ---
     let currentInvoice = createNewInvoice();
     let selectedItemId = '';
     let selectedItemQty = 1;
+    let customItem = { name: '', quantity: 1, price: null };
 
-    // --- Reactive calculations ---
+    // Reactive calculations now check if tax should be applied
     $: subtotal = currentInvoice.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-    $: taxAmount = subtotal * (currentInvoice.taxRate / 100);
+    $: taxAmount = currentInvoice.applyTax ? subtotal * (currentInvoice.taxRate / 100) : 0;
     $: total = subtotal + taxAmount;
 
-    // --- Functions ---
     function createNewInvoice() {
         const nextInvoiceNumber = $invoices.length + 1;
         return {
@@ -23,65 +22,67 @@
             dueDate: dayjs().add(14, 'day').format('YYYY-MM-DD'),
             items: [],
             taxRate: 8.875,
+            applyTax: true, // New property to control tax
             status: 'Draft'
         };
     }
 
-    function handleAddItem() {
+    function handleAddItemFromInventory() {
         const itemToAdd = $inventory.find(i => i.id === selectedItemId);
-        if (!itemToAdd) {
-            alert('Please select an item.');
-            return;
-        }
-
-        const existingItem = currentInvoice.items.find(i => i.id === selectedItemId);
-        if (existingItem) {
-            existingItem.quantity += selectedItemQty;
-            currentInvoice.items = currentInvoice.items; // Trigger reactivity
-        } else {
-            currentInvoice.items = [
-                ...currentInvoice.items,
-                { ...itemToAdd, quantity: selectedItemQty }
-            ];
-        }
-
-        // Reset selection
+        if (!itemToAdd) { alert('Please select an item.'); return; }
+        
+        addItemToInvoice(itemToAdd, selectedItemQty);
         selectedItemId = '';
         selectedItemQty = 1;
     }
+    
+    function handleAddCustomItem() {
+        const name = customItem.name.trim();
+        const quantity = Number(customItem.quantity);
+        const price = Number(customItem.price);
 
+        if (name && quantity > 0 && price >= 0) {
+            addItemToInvoice({ id: `custom-${Date.now()}`, name, price, currency: 'USD' }, quantity);
+            customItem = { name: '', quantity: 1, price: null }; // Reset form
+        } else {
+            alert("Please provide a valid name, quantity, and price for the custom item.");
+        }
+    }
+
+    function addItemToInvoice(item, quantity) {
+        const existingItem = currentInvoice.items.find(i => i.id === item.id);
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            currentInvoice.items.push({ ...item, quantity });
+        }
+        currentInvoice.items = currentInvoice.items; // Trigger reactivity
+    }
+    
     function removeItem(itemId) {
         currentInvoice.items = currentInvoice.items.filter(i => i.id !== itemId);
     }
 
     function saveInvoice() {
-        if (!currentInvoice.customerName.trim()) {
-            alert('Please enter a customer name.');
-            return;
-        }
-        if (currentInvoice.items.length === 0) {
-            alert('Please add at least one item to the invoice.');
-            return;
-        }
+        if (!currentInvoice.customerName.trim()) { alert('Please enter a customer name.'); return; }
+        if (currentInvoice.items.length === 0) { alert('Please add at least one item.'); return; }
 
         const invoiceToSave = { ...currentInvoice, id: currentInvoice.id || Date.now(), status: 'Saved' };
-
         const existingIndex = $invoices.findIndex(inv => inv.id === invoiceToSave.id);
+
         if (existingIndex > -1) {
             $invoices[existingIndex] = invoiceToSave;
-            $invoices = $invoices; // Trigger reactivity
         } else {
-            $invoices = [...$invoices, invoiceToSave];
+            $invoices.push(invoiceToSave);
         }
+        $invoices = $invoices; // Trigger reactivity & save to localStorage
 
-        // Deduct from inventory
         invoiceToSave.items.forEach(invoiceItem => {
-            $inventory = $inventory.map(invItem => {
-                if (invItem.id === invoiceItem.id) {
-                    return { ...invItem, quantity: invItem.quantity - invoiceItem.quantity };
-                }
-                return invItem;
-            });
+            if (!String(invoiceItem.id).startsWith('custom-')) {
+                $inventory.update(invItems => invItems.map(invItem => 
+                    invItem.id === invoiceItem.id ? { ...invItem, quantity: invItem.quantity - invoiceItem.quantity } : invItem
+                ));
+            }
         });
 
         alert(`Invoice ${invoiceToSave.number} saved!`);
@@ -90,92 +91,75 @@
 
     function loadInvoice(invoiceId) {
         const invoiceToLoad = $invoices.find(inv => inv.id === invoiceId);
-        if (invoiceToLoad) {
-            currentInvoice = JSON.parse(JSON.stringify(invoiceToLoad));
-        }
+        if (invoiceToLoad) currentInvoice = JSON.parse(JSON.stringify(invoiceToLoad));
     }
     
-    function printInvoice() {
-        window.print();
-    }
-
+    function printInvoice() { window.print(); }
 </script>
 
 <style>
-    .invoice-preview {
-        font-family: 'Arial', sans-serif;
-    }
+    .invoice-preview { font-family: 'Arial', sans-serif; }
     @media print {
-        body * {
-            visibility: hidden;
-        }
-        .printable-area, .printable-area * {
-            visibility: visible;
-        }
-        .printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
-        .no-print {
-            display: none;
-        }
+        body > :not(.printable-area) { display: none; }
+        .printable-area { position: absolute; left: 0; top: 0; width: 100%; }
+        .no-print { display: none; }
     }
 </style>
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6 no-print">
-        <h1 class="text-4xl font-greycliffbold text-charcoal">
-            Invoicing
-        </h1>
+        <h1 class="text-4xl font-greycliffbold text-charcoal">Invoicing</h1>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div class="no-print">
-            <div class="card w-full bg-base-100 shadow-xl border border-gray-200">
-                <div class="card-body p-6">
-                    <h2 class="card-title text-xl font-greycliffmed">Invoice Details</h2>
+        <div class="no-print space-y-6">
+            <div class="card bg-base-100 shadow-xl border"><div class="card-body p-6">
+                <h2 class="card-title text-xl font-greycliffmed">Invoice Details</h2>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Customer Name</span></label>
+                    <input type="text" placeholder="Customer Name" class="input input-bordered" bind:value={currentInvoice.customerName} />
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-2">
                     <div class="form-control">
-                        <label class="label"><span class="label-text">Customer Name</span></label>
-                        <input type="text" placeholder="Customer Name" class="input input-bordered" bind:value={currentInvoice.customerName} />
+                        <label class="label"><span class="label-text">Issue Date</span></label>
+                        <input type="date" class="input input-bordered" bind:value={currentInvoice.issueDate} />
                     </div>
-                    <div class="grid grid-cols-2 gap-4 mt-2">
-                        <div class="form-control">
-                            <label class="label"><span class="label-text">Issue Date</span></label>
-                            <input type="date" class="input input-bordered" bind:value={currentInvoice.issueDate} />
-                        </div>
-                        <div class="form-control">
-                            <label class="label"><span class="label-text">Due Date</span></label>
-                            <input type="date" class="input input-bordered" bind:value={currentInvoice.dueDate} />
-                        </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Due Date</span></label>
+                        <input type="date" class="input input-bordered" bind:value={currentInvoice.dueDate} />
                     </div>
                 </div>
-            </div>
+                <div class="form-control mt-2">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Apply Tax ({currentInvoice.taxRate}%)</span>
+                        <input type="checkbox" class="toggle toggle-primary" bind:checked={currentInvoice.applyTax} />
+                    </label>
+                </div>
+            </div></div>
 
-            <div class="card w-full bg-base-100 shadow-xl border border-gray-200 mt-6">
-                <div class="card-body p-6">
-                    <h2 class="card-title text-xl font-greycliffmed">Add Items</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div class="form-control md:col-span-2">
-                            <label class="label"><span class="label-text">Select Item from Inventory</span></label>
-                            <select class="select select-bordered" bind:value={selectedItemId}>
-                                <option disabled selected value="">Select an item</option>
-                                {#each $inventory as item}
-                                    <option value={item.id}>{item.name} (Stock: {item.quantity})</option>
-                                {/each}
-                            </select>
-                        </div>
-                        <div class="form-control">
-                            <label class="label"><span class="label-text">Quantity</span></label>
-                            <input type="number" bind:value={selectedItemQty} min="1" class="input input-bordered">
-                        </div>
-                    </div>
-                    <div class="card-actions justify-end mt-4">
-                        <button class="btn btn-secondary" on:click={handleAddItem}>Add Item</button>
-                    </div>
+            <div class="card bg-base-100 shadow-xl border"><div class="card-body p-6">
+                <h2 class="card-title text-xl font-greycliffmed">Add From Inventory</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <select class="select select-bordered md:col-span-2" bind:value={selectedItemId}>
+                        <option disabled selected value="">Select an item</option>
+                        {#each $inventory as item}
+                            <option value={item.id}>{item.name} (Stock: {item.quantity})</option>
+                        {/each}
+                    </select>
+                    <input type="number" bind:value={selectedItemQty} min="1" class="input input-bordered">
                 </div>
-            </div>
+                <div class="card-actions justify-end mt-4"><button class="btn btn-secondary" on:click={handleAddItemFromInventory}>Add Item</button></div>
+            </div></div>
+
+            <div class="card bg-base-100 shadow-xl border"><div class="card-body p-6">
+                <h2 class="card-title text-xl font-greycliffmed">Add Custom Item</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" placeholder="Item Name" class="input input-bordered" bind:value={customItem.name} />
+                    <input type="number" placeholder="Quantity" class="input input-bordered" bind:value={customItem.quantity} min="1"/>
+                    <input type="number" placeholder="Price" class="input input-bordered" bind:value={customItem.price} min="0" step="0.01" />
+                </div>
+                <div class="card-actions justify-end mt-4"><button class="btn btn-accent" on:click={handleAddCustomItem}>Add Custom Item</button></div>
+            </div></div>
 
             <div class="mt-6 flex flex-wrap gap-4 justify-center">
                 <button class="btn btn-success btn-wide" on:click={saveInvoice}>Save Invoice</button>
@@ -185,68 +169,55 @@
         </div>
 
         <div class="printable-area">
-            <div class="card w-full bg-base-100 shadow-xl border border-gray-200">
-                <div class="card-body p-8 invoice-preview text-sm">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h2 class="text-2xl font-bold font-greycliffbold">{$storeName || 'Your Company'}</h2>
-                        </div>
-                        <div class="text-right">
-                            <h3 class="text-xl font-bold text-gray-800">INVOICE</h3>
-                            <p class="text-gray-500">{currentInvoice.number}</p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mt-8">
-                        <div>
-                            <p class="font-bold text-gray-700">Bill To:</p>
-                            <p>{currentInvoice.customerName || 'Customer Name'}</p>
-                        </div>
-                        <div class="text-right">
-                            <p><span class="font-bold text-gray-700">Issue Date:</span> {dayjs(currentInvoice.issueDate).format('MMM D, YYYY')}</p>
-                            <p><span class="font-bold text-gray-700">Due Date:</span> {dayjs(currentInvoice.dueDate).format('MMM D, YYYY')}</p>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto mt-6">
-                        <table class="table w-full">
-                            <thead class="bg-base-200">
-                                <tr>
-                                    <th>Item</th>
-                                    <th class="text-center">Qty</th>
-                                    <th class="text-right">Price</th>
-                                    <th class="text-right">Total</th>
-                                    <th class="no-print"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {#each currentInvoice.items as item (item.id)}
-                                <tr>
-                                    <td>{item.name}</td>
-                                    <td class="text-center">{item.quantity}</td>
-                                    <td class="text-right">${item.price.toFixed(2)}</td>
-                                    <td class="text-right">${(item.quantity * item.price).toFixed(2)}</td>
-                                    <td class="no-print text-center p-1"><button class="btn btn-ghost btn-xs" on:click={() => removeItem(item.id)}>✕</button></td>
-                                </tr>
-                                {/each}
-                                {#if currentInvoice.items.length === 0}
-                                <tr><td colspan="5" class="text-center text-gray-400 py-4">No items added yet.</td></tr>
-                                {/if}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="flex justify-end mt-6">
-                        <div class="w-full max-w-xs text-right">
-                            <div class="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-                            <div class="flex justify-between mt-1"><span>Tax ({currentInvoice.taxRate}%):</span><span>${taxAmount.toFixed(2)}</span></div>
-                            <div class="divider my-1"></div>
-                            <div class="flex justify-between font-bold text-lg"><span>Total:</span><span>${total.toFixed(2)}</span></div>
-                        </div>
+            <div class="card w-full bg-white shadow-xl border"><div class="card-body p-8 invoice-preview text-sm text-gray-700">
+                <div class="flex justify-between items-start">
+                    <div><h2 class="text-2xl font-bold font-greycliffbold text-black">{$storeName || 'Your Company'}</h2></div>
+                    <div class="text-right">
+                        <h3 class="text-xl font-bold">INVOICE</h3>
+                        <p class="text-gray-500">{currentInvoice.number}</p>
                     </div>
                 </div>
-            </div>
+                <div class="grid grid-cols-2 gap-4 mt-8">
+                    <div>
+                        <p class="font-bold">Bill To:</p>
+                        <p>{currentInvoice.customerName || 'Customer Name'}</p>
+                    </div>
+                    <div class="text-right">
+                        <p><span class="font-bold">Issue Date:</span> {dayjs(currentInvoice.issueDate).format('MMM D, YYYY')}</p>
+                        <p><span class="font-bold">Due Date:</span> {dayjs(currentInvoice.dueDate).format('MMM D, YYYY')}</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto mt-6">
+                    <table class="table w-full">
+                        <thead class="bg-gray-50"><tr><th>Item</th><th class="text-center">Qty</th><th class="text-right">Price</th><th class="text-right">Total</th><th class="no-print"></th></tr></thead>
+                        <tbody>
+                            {#each currentInvoice.items as item (item.id)}
+                            <tr>
+                                <td>{item.name}</td><td class="text-center">{item.quantity}</td>
+                                <td class="text-right">${item.price.toFixed(2)}</td>
+                                <td class="text-right">${(item.quantity * item.price).toFixed(2)}</td>
+                                <td class="no-print text-center p-1"><button class="btn btn-ghost btn-xs" on:click={() => removeItem(item.id)}>✕</button></td>
+                            </tr>
+                            {/each}
+                            {#if currentInvoice.items.length === 0}
+                            <tr><td colspan="5" class="text-center text-gray-400 py-4">No items added yet.</td></tr>
+                            {/if}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end mt-6"><div class="w-full max-w-xs text-right">
+                    <div class="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
+                    {#if currentInvoice.applyTax}
+                    <div class="flex justify-between mt-1"><span>Tax ({currentInvoice.taxRate}%):</span><span>${taxAmount.toFixed(2)}</span></div>
+                    {/if}
+                    <div class="divider my-1"></div>
+                    <div class="flex justify-between font-bold text-lg text-black"><span>Total:</span><span>${total.toFixed(2)}</span></div>
+                </div></div>
+            </div></div>
         </div>
     </div>
 
-    <div class="card w-full bg-base-100 shadow-xl border border-gray-200 mt-8 no-print">
+    <div class="card w-full bg-base-100 shadow-xl border mt-8 no-print">
         <div class="card-body p-6">
             <h2 class="card-title text-xl font-greycliffmed">Saved Invoices</h2>
             <div class="overflow-x-auto">
@@ -255,10 +226,9 @@
                     <tbody>
                         {#each $invoices as invoice (invoice.id)}
                         <tr class="hover">
-                            <td>{invoice.number}</td>
-                            <td>{invoice.customerName}</td>
+                            <td>{invoice.number}</td><td>{invoice.customerName}</td>
                             <td>{dayjs(invoice.issueDate).format('YYYY-MM-DD')}</td>
-                            <td class="text-right font-mono">${(invoice.items.reduce((s, i) => s + i.quantity * i.price, 0) * (1 + invoice.taxRate / 100)).toFixed(2)}</td>
+                            <td class="text-right font-mono">${(invoice.items.reduce((s, i) => s + i.quantity * i.price, 0) * (1 + (invoice.applyTax ? invoice.taxRate : 0) / 100)).toFixed(2)}</td>
                             <td><span class="badge badge-info badge-outline">{invoice.status}</span></td>
                             <td><button class="btn btn-xs" on:click={() => loadInvoice(invoice.id)}>View</button></td>
                         </tr>
