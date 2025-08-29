@@ -1,18 +1,36 @@
 <script lang='ts'>
-    import { onMount } from "svelte";
-    import { inventory, storeName } from '../stores.js';
+    import { inventory } from '../stores.js';
 
     let newItem = {
-        id: '',
         name: '',
-        quantity: 0,
-        price: 0
+        quantity: null,
+        price: null
     };
 
     function addItem() {
-        if (newItem.name && newItem.quantity > 0 && newItem.price > 0) {
-            $inventory = [...$inventory, { ...newItem, id: Date.now().toString() }];
-            newItem = { id: '', name: '', quantity: 0, price: 0 }; // Reset form
+        const name = newItem.name.trim();
+        const quantity = Number(newItem.quantity);
+        const price = Number(newItem.price);
+
+        if (name && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0) {
+            const newItemData = {
+                id: Date.now().toString(),
+                name,
+                quantity,
+                price
+            };
+            $inventory = [...$inventory, newItemData];
+            
+            // Reset form
+            newItem = { name: '', quantity: null, price: null };
+        } else {
+            alert("Please fill out all fields with valid values.");
+        }
+    }
+
+    function removeItem(itemId) {
+        if (confirm("Are you sure you want to remove this item?")) {
+            $inventory = $inventory.filter(item => item.id !== itemId);
         }
     }
 
@@ -33,14 +51,12 @@
     <div class="card w-full max-w-4xl bg-base-100 shadow-xl border border-gray-200 mx-auto">
         <div class="card-body p-8">
             <h2 class="card-title text-xl font-greycliffmed text-charcoal mb-4">Add New Item</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="text" placeholder="Item Name" class="input input-bordered" bind:value={newItem.name} />
-                <input type="number" placeholder="Quantity" class="input input-bordered" bind:value={newItem.quantity} />
-                <input type="number" placeholder="Price" class="input input-bordered" bind:value={newItem.price} />
-            </div>
-            <div class="card-actions justify-end mt-4">
-                <button class="btn btn-primary" on:click={addItem}>Add Item</button>
-            </div>
+            <form on:submit|preventDefault={addItem} class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" placeholder="Item Name" class="input input-bordered md:col-span-2" bind:value={newItem.name} />
+                <input type="number" placeholder="Quantity" class="input input-bordered" bind:value={newItem.quantity} min="1" step="1" />
+                <input type="number" placeholder="Price" class="input input-bordered" bind:value={newItem.price} min="0" step="0.01" />
+                <button type="submit" class="btn btn-primary">Add Item</button>
+            </form>
         </div>
     </div>
 
@@ -52,20 +68,21 @@
                     <thead>
                         <tr>
                             <th>Item Name</th>
-                            <th>Quantity</th>
-                            <th>Price</th>
-                            <th>Actions</th>
+                            <th class="text-center">Quantity</th>
+                            <th class="text-right">Price</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {#each $inventory as item}
+                        {#each $inventory as item (item.id)}
                             <tr class="hover">
-                                <td>{item.name}</td>
-                                <td>{item.quantity}</td>
-                                <td class="font-mono">${item.price}</td>
-                                <td class="space-x-2">
-                                    <button class="btn btn-xs btn-success" on:click={() => updateQuantity(item.id, 1)}>+</button>
-                                    <button class="btn btn-xs btn-error" on:click={() => updateQuantity(item.id, -1)}>-</button>
+                                <td class="font-greycliffmed">{item.name}</td>
+                                <td class="text-center font-mono">{item.quantity}</td>
+                                <td class="text-right font-mono">${item.price.toFixed(2)}</td>
+                                <td class="text-center space-x-2">
+                                    <button class="btn btn-xs btn-outline btn-success" on:click={() => updateQuantity(item.id, 1)}>+</button>
+                                    <button class="btn btn-xs btn-outline btn-warning" on:click={() => updateQuantity(item.id, -1)}>-</button>
+                                    <button class="btn btn-xs btn-outline btn-error" on:click={() => removeItem(item.id)}>Remove</button>
                                 </td>
                             </tr>
                         {/each}
