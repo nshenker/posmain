@@ -6,6 +6,7 @@
     import dayjs from 'dayjs';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
+    import { browser } from '$app/environment';
 
     let currentInvoice = createNewInvoice();
     let selectedItemId = '';
@@ -15,7 +16,7 @@
 
     onMount(() => {
         if (!$publicKey) {
-            alert("Please set your merchant wallet address first.");
+            if (browser) alert("Please set your merchant wallet address first.");
             goto('/');
             return;
         }
@@ -39,7 +40,7 @@
 
     function handleAddItemFromInventory() {
         const itemToAdd = $inventory.find(i => i.id === selectedItemId);
-        if (!itemToAdd) { alert('Please select an item.'); return; }
+        if (!itemToAdd) { if (browser) alert('Please select an item.'); return; }
         addItemToInvoice(itemToAdd, selectedItemQty);
         selectedItemId = ''; selectedItemQty = 1;
     }
@@ -50,7 +51,7 @@
             addItemToInvoice({ id: `custom-${Date.now()}`, name: name.trim(), price, currency }, quantity);
             customItem = { name: '', quantity: 1, price: null, currency: 'USDC' };
         } else {
-            alert("Please provide a valid name, quantity, and price.");
+            if (browser) alert("Please provide a valid name, quantity, and price.");
         }
     }
 
@@ -66,8 +67,8 @@
     }
 
     function saveInvoice() {
-        if (!currentInvoice.customerName.trim()) { alert('Please enter a customer name.'); return; }
-        if (currentInvoice.items.length === 0) { alert('Please add at least one item.'); return; }
+        if (!currentInvoice.customerName.trim()) { if (browser) alert('Please enter a customer name.'); return; }
+        if (currentInvoice.items.length === 0) { if (browser) alert('Please add at least one item.'); return; }
 
         const invoiceToSave = { ...currentInvoice, id: currentInvoice.id || Date.now(), status: 'Saved', total };
         const existingIndex = $invoices.findIndex(inv => inv.id === invoiceToSave.id);
@@ -81,8 +82,8 @@
                 $inventory.update(invs => invs.map(i => i.id === item.id ? { ...i, quantity: i.quantity - item.quantity } : i));
             }
         });
-
-        alert(`Invoice ${invoiceToSave.number} saved!`);
+        
+        if (browser) alert(`Invoice ${invoiceToSave.number} saved!`);
         currentInvoice = createNewInvoice();
     }
 
@@ -91,14 +92,14 @@
         if (invoiceToLoad) currentInvoice = JSON.parse(JSON.stringify(invoiceToLoad));
     }
     
-    function printInvoice() { window.print(); }
+    function printInvoice() { if (browser) window.print(); }
 
     function generateQrCode() {
         if (!qrCodeElement || total <= 0) return;
 
         const selectedToken = $mints.find(m => m.name === currentInvoice.paymentCurrency);
         if (!selectedToken) {
-            alert("Selected payment currency is invalid.");
+            if (browser) alert("Selected payment currency is invalid.");
             return;
         }
 
@@ -198,4 +199,26 @@
                         <button class="btn btn-primary btn-sm" on:click={generateQrCode}>Pay with Solana</button>
                     </div>
                     <div class="w-full max-w-xs text-right">
-                        <div class="flex justify-between"><span>
+                        <div class="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
+                        {#if currentInvoice.applyTax}<div class="flex justify-between mt-1"><span>Tax ({currentInvoice.taxRate}%):</span><span>${taxAmount.toFixed(2)}</span></div>{/if}
+                        <div class="divider my-1"></div>
+                        <div class="flex justify-between font-bold text-lg text-black"><span>Total ({currentInvoice.paymentCurrency}):</span><span>${total.toFixed(2)}</span></div>
+                    </div>
+                </div>
+            </div></div>
+        </div>
+    </div>
+    <div class="card w-full bg-base-100 shadow-xl border mt-8 no-print"><div class="card-body p-6">
+        <h2 class="card-title text-xl font-greycliffmed">Saved Invoices</h2>
+        <div class="overflow-x-auto">
+            <table class="table w-full"><thead><tr><th>#</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>
+                    {#each $invoices as invoice (invoice.id)}
+                    <tr class="hover"><td>{invoice.number}</td><td>{invoice.customerName}</td><td>{dayjs(invoice.issueDate).format('YYYY-MM-DD')}</td><td class="text-right font-mono">${invoice.total.toFixed(2)}</td><td><span class="badge badge-info badge-outline">{invoice.status}</span></td><td><button class="btn btn-xs" on:click={() => loadInvoice(invoice.id)}>View</button></td></tr>
+                    {/each}
+                    {#if $invoices.length === 0}<tr><td colspan="6" class="text-center text-gray-400 py-4">No saved invoices.</td></tr>{/if}
+                </tbody>
+            </table>
+        </div>
+    </div></div>
+</div>
