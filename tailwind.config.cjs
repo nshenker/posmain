@@ -27,11 +27,16 @@ module.exports = {
           "base-200": '#FDFDFD',
         },
         dark: {
-          ...require("daisyui/src/colors/themes")["[data-theme=dark]"],
-          primary: '#D4AF37',
-          "primary-focus": '#C09E26',
-          "base-100": '#1E1E1E',
-          "base-200": '#121212',
+          "primary": "#D4AF37",
+          "secondary": "#C09E26",
+          "accent": "#FACC15",
+          "neutral": "#191D24",
+          "base-100": "#2A303C",
+          "info": "#3ABFF8",
+          "success": "#36D399",
+          "warning": "#FBBD23",
+          "error": "#F87272",
+          "base-content": "#F9FAFB", // This sets the default text color to a light grey
         },
       },
       {
