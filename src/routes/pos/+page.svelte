@@ -40,7 +40,7 @@
         <button role="tab" class="tab tab-lg" on:click={()=>(activeTab=3)} class:tab-active={activeTab === 3}>Settings</button>
     </div>
 
-    <div class="mt-4">
+    <div class="mt-4 flex justify-center">
         {#if activeTab == 1}
             <CreateCharge/>
         {:else if activeTab == 2}
