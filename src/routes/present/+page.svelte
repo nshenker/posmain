@@ -1,14 +1,16 @@
 <script lang='ts'>
     import { onMount } from "svelte";
     import * as web3 from '@solana/web3.js';
-	import { createQR, encodeURL, findReference, FindReferenceError} from "@solana/pay"
+    import { createQR, encodeURL, findReference, FindReferenceError} from "@solana/pay"
     import { storeName, publicKey, pmtAmt, mostRecentTxn, showWarning, successArray, mints, selectedMint} from '../stores.js';
-	import { goto } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import BigNumber from 'bignumber.js';
 
 	let txnConfirmed = false;
-  
-    let sol_rpc = process.env.SOLANA_RPC ? process.env.SOLANA_RPC : "https://solana-mainnet.g.alchemy.com/v2/5Bo-yRwJYXcscWQkkah0KJ-9jPmm5cSi";
+    let statusMessage = "Awaiting Payment...";
+    const POLLING_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+    let sol_rpc = process.env.SOLANA_RPC ? process.env.SOLANA_RPC : "https://api.mainnet-beta.solana.com";
 	let connection = new web3.Connection(sol_rpc);
     let currentMint = $mints.find(item => item.name == $selectedMint);
     let splToken = new web3.PublicKey(currentMint.mint);
@@ -35,11 +37,19 @@
             console.error("Error creating QR code", e);
         }
         
+        const startTime = Date.now();
         intervalId = setInterval(async () => {
+            if (Date.now() - startTime > POLLING_TIMEOUT) {
+                clearInterval(intervalId);
+                statusMessage = "Transaction not found. Please try again.";
+                return;
+            }
+
             try {
-                const signatureInfo = await findReference(connection, reference, { until: $mostRecentTxn });
+                const signatureInfo = await findReference(connection, reference, { until: $mostRecentTxn, commitment: 'confirmed' });
                 txnConfirmed = true;
-                clearInterval(intervalId); // Stop polling once confirmed
+                statusMessage = "Transaction Confirmed!";
+                clearInterval(intervalId);
 
                 let confirmedTxn = await connection.getParsedTransaction(signatureInfo.signature, "confirmed");
                 if (confirmedTxn) {
@@ -61,8 +71,6 @@
                             uiAmount: uiAmount,
                             mint: $selectedMint
                         };
-                        
-                        // This is the key fix: Use the update method for persistent stores
                         successArray.update(items => {
                             if (!items.some(item => item.txid === new_entry.txid)) {
                                 return [...items, new_entry];
@@ -72,10 +80,11 @@
                     }
                 }
                 mostRecentTxn.set(signatureInfo.signature);
-
             } catch (e) {
                 if (!(e instanceof FindReferenceError)) {
                     console.error('Unknown error', e);
+                    statusMessage = "An error occurred. Please check the console.";
+                    clearInterval(intervalId);
                 }
             }
         }, 2000);
@@ -85,9 +94,9 @@
         };
     });
 
-	function goBack() {
+    function goBack() {
         goto('/pos');
-	}
+    }
 </script>
 
 <div class="flex flex-col items-center justify-center min-h-screen p-4">
@@ -98,22 +107,24 @@
             </h1>
 
             <div id="qr-code" class="rounded-lg overflow-hidden border border-gray-200 shadow-sm"></div>
-         
+		   
 		   <div class="mt-4">
                 {#if !txnConfirmed}
                     <div class="flex items-center text-gray-500">
-                        <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-						<span>Awaiting Payment...</span>
+                        {#if statusMessage === "Awaiting Payment..."}
+                            <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        {/if}
+						<span>{statusMessage}</span>
                     </div>
                 {:else}
                     <div class="flex items-center text-green-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span class="font-bold">Transaction Confirmed!</span>
+                        <span class="font-bold">{statusMessage}</span>
                     </div>
                 {/if}
             </div>
