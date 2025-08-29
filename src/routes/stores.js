@@ -35,3 +35,7 @@ export const mints = writable([
 export const selectedMint = createPersistentStore("selectedMint", "USDC");
 export const merchantLogo = createPersistentStore("merchantLogo", "");
 export const theme = createPersistentStore("theme", "light");
+
+// New stores for inventory and invoicing
+export const inventory = createPersistentStore("inventory", []);
+export const invoices = createPersistentStore("invoices", []);
