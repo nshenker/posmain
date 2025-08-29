@@ -44,7 +44,7 @@
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
-        <h1 class="text-4xl font-greycliffbold text-charcoal">Inventory Management</h1>
+        <h1 class="text-4xl font-greycliffbold">Inventory Management</h1>
     </header>
     <div class="card w-full max-w-4xl bg-base-100 shadow-xl border mx-auto">
         <div class="card-body p-8">
@@ -81,7 +81,7 @@
                                 </td>
                             </tr>
                         {/each}
-                        {#if $inventory.length === 0}<tr><td colspan="4" class="text-center text-gray-500 py-4">No items in inventory.</td></tr>{/if}
+                        {#if $inventory.length === 0}<tr><td colspan="4" class="text-center py-4">No items in inventory.</td></tr>{/if}
                     </tbody>
                 </table>
             </div>
