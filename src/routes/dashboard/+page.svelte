@@ -37,7 +37,7 @@
         {/if}
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
         <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
             <div class="card-body items-center text-center">
                 <h2 class="card-title text-2xl font-greycliffmed text-charcoal">Point of Sale</h2>
@@ -64,6 +64,16 @@
                 <p>Keep track of your product inventory.</p>
                 <div class="card-actions justify-center mt-4">
                     <button on:click={() => goto('/inventory')} class="btn btn-primary">Manage Inventory</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
+            <div class="card-body items-center text-center">
+                <h2 class="card-title text-2xl font-greycliffmed text-charcoal">Analytics</h2>
+                <p>View your sales data and analytics.</p>
+                <div class="card-actions justify-center mt-4">
+                    <button on:click={() => goto('/analytics')} class="btn btn-primary">View Analytics</button>
                 </div>
             </div>
         </div>
