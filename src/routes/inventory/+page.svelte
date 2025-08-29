@@ -3,6 +3,7 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
+    import { showToast } from '../toastStore.js';
 
     let newItem = {
         name: '',
@@ -13,7 +14,7 @@
 
     onMount(() => {
         if (browser && !$publicKey) {
-            alert("Please set your merchant wallet address first.");
+            showToast("Please set your merchant wallet address first.", "error");
             goto('/');
         }
     });
@@ -24,7 +25,7 @@
             $inventory = [...$inventory, { id: Date.now().toString(), name: name.trim(), quantity, price, currency }];
             newItem = { name: '', quantity: null, price: null, currency: 'USDC' };
         } else {
-            if (browser) alert("Please fill out all fields with valid values.");
+            if (browser) showToast("Please fill out all fields with valid values.", "error");
         }
     }
 
