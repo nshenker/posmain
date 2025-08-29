@@ -1,9 +1,10 @@
 <script lang='ts'>
     import { onMount, onDestroy } from "svelte";
     import { goto } from '$app/navigation';
-	import { storeName, publicKey, pmtAmt, showWarning, mints, selectedMint, merchantLogo, successArray, mostRecentTxn, fullScreen, theme } from '../stores.js';
-	async function reset() {
-        if (typeof window !== 'undefined' && confirm("Are you sure you want to reset your store? This will clear all your settings and transaction history.")) {
+	import { storeName, publicKey, pmtAmt, showWarning, mints, selectedMint, merchantLogo, successArray, mostRecentTxn, fullScreen, theme, invoices, inventory } from '../stores.js';
+	
+    async function reset() {
+        if (typeof window !== 'undefined' && confirm("Are you sure you want to reset your store? This will clear all settings, transaction history, invoices, and inventory permanently.")) {
             localStorage.clear();
 			// Reset all stores to their default values
             storeName.set("");
@@ -16,6 +17,8 @@
             selectedMint.set("USDC");
             merchantLogo.set("");
             theme.set("light");
+            invoices.set([]);
+            inventory.set([]);
             goto('/', { state: { foo: 'bar' } });
 		}
     }
@@ -40,16 +43,14 @@
             <label class="label cursor-pointer">
                 <span class="label-text font-greycliffmed">Show 'No Custody' Warning</span>
                 <input type="checkbox" bind:checked={$showWarning} class="toggle toggle-primary" />
-   
 	         </label>
         </div>
 
         <div class="form-control w-full mt-4">
             <label for="currency-select" class="label">
-                <span class="label-text font-greycliffmed">Select Currency</span>
+                <span class="label-text font-greycliffmed">Default Currency</span>
             </label>
             <select id="currency-select" bind:value={$selectedMint} class="select select-bordered">
-           
 			     {#each $mints as mint}
                    <option>{mint.name}</option>
                 {/each}
@@ -58,7 +59,6 @@
 
         <div class="form-control w-full mt-4">
             <label for="logo-upload" class="label">
-            
 			   <span class="label-text font-greycliffmed">Brand Logo</span>
             </label>
             <input id="logo-upload" type="file" on:change={handleLogoUpload} class="file-input file-input-bordered w-full" />
