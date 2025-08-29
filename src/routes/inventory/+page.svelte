@@ -2,6 +2,7 @@
     import { inventory, mints, publicKey } from '../stores.js';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
+    import { browser } from '$app/environment';
 
     let newItem = {
         name: '',
@@ -12,7 +13,9 @@
 
     onMount(() => {
         if (!$publicKey) {
-            alert("Please set your merchant wallet address first.");
+            if (browser) {
+                alert("Please set your merchant wallet address first.");
+            }
             goto('/');
         }
     });
@@ -23,12 +26,14 @@
             $inventory = [...$inventory, { id: Date.now().toString(), name: name.trim(), quantity, price, currency }];
             newItem = { name: '', quantity: null, price: null, currency: 'USDC' };
         } else {
-            alert("Please fill out all fields with valid values.");
+            if (browser) alert("Please fill out all fields with valid values.");
         }
     }
 
     function removeItem(itemId) {
-        if (confirm("Are you sure?")) $inventory = $inventory.filter(item => item.id !== itemId);
+        if (browser && confirm("Are you sure?")) {
+            $inventory = $inventory.filter(item => item.id !== itemId);
+        }
     }
 
     function updateQuantity(itemId, amount) {
