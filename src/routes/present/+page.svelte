@@ -10,7 +10,8 @@
     let statusMessage = "Awaiting Payment...";
     const POLLING_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
-    let sol_rpc = process.env.SOLANA_RPC ? process.env.SOLANA_RPC : "https://mainnet.helius-rpc.com/?api-key=a4483877-5ea8-4b2f-8789-4e27103248a0";
+    // Reverted to a more stable public RPC endpoint
+    let sol_rpc = "https://solana-mainnet.g.alchemy.com/v2/5Bo-yRwJYXcscWQkkah0KJ-9jPmm5cSi";
 	let connection = new web3.Connection(sol_rpc);
     let currentMint = $mints.find(item => item.name == $selectedMint);
     let splToken = new web3.PublicKey(currentMint.mint);
@@ -46,7 +47,7 @@
             }
 
             try {
-                const signatureInfo = await findReference(connection, reference, { until: $mostRecentTxn, commitment: 'confirmed' });
+                const signatureInfo = await findReference(connection, reference, { commitment: 'confirmed' });
                 txnConfirmed = true;
                 statusMessage = "Transaction Confirmed!";
                 clearInterval(intervalId);
@@ -81,11 +82,13 @@
                 }
                 mostRecentTxn.set(signatureInfo.signature);
             } catch (e) {
-                if (!(e instanceof FindReferenceError)) {
-                    console.error('Unknown error', e);
-                    statusMessage = "An error occurred. Please check the console.";
-                    clearInterval(intervalId);
+                if (e instanceof FindReferenceError) {
+                    // This is an expected error when the transaction hasn't been found yet, so we can ignore it.
+                    return;
                 }
+                console.error('An unexpected error occurred:', e);
+                statusMessage = "An error occurred. Please check the console.";
+                clearInterval(intervalId);
             }
         }, 2000);
 
@@ -109,22 +112,25 @@
             <div id="qr-code" class="rounded-lg overflow-hidden border border-gray-200 shadow-sm"></div>
 		   
 		   <div class="mt-4">
-                {#if !txnConfirmed}
+                {#if !txnConfirmed && statusMessage !== 'An error occurred. Please check the console.' && statusMessage !== 'Transaction not found. Please try again.'}
                     <div class="flex items-center text-gray-500">
-                        {#if statusMessage === "Awaiting Payment..."}
-                            <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                        {/if}
+                        <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
 						<span>{statusMessage}</span>
                     </div>
-                {:else}
+                {:else if txnConfirmed}
                     <div class="flex items-center text-green-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span class="font-bold">{statusMessage}</span>
+                    </div>
+                {:else}
+                    <div class="flex items-center text-error">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span>{statusMessage}</span>
                     </div>
                 {/if}
             </div>
