@@ -3,12 +3,13 @@
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
     import { storeName, merchantLogo, publicKey } from '../stores.js';
+    import { showToast } from '../toastStore.js';
 
     const devWallet = 'CXfJMf3d8mm96RGtttztVcCwTGr1Dwnk6vypRAhZs6Yo';
 
     onMount(() => {
         if (browser && !$publicKey) {
-            alert("Please set your merchant wallet address first.");
+            showToast("Please set your merchant wallet address first.", "error");
             goto('/');
         }
     });
@@ -17,10 +18,10 @@
         if (browser) {
             try {
                 await navigator.clipboard.writeText(devWallet);
-                alert('Address copied to clipboard!');
+                showToast('Address copied to clipboard!', 'success');
             } catch (err) {
                 console.error('Failed to copy text: ', err);
-                alert('Failed to copy address.');
+                showToast('Failed to copy address.', 'error');
             }
         }
     }
