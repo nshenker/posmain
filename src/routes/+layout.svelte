@@ -42,6 +42,7 @@
                             <li><a href="/pos">Point of Sale</a></li>
                             <li><a href="/invoicing">Invoicing</a></li>
                             <li><a href="/inventory">Inventory</a></li>
+                            <li><a href="/analytics">Analytics</a></li>
                         </ul>
                     </div>
                     <div class="navbar-end">
@@ -78,6 +79,7 @@
                         <li><a href="/pos">Point of Sale</a></li>
                         <li><a href="/invoicing">Invoicing</a></li>
                         <li><a href="/inventory">Inventory</a></li>
+                        <li><a href="/analytics">Analytics</a></li>
                     </ul>
                 </div>
                 <div class="navbar-end">
