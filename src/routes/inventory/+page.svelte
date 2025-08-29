@@ -10,12 +10,13 @@
         price: null,
         currency: 'USDC'
     };
+    
+    let editingItem = null;
+    let editModal: HTMLDialogElement;
 
     onMount(() => {
         if (!$publicKey) {
-            if (browser) {
-                alert("Please set your merchant wallet address first.");
-            }
+            if (browser) alert("Please set your merchant wallet address first.");
             goto('/');
         }
     });
@@ -31,7 +32,7 @@
     }
 
     function removeItem(itemId) {
-        if (browser && confirm("Are you sure?")) {
+        if (browser && confirm("Are you sure you want to remove this item?")) {
             $inventory = $inventory.filter(item => item.id !== itemId);
         }
     }
@@ -41,7 +42,59 @@
             item.id === itemId ? { ...item, quantity: Math.max(0, item.quantity + amount) } : item
         );
     }
+
+    function openEditModal(item) {
+        // Create a copy to avoid mutating the original item directly
+        editingItem = { ...item };
+        editModal.showModal();
+    }
+
+    function saveChanges() {
+        if (!editingItem) return;
+
+        $inventory = $inventory.map(item => {
+            if (item.id === editingItem.id) {
+                return editingItem; // Replace the old item with the edited one
+            }
+            return item;
+        });
+
+        editModal.close();
+        editingItem = null;
+    }
 </script>
+
+<dialog bind:this={editModal} class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">Edit Item</h3>
+        {#if editingItem}
+        <div class="py-4 space-y-4">
+            <div class="form-control">
+                <label class="label"><span class="label-text">Item Name</span></label>
+                <input type="text" placeholder="Item Name" class="input input-bordered" bind:value={editingItem.name} />
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text">Price</span></label>
+                <div class="input-group">
+                    <input type="number" placeholder="Price" class="input input-bordered w-full" bind:value={editingItem.price} min="0" step="0.01" />
+                    <select class="select select-bordered" bind:value={editingItem.currency}>
+                        {#each $mints as mint}
+                        <option value={mint.name}>{mint.name}</option>
+                        {/each}
+                    </select>
+                </div>
+            </div>
+        </div>
+        {/if}
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn btn-ghost">Cancel</button>
+            </form>
+            <button class="btn btn-primary" on:click={saveChanges}>Save Changes</button>
+        </div>
+    </div>
+</dialog>
+
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
@@ -75,9 +128,10 @@
                                 <td class="font-greycliffmed">{item.name}</td>
                                 <td class="text-center font-mono">{item.quantity}</td>
                                 <td class="text-right font-mono">{item.price.toFixed(2)} {item.currency}</td>
-                                <td class="text-center space-x-2">
+                                <td class="text-center space-x-1">
                                     <button class="btn btn-xs btn-outline btn-success" on:click={() => updateQuantity(item.id, 1)}>+</button>
                                     <button class="btn btn-xs btn-outline btn-warning" on:click={() => updateQuantity(item.id, -1)}>-</button>
+                                    <button class="btn btn-xs btn-outline btn-info" on:click={() => openEditModal(item)}>Edit</button>
                                     <button class="btn btn-xs btn-outline btn-error" on:click={() => removeItem(item.id)}>Remove</button>
                                 </td>
                             </tr>
