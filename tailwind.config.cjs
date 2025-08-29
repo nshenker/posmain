@@ -13,7 +13,7 @@ module.exports = {
         greycliffmed: ['GreycliffCF-Medium'] ,
         greycliffreg: ['GreycliffCF-Regular'] ,
       }
-     }
+    }
   },
   plugins: [require("daisyui")],
   daisyui: {
@@ -25,6 +25,13 @@ module.exports = {
           "primary-focus": '#C09E26',
           "base-100": '#FFFFFF',
           "base-200": '#FDFDFD',
+        },
+        dark: {
+          ...require("daisyui/src/colors/themes")["[data-theme=dark]"],
+          primary: '#D4AF37',
+          "primary-focus": '#C09E26',
+          "base-100": '#1E1E1E',
+          "base-200": '#121212',
         },
       },
       {
@@ -56,7 +63,7 @@ module.exports = {
           "primary": "#d8b4fe",
           "secondary": "#c084fc",
           "accent": "#a855f7",
-          "neutral": "#3d4451",
+           "neutral": "#3d4451",
           "base-100": "#f5f3ff",
           "base-200": "#ede9fe",
         },
