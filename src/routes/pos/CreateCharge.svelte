@@ -1,17 +1,21 @@
 <script lang='ts'>
     import { onMount } from "svelte";
     import { goto } from '$app/navigation';
-	import { pmtAmt, selectedMint, invoices } from '../stores.js';
+    import { pmtAmt, selectedMint, invoices } from '../stores.js';
     import Keyboard from "svelte-keyboard";
     import { browser } from '$app/environment';
-	import bonkLogo from "../../lib/images/BonkLogo.png";
+    import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
+    import InventoryModal from "./InventoryModal.svelte";
+
+    let showInventoryModal = false;
 
     const keys = [
         { row: 0, value: "1"}, { row: 0, value: "2"}, { row: 0, value: "3"}, 
         { row: 1, value: "4"}, { row: 1, value: "5"}, { row: 1, value: "6"},
         { row: 2, value: "7"}, { row: 2, value: "8"}, { row: 2, value: "9"},
-        { row: 3, value: "<" }, { row: 3, value: "0"}, { row: 3, value: "."}
+        { row: 3, value: "<" }, { row: 3, value: "0"}, { row: 3, 
+        value: "."}
     ];
     
     let left = "";
@@ -35,7 +39,9 @@
 
     const onKeydown = (event) => {
         const detail = event.detail;
+
         if ($pmtAmt === "0.00" && detail !== ".") left = "";
+
         if (detail === "<") {
             if (decimalsActive) {
                 right = right.slice(0, -1);
@@ -60,6 +66,10 @@
     }
 </script>
 
+{#if showInventoryModal}
+    <InventoryModal on:close={() => showInventoryModal = false} />
+{/if}
+
 <div class="card w-full max-w-md bg-base-100 shadow-xl border border-gray-200">
     <div class="card-body p-8 items-center text-center">
         <h2 class="card-title text-xl font-greycliffmed text-charcoal mb-4">Create Charge</h2>
@@ -80,7 +90,8 @@
             <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
         </div>
         <div class="card-actions justify-center mt-6">
-            <button on:click={createQRCode} class="btn btn-primary btn-wide text-white font-greycliffbold normal-case">Create QR Code</button>
+            <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case">Add from Inventory</button>
+            <button on:click={createQRCode} class="btn btn-primary text-white font-greycliffbold normal-case">Create QR Code</button>
         </div>
     </div>
 </div>
