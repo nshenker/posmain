@@ -14,7 +14,9 @@
     });
 
     onMount(() => {
-        document.documentElement.setAttribute('data-theme', $theme);
+        if(browser) {
+            document.documentElement.setAttribute('data-theme', $theme);
+        }
     });
 </script>
 
@@ -25,7 +27,7 @@
                 {#if $merchantLogo}
                     <img src={$merchantLogo} alt="Merchant Logo" class="h-10">
                 {:else}
-                    <button on:click={() => goto('/dashboard')} class="btn btn-ghost normal-case text-xl font-greycliffbold">Solana Suite</button>
+                    <button on:click={() => goto('/dashboard')} class="btn btn-ghost normal-case text-xl font-greycliffbold">PoSolana</button>
                 {/if}
             </div>
             <div class="navbar-center hidden lg:flex">
