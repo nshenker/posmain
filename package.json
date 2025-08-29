@@ -27,8 +27,8 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@solana/pay": "^0.2.6",
-		"@solana/web3.js": "^1.91.4",
+		"@solana/pay": "^0.2.4",
+		"@solana/web3.js": "^1.73.0",
 		"daisyui": "^2.46.0",
 		"dayjs": "^1.11.7",
 		"focus-svelte": "^0.3.4",
