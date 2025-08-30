@@ -19,7 +19,7 @@
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
-        <h1 class="text-4xl font-greycliffbold text-charcoal">
+        <h1 class="text-4xl font-greycliffbold">
             {$storeName}
         </h1>
         {#if $merchantLogo}
