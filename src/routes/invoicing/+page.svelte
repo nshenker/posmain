@@ -203,26 +203,26 @@
         </div>
 
         <div class="printable-area">
-            <div class="card w-full bg-white shadow-xl border"><div class="card-body p-8 invoice-preview text-sm text-gray-700">
+            <div class="card w-full bg-white shadow-xl border"><div class="card-body p-8 invoice-preview text-sm">
                 <div class="flex justify-between items-start">
-                    <div><h2 class="text-2xl font-bold font-greycliffbold text-black">{$storeName || 'Your Company'}</h2></div>
-                    <div class="text-right"><h3 class="text-xl font-bold">INVOICE</h3><p>{currentInvoice.number}</p></div>
+                    <div><h2 class="text-2xl font-bold font-greycliffbold">{$storeName || 'Your Company'}</h2></div>
+                    <div class="text-right"><h3 class="text-xl font-bold">INVOICE</h3><p class="opacity-70">{currentInvoice.number}</p></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mt-8">
                     <div><p class="font-bold">Bill To:</p><p>{currentInvoice.customerName || 'Customer Name'}</p></div>
                     <div class="text-right"><p><span class="font-bold">Issue Date:</span> {dayjs(currentInvoice.issueDate).format('MMM D, YYYY')}</p><p><span class="font-bold">Due Date:</span> {dayjs(currentInvoice.dueDate).format('MMM D, YYYY')}</p></div>
                 </div>
                 <div class="overflow-x-auto mt-6">
-                    <table class="table w-full"><thead class="bg-gray-50"><tr><th>Item</th><th class="text-center">Qty</th><th class="text-right">Price</th><th class="text-right">Total</th><th class="no-print"></th></tr></thead>
+                    <table class="table w-full"><thead class="bg-gray-50 text-gray-700"><tr><th>Item</th><th class="text-center">Qty</th><th class="text-right">Price</th><th class="text-right">Total</th><th class="no-print"></th></tr></thead>
                         <tbody>
                             {#each currentInvoice.items as item (item.id)}<tr><td>{item.name}</td><td class="text-center">{item.quantity}</td><td class="text-right">${(item.price || 0).toFixed(2)}</td><td class="text-right">${(item.quantity * (item.price || 0)).toFixed(2)}</td><td class="no-print text-center p-1"><button class="btn btn-ghost btn-xs" on:click={() => removeItem(item.id)}>✕</button></td></tr>{/each}
-                            {#if currentInvoice.items.length === 0}<tr><td colspan="5" class="text-center py-4">No items added yet.</td></tr>{/if}
+                            {#if currentInvoice.items.length === 0}<tr><td colspan="5" class="text-center opacity-70 py-4">No items added yet.</td></tr>{/if}
                         </tbody>
                     </table>
                 </div>
                 <div class="flex justify-between items-end mt-6">
                     <div class="text-center no-print">
-                        <div id="qr-code-invoice" class="mb-2 min-h-[200px] min-w-[200px] flex items-center justify-center text-sm">Click "Pay" to generate code.</div>
+                        <div id="qr-code-invoice" class="mb-2 min-h-[200px] min-w-[200px] flex items-center justify-center text-sm opacity-70">Click "Pay" to generate code.</div>
                         <button class="btn btn-primary btn-sm" on:click={generateQrCode} disabled={!librariesLoaded}>Pay with Solana</button>
                     </div>
                     <div class="w-full max-w-xs text-right">
@@ -253,7 +253,7 @@
                         </td>
                     </tr>
                     {/each}
-                    {#if $invoices.length === 0}<tr><td colspan="6" class="text-center py-4">No saved invoices.</td></tr>{/if}
+                    {#if $invoices.length === 0}<tr><td colspan="6" class="text-center opacity-70 py-4">No saved invoices.</td></tr>{/if}
                 </tbody>
             </table>
         </div>
