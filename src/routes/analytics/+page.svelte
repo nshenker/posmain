@@ -65,7 +65,7 @@
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
-        <h1 class="text-4xl font-greycliffbold text-charcoal">Reporting & Analytics</h1>
+        <h1 class="text-4xl font-greycliffbold">Reporting & Analytics</h1>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -96,7 +96,7 @@
                 {#if salesByTokenData.labels && salesByTokenData.labels.length}
                     <Pie data={salesByTokenData} />
                 {:else}
-                    <p class="text-center text-gray-500">No sales data available.</p>
+                    <p class="text-center">No sales data available.</p>
                 {/if}
             </div>
         </div>
@@ -106,7 +106,7 @@
                  {#if salesOverTimeData.labels && salesOverTimeData.labels.length}
                     <Line data={salesOverTimeData} />
                 {:else}
-                    <p class="text-center text-gray-500">No sales data available.</p>
+                    <p class="text-center">No sales data available.</p>
                 {/if}
             </div>
         </div>
