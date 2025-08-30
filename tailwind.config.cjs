@@ -36,7 +36,7 @@ module.exports = {
           "success": "#36D399",
           "warning": "#FBBD23",
           "error": "#F87272",
-          "base-content": "#C09E26", // Set text to secondary gold color
+          "base-content": "#D4AF37", // Set text to BRIGHT GOLD
         },
       },
       {
