@@ -1,104 +1,60 @@
-<script>
-    import { onMount } from 'svelte';
-    import { browser } from '$app/environment';
-    import "../app.css";
-    import { fullScreen, merchantLogo, theme } from './stores.js';
-    import Fullscreen from "svelte-fullscreen";
-    import ThemeSwitcher from "./ThemeSwitcher.svelte";
+<script lang='ts'>
+    import { onMount } from "svelte";
+    import * as web3 from '@solana/web3.js';
+	import { storeName, publicKey } from './stores.js';
     import { goto } from '$app/navigation';
-    import { Toaster } from 'svelte-french-toast';
-    import Toast from './Toast.svelte';
+    import { browser } from '$app/environment';
 
-    theme.subscribe(value => {
-        if (browser) {
-            document.documentElement.setAttribute('data-theme', value);
-        }
-    });
-
-    onMount(() => {
-        if(browser) {
-            document.documentElement.setAttribute('data-theme', $theme);
-        }
-    });
+    let invalidKey = false;
+	
+    async function createStore() {
+        try {
+            $publicKey = $publicKey.trim();
+            new web3.PublicKey($publicKey);
+			invalidKey = false;
+			goto('/dashboard');
+		}
+         catch(e) {
+            invalidKey = true;
+		}
+    }
 </script>
 
-{#if browser}
-    <Fullscreen let:onRequest let:onExit bind:fullscreen={$fullScreen}>
-        <div class="bg-base-200 min-h-screen">
-            <Toaster />
-            <Toast />
-            <div class="fixed top-0 left-0 right-0 z-50 bg-base-100 shadow-md no-print">
-                <div class="navbar px-4">
-                    <div class="navbar-start">
-                        {#if $merchantLogo}
-                            <img src={$merchantLogo} alt="Merchant Logo" class="h-10">
-                        {:else}
-                            <button on:click={() => goto('/dashboard')} class="btn btn-ghost normal-case text-xl font-greycliffbold">PoSolana</button>
-                        {/if}
-                    </div>
-                    <div class="navbar-center hidden lg:flex">
-                        <ul class="menu menu-horizontal px-1">
-                            <li><a href="/dashboard">Dashboard</a></li>
-                            <li><a href="/pos">Point of Sale</a></li>
-                            <li><a href="/invoicing">Invoicing</a></li>
-                            <li><a href="/inventory">Inventory</a></li>
-                            <li><a href="/analytics">Analytics</a></li>
-                        </ul>
-                    </div>
-                    <div class="navbar-end">
-                        <ThemeSwitcher />
-                        <!-- 
-                          FIX: Replaced the single toggle button with a conditional block 
-                          to render separate "Enter" and "Exit" fullscreen buttons. 
-                          This is a more robust way to handle the state change.
-                        -->
-                        {#if $fullScreen}
-                            <button class="btn btn-ghost btn-circle" on:click={onExit}>
-                                <!-- Collapse Icon -->
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 inline"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
-                            </button>
-                        {:else}
-                            <button class="btn btn-ghost btn-circle" on:click={onRequest}>
-                                <!-- Expand Icon -->
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 inline"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
-                            </button>
-                        {/if}
-                    </div>
-                </div>
-            </div>
-            <main class="pt-24 pb-16 md:pb-4">
-                <slot />
-            </main>
+<div class="flex flex-col min-h-screen">
+    <main class="flex-grow flex flex-col items-center justify-center p-4">
+        <div class="text-center mb-8">
+            <h1 class="font-greycliffbold text-5xl text-charcoal tracking-tight">
+                PoSolana Suite
+            </h1>
+            <p class="font-greycliffmed text-lg text-gray-500 mt-2">Your all-in-one solution for running your business on Solana.</p>
         </div>
-    </Fullscreen>
-{:else}
-    <div class="bg-base-200 min-h-screen">
-        <div class="fixed top-0 left-0 right-0 z-50 bg-base-100 shadow-md no-print">
-            <div class="navbar px-4">
-                <div class="navbar-start">
-                    {#if $merchantLogo}
-                        <img src={$merchantLogo} alt="Merchant Logo" class="h-10">
-                    {:else}
-                        <button on:click={() => goto('/dashboard')} class="btn btn-ghost normal-case text-xl font-greycliffbold">PoSolana</button>
-                    {/if}
+        <div class="card w-full max-w-md bg-base-100 shadow-xl border border-gray-200">
+            <div class="card-body p-8">
+                <h2 class="card-title text-xl font-greycliffmed text-charcoal mb-4">Enter Merchant Details</h2>
+                <div class="form-control w-full">
+                    <label for="store-name" class="label">
+                      <span class="label-text font-greycliffmed">Store Name</span>
+                    </label>
+                    <input id="store-name" bind:value={$storeName} type="text" placeholder="e.g., The Gilded Lily" class="input input-bordered w-full" /> 
                 </div>
-                <div class="navbar-center hidden lg:flex">
-                    <ul class="menu menu-horizontal px-1">
-                        <li><a href="/dashboard">Dashboard</a></li>
-                        <li><a href="/pos">Point of Sale</a></li>
-                        <li><a href="/invoicing">Invoicing</a></li>
-                        <li><a href="/inventory">Inventory</a></li>
-                        <li><a href="/analytics">Analytics</a></li>
-                    </ul>
+                <div class="form-control w-full mt-4">
+                    <label for="wallet-address" class="label">
+                      <span class="label-text font-greycliffmed">Merchant Wallet Address</span>
+                    </label>
+                    <input id="wallet-address" bind:value={$publicKey} type="text" placeholder="Solana Public Key" class="input input-bordered w-full" />    
                 </div>
-                <div class="navbar-end">
-                    <ThemeSwitcher />
+                {#if invalidKey}
+                     <span class="text-center text-sm text-error mt-2">Invalid key - please enter a valid wallet address</span>
+                {/if}
+                <div class="card-actions justify-center mt-6">
+                    <button on:click={createStore} class="btn btn-primary btn-wide text-white font-greycliffbold normal-case">Enter Suite</button>
                 </div>
             </div>
         </div>
-        <main class="pt-24 pb-16 md:pb-4">
-            <slot />
-        </main>
-    </div>
-{/if}
-
+    </main>
+    <footer class="footer footer-center p-4 text-base-content">
+        <div class="items-center">
+            <span class="text-sm text-gray-400">PoSolana © 2025</span>
+        </div>
+    </footer>
+</div>
