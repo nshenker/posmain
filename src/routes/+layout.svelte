@@ -3,7 +3,7 @@
     import { browser } from '$app/environment';
     import "../app.css";
     import { fullScreen, merchantLogo, theme } from './stores.js';
-	import Fullscreen from "svelte-fullscreen";
+    import Fullscreen from "svelte-fullscreen";
     import ThemeSwitcher from "./ThemeSwitcher.svelte";
     import { goto } from '$app/navigation';
     import { Toaster } from 'svelte-french-toast';
@@ -47,7 +47,11 @@
                     </div>
                     <div class="navbar-end">
                         <ThemeSwitcher />
-                        <button class="btn btn-ghost btn-circle" on:click={$fullScreen ? onExit : onRequest}>
+                        <!-- 
+                          FIX: Changed the on:click handler to an arrow function. 
+                          This ensures the correct function (onExit or onRequest) is called based on the current $fullScreen state when the button is clicked.
+                        -->
+                        <button class="btn btn-ghost btn-circle" on:click={() => $fullScreen ? onExit() : onRequest()}>
                             {#if !$fullScreen}
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 inline"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
                             {:else}
@@ -58,7 +62,7 @@
                 </div>
             </div>
             <main class="pt-24 pb-16 md:pb-4">
-              <slot />
+                <slot />
             </main>
         </div>
     </Fullscreen>
@@ -88,7 +92,7 @@
             </div>
         </div>
         <main class="pt-24 pb-16 md:pb-4">
-          <slot />
+            <slot />
         </main>
     </div>
 {/if}
