@@ -19,8 +19,8 @@
     }
 </script>
 
-<div class="flex flex-col min-h-screen">
-    <main class="flex-grow flex flex-col items-center p-4 pt-16 sm:pt-24">
+<div class="flex flex-col">
+    <main class="flex flex-col items-center p-4 pt-16 sm:pt-24">
         <div class="text-center mb-8">
             <h1 class="font-greycliffbold text-5xl tracking-tight">
                 PoSolana Suite
