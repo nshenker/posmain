@@ -3,6 +3,9 @@
     const themes = [
         { name: "light", colors: { primary: '#D4AF37', base: '#FFFFFF' } },
         { name: "dark", colors: { primary: '#D4AF37', base: '#1E1E1E' } },
+        { name: "usdc", colors: { primary: '#2775CA', base: '#F0F5FA' } },
+        { name: "sol", colors: { primary: '#9945FF', base: '#F0F0F0' } },
+        { name: "bonk", colors: { primary: '#FBAE26', base: '#FFF8E7' } },
         { name: "emerald", colors: { primary: '#6ee7b7', base: '#f0fdf4' } },
         { name: "sapphire", colors: { primary: '#7dd3fc', base: '#f0f9ff' } },
         { name: "ruby", colors: { primary: '#fca5a5', base: '#fef2f2' } },
