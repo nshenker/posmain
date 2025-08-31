@@ -15,6 +15,12 @@
         { name: "amber", colors: { primary: '#fcd34d', secondary: '#fbbf24', accent: '#f59e0b', base: '#fffbeb' } },
         { name: "cyan", colors: { primary: '#67e8f9', secondary: '#22d3ee', accent: '#06b6d4', base: '#ecfeff' } },
     ];
+
+    function handleKeyDown(event, themeName) {
+        if (event.key === 'Enter') {
+            $theme = themeName;
+        }
+    }
 </script>
 
 <div class="dropdown dropdown-end">
@@ -24,7 +30,7 @@
     <div tabindex="0" class="dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2">
             {#each themes as themeOption}
-                <div class="outline-base-content/20 outline-1 outline rounded-lg" on:click={() => $theme = themeOption.name} on:keydown|enter={() => $theme = themeOption.name} role="button" tabindex="0">
+                <div class="outline-base-content/20 outline-1 outline rounded-lg" on:click={() => $theme = themeOption.name} on:keydown={(e) => handleKeyDown(e, themeOption.name)} role="button" tabindex="0">
                     <div class="bg-base-200 rounded-t-lg p-2 font-bold">
                         {@html themeOption.name.charAt(0).toUpperCase() + themeOption.name.slice(1)}
                     </div>
