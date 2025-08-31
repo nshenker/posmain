@@ -36,7 +36,31 @@ module.exports = {
           "success": "#36D399",
           "warning": "#FBBD23",
           "error": "#F87272",
-          "base-content": "#D4AF37", // Set text to BRIGHT GOLD
+          "base-content": "#D4AF37",
+        },
+        usdc: {
+          "primary": "#2775CA",
+          "secondary": "#3385D9",
+          "accent": "#4A90E2",
+          "neutral": "#FFFFFF",
+          "base-100": "#F0F5FA",
+          "base-content": "#000000",
+        },
+        sol: {
+          "primary": "#9945FF",
+          "secondary": "#14F195",
+          "accent": "#000000",
+          "neutral": "#FFFFFF",
+          "base-100": "#F0F0F0",
+          "base-content": "#000000",
+        },
+        bonk: {
+          "primary": "#FBAE26",
+          "secondary": "#E85B25",
+          "accent": "#FFFFFF",
+          "neutral": "#000000",
+          "base-100": "#FFF8E7",
+          "base-content": "#000000",
         },
       },
       {
