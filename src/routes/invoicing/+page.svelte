@@ -172,8 +172,8 @@
                     <label class="label cursor-pointer"><span class="label-text">Apply Tax ({currentInvoice.taxRate}%)</span><input type="checkbox" class="toggle toggle-primary" bind:checked={currentInvoice.applyTax} /></label>
                 </div>
                 <div class="form-control">
-                    <label class="label"><span class="label-text">Payment Currency</span></label>
-                    <select class="select select-bordered" bind:value={currentInvoice.paymentCurrency}>
+                    <label class="label" for="payment-currency"><span class="label-text">Payment Currency</span></label>
+                    <select class="select select-bordered" id="payment-currency" bind:value={currentInvoice.paymentCurrency}>
                         {#each $mints as mint}<option value={mint.name}>{mint.name}</option>{/each}
                     </select>
                 </div>
@@ -209,53 +209,4 @@
                     <div class="text-right"><h3 class="text-xl font-bold">INVOICE</h3><p class="opacity-70">{currentInvoice.number}</p></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mt-8">
-                    <div><p class="font-bold">Bill To:</p><p>{currentInvoice.customerName || 'Customer Name'}</p></div>
-                    <div class="text-right"><p><span class="font-bold">Issue Date:</span> {dayjs(currentInvoice.issueDate).format('MMM D, YYYY')}</p><p><span class="font-bold">Due Date:</span> {dayjs(currentInvoice.dueDate).format('MMM D, YYYY')}</p></div>
-                </div>
-                <div class="overflow-x-auto mt-6">
-                    <table class="table w-full"><thead class="bg-gray-50 text-gray-700"><tr><th>Item</th><th class="text-center">Qty</th><th class="text-right">Price</th><th class="text-right">Total</th><th class="no-print"></th></tr></thead>
-                        <tbody>
-                            {#each currentInvoice.items as item (item.id)}<tr><td>{item.name}</td><td class="text-center">{item.quantity}</td><td class="text-right">${(item.price || 0).toFixed(2)}</td><td class="text-right">${(item.quantity * (item.price || 0)).toFixed(2)}</td><td class="no-print text-center p-1"><button class="btn btn-ghost btn-xs" on:click={() => removeItem(item.id)}>✕</button></td></tr>{/each}
-                            {#if currentInvoice.items.length === 0}<tr><td colspan="5" class="text-center opacity-70 py-4">No items added yet.</td></tr>{/if}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="flex justify-between items-end mt-6">
-                    <div class="text-center no-print">
-                        <div id="qr-code-invoice" class="mb-2 min-h-[200px] min-w-[200px] flex items-center justify-center text-sm opacity-70">Click "Pay" to generate code.</div>
-                        <button class="btn btn-primary btn-sm" on:click={generateQrCode} disabled={!librariesLoaded}>Pay with Solana</button>
-                    </div>
-                    <div class="w-full max-w-xs text-right">
-                        <div class="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-                        {#if currentInvoice.applyTax}<div class="flex justify-between mt-1"><span>Tax ({currentInvoice.taxRate}%):</span><span>${taxAmount.toFixed(2)}</span></div>{/if}
-                        <div class="divider my-1"></div>
-                        <div class="flex justify-between font-bold text-lg"><span>Total ({currentInvoice.paymentCurrency}):</span><span>${total.toFixed(2)}</span></div>
-                    </div>
-                </div>
-            </div></div>
-        </div>
-    </div>
-    <div class="card w-full bg-base-100 shadow-xl border mt-8 no-print"><div class="card-body p-6">
-        <h2 class="card-title text-xl font-greycliffmed">Saved Invoices</h2>
-        <div class="overflow-x-auto">
-            <table class="table w-full"><thead><tr><th>#</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody>
-                    {#each $invoices as invoice (invoice.id)}
-                    <tr class="hover">
-                        <td>{invoice.number}</td>
-                        <td>{invoice.customerName}</td>
-                        <td>{dayjs(invoice.issueDate).format('YYYY-MM-DD')}</td>
-                        <td class="text-right font-mono">${(invoice.total || 0).toFixed(2)}</td>
-                        <td><span class="badge badge-info badge-outline">{invoice.status}</span></td>
-                        <td class="space-x-1">
-                            <button class="btn btn-xs btn-outline" on:click={() => loadInvoice(invoice.id)}>View</button>
-                            <button class="btn btn-xs btn-outline btn-error" on:click={() => removeInvoice(invoice.id)}>Delete</button>
-                        </td>
-                    </tr>
-                    {/each}
-                    {#if $invoices.length === 0}<tr><td colspan="6" class="text-center opacity-70 py-4">No saved invoices.</td></tr>{/if}
-                </tbody>
-            </table>
-        </div>
-    </div></div>
-</div>
+                    <div><p class="font-bold">Bill
