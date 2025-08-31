@@ -7,6 +7,7 @@
     import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
     import InventoryModal from "./InventoryModal.svelte";
+    import hntLogo from "../../lib/images/HNTLogo.png";
 
     let showInventoryModal = false;
 
@@ -72,7 +73,7 @@
 
 <div class="card w-full max-w-md bg-base-100 shadow-xl border border-gray-200">
     <div class="card-body p-8 items-center text-center">
-        <h2 class="card-title text-xl font-greycliffmed text-charcoal mb-4">Create Charge</h2>
+        <h2 class="card-title text-xl font-greycliffmed mb-4">Create Charge</h2>
         <div class="flex items-center space-x-2">
             {#if $selectedMint === "USDC"}
                 <svg class="h-9 w-9" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
@@ -83,6 +84,8 @@
                <img src={solLogo} class="w-10" alt="SOL" />
             {:else if $selectedMint === "BONK"}
                 <img src={bonkLogo} class="w-10 rounded-full" alt="BONK" />
+            {:else if $selectedMint === "HNT"}
+                <img src={hntLogo} class="w-10" alt="HNT" />
             {/if}
             <input bind:value={$pmtAmt} class="input input-bordered w-48 text-right text-xl font-mono" placeholder="0.00" readonly />
         </div>
