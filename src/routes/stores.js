@@ -22,14 +22,14 @@ export const publicKey = createPersistentStore("publicKey", "");
 export const pmtAmt = createPersistentStore("pmtAmt", "");
 export const mostRecentTxn = createPersistentStore("mostRecentTxn", "");
 export const showWarning = createPersistentStore("showWarning", true);
-export const fullScreen = createPersistentStore("fullScreen", false);
-export let successArray = createPersistentStore("successArray", []);
+export const successArray = createPersistentStore("successArray", []);
 
 // Simplified the mints array to only include USDC, SOL, and BONK
 export const mints = writable([
     {name:"USDC", mint:"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"},
     {name:"SOL", mint:"So11111111111111111111111111111111111111112"},
-    {name:"BONK", mint:"DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"}
+    {name:"BONK", mint:"DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"},
+    {name:"HNT", mint:"hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux"}
 ]);
 
 export const selectedMint = createPersistentStore("selectedMint", "USDC");
