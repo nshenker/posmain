@@ -22,7 +22,8 @@ export const publicKey = createPersistentStore("publicKey", "");
 export const pmtAmt = createPersistentStore("pmtAmt", "");
 export const mostRecentTxn = createPersistentStore("mostRecentTxn", "");
 export const showWarning = createPersistentStore("showWarning", true);
-export const successArray = createPersistentStore("successArray", []);
+export const fullScreen = createPersistentStore("fullScreen", false);
+export let successArray = createPersistentStore("successArray", []);
 
 // Simplified the mints array to only include USDC, SOL, and BONK
 export const mints = writable([
