@@ -12,21 +12,35 @@
 
     // Reverted to a more stable public RPC endpoint
     let sol_rpc = "https://solana-mainnet.g.alchemy.com/v2/5Bo-yRwJYXcscWQkkah0KJ-9jPmm5cSi";
-	let connection = new web3.Connection(sol_rpc);
-    let currentMint = $mints.find(item => item.name == $selectedMint);
-    let splToken = new web3.PublicKey(currentMint.mint);
-	const reference = web3.Keypair.generate().publicKey;
+    let connection = new web3.Connection(sol_rpc);
+    const reference = web3.Keypair.generate().publicKey;
     const label = 'Payment to ' + ($storeName || 'store');
     const message = 'Thank you for your payment!';
-	const memo = 'Shanksy Productions';
+	const memo = 'Transaction by PoSolana';
     let intervalId;
 
     onMount(async () => {
         const pmtAmtString = $pmtAmt ? $pmtAmt.toString() : '0';
         const recipient = new web3.PublicKey($publicKey);
         const amount = new BigNumber(pmtAmtString.replace(/,/g, ''));
-        const url = encodeURL({ recipient, amount, splToken, reference, label, message, memo });
-   
+        
+        const currentMint = $mints.find(item => item.name == $selectedMint);
+
+        const urlParams = {
+            recipient,
+            amount,
+            reference,
+            label,
+            message,
+            memo,
+        };
+
+        if (currentMint && currentMint.name !== 'SOL') {
+            urlParams.splToken = new web3.PublicKey(currentMint.mint);
+        }
+
+        const url = encodeURL(urlParams);
+
         try {
             const qrCode = createQR(url, 360, 'transparent');
             const element = document.getElementById('qr-code');
@@ -56,7 +70,8 @@
                 if (confirmedTxn) {
                     const transferInstruction = confirmedTxn.transaction.message.instructions.find(
                         (instruction) => (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transfer' || (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transferChecked'
-                    ) as web3.PartiallyDecodedInstruction | undefined;
+                    ) as web3.PartiallyDecodedInstruction |
+undefined;
                     
                     let uiAmount = 0;
                     if (transferInstruction?.parsed?.info?.tokenAmount) {
@@ -112,7 +127,7 @@
             <div id="qr-code" class="rounded-lg overflow-hidden border border-gray-200 shadow-sm"></div>
 		   
 		   <div class="mt-4">
-                {#if !txnConfirmed && statusMessage !== 'An error occurred. Please check the console.' && statusMessage !== 'Transaction not found. Please try again.'}
+               {#if !txnConfirmed && statusMessage !== 'An error occurred. Please check the console.' && statusMessage !== 'Transaction not found. Please try again.'}
                     <div class="flex items-center">
                         <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
