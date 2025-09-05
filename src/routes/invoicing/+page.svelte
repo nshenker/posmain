@@ -11,7 +11,6 @@
     let selectedItemId = '';
     let selectedItemQty = 1;
     let customItem = { name: '', quantity: 1, price: null, currency: 'USDC' };
-
     // --- Module variables for dynamically imported libraries ---
     let createQR, encodeURL, BigNumber, web3;
     let librariesLoaded = false;
@@ -103,6 +102,7 @@
                 $inventory.update(invs => invs.map(i => i.id === item.id ? { ...i, quantity: i.quantity - item.quantity } : i));
             }
         });
+
         if (browser) showToast(`Invoice ${invoiceToSave.number} saved!`, 'success');
         currentInvoice = createNewInvoice();
     }
@@ -128,18 +128,24 @@
         const qrCodeElement = document.getElementById('qr-code-invoice');
         if (!librariesLoaded) { if (browser) showToast("Payment libraries are still loading. Please wait a moment and try again.", 'error'); return; }
         if (!qrCodeElement || total <= 0) return;
+        
         const selectedToken = $mints.find(m => m.name === currentInvoice.paymentCurrency);
         if (!selectedToken) { if (browser) showToast("Selected payment currency is invalid.", "error"); return; }
 
-        const url = encodeURL({
+        const urlParams = {
             recipient: new web3.PublicKey($publicKey),
             amount: new BigNumber(total),
-            splToken: new web3.PublicKey(selectedToken.mint),
             reference: new web3.PublicKey(web3.Keypair.generate().publicKey),
             label: `Invoice ${currentInvoice.number}`,
             message: `Payment for ${currentInvoice.customerName}`,
             memo: `Invoice #${currentInvoice.number}`
-        });
+        };
+
+        if (selectedToken.name !== 'SOL') {
+            urlParams.splToken = new web3.PublicKey(selectedToken.mint);
+        }
+
+        const url = encodeURL(urlParams);
         const qr = createQR(url, 200, 'transparent');
         qrCodeElement.innerHTML = '';
         qr.append(qrCodeElement);
