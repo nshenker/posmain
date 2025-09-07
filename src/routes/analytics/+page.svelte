@@ -1,8 +1,9 @@
 <script lang='ts'>
-    import { successArray } from '../stores.js';
+    import { successArray, mints } from '../stores.js';
+    import { tokenPrices } from '../priceStore.js';
     import { onMount } from 'svelte';
     import { Chart, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement, PointElement, LineElement } from 'chart.js';
-    import { Bar, Pie, Line } from 'svelte-chartjs';
+    import { Pie, Line } from 'svelte-chartjs';
     import dayjs from 'dayjs';
 
     Chart.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement, PointElement, LineElement);
@@ -12,54 +13,74 @@
     let averageSale = 0;
     let salesByTokenData = {};
     let salesOverTimeData = {};
+    let ready = false;
 
     onMount(() => {
-        // --- Key Metrics Calculations ---
-        totalTransactions = $successArray.length;
-        if (totalTransactions > 0) {
-            totalRevenue = $successArray.reduce((acc, curr) => acc + curr.uiAmount, 0);
-            averageSale = totalRevenue / totalTransactions;
-        }
+        const mintMap = new Map($mints.map(m => [m.name, m.coingeckoId]));
+        
+        const unsubscribe = tokenPrices.subscribe(prices => {
+            if (Object.keys(prices).length === 0) return;
 
-        // --- Sales by Token Calculation ---
-        const salesByToken = $successArray.reduce((acc, curr) => {
-            acc[curr.mint] = (acc[curr.mint] || 0) + curr.uiAmount;
-            return acc;
-        }, {});
+            // --- Helper to get USD value of a transaction ---
+            const getTxnUsdValue = (txn) => {
+                const coingeckoId = mintMap.get(txn.mint);
+                const price = prices[coingeckoId]?.usd || 0;
+                return txn.uiAmount * price;
+            };
 
-        salesByTokenData = {
-            labels: Object.keys(salesByToken),
-            datasets: [
-                {
-                    label: 'Sales by Token',
-                    data: Object.values(salesByToken),
-                    backgroundColor: ['#2775ca', '#9945FF', '#FBAE26'],
-                    hoverOffset: 4
-                },
-            ],
-        };
+            // --- Key Metrics Calculations ---
+            totalTransactions = $successArray.length;
+            if (totalTransactions > 0) {
+                totalRevenue = $successArray.reduce((acc, curr) => acc + getTxnUsdValue(curr), 0);
+                averageSale = totalRevenue / totalTransactions;
+            }
 
-        // --- Sales Over Time Calculation (by day) ---
-        const salesByDay = $successArray.reduce((acc, curr) => {
-            const date = dayjs.unix(curr.timestamp).format('YYYY-MM-DD');
-            acc[date] = (acc[date] || 0) + curr.uiAmount;
-            return acc;
-        }, {});
+            // --- Sales by Token Calculation ---
+            const salesByToken = $successArray.reduce((acc, curr) => {
+                const usdValue = getTxnUsdValue(curr);
+                acc[curr.mint] = (acc[curr.mint] || 0) + usdValue;
+                return acc;
+            }, {});
 
-        const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
+            salesByTokenData = {
+                labels: Object.keys(salesByToken),
+                datasets: [
+                    {
+                        label: 'Sales by Token (USD)',
+                        data: Object.values(salesByToken),
+                        backgroundColor: ['#2775ca', '#9945FF', '#FBAE26'],
+                        hoverOffset: 4
+                    },
+                ],
+            };
 
-        salesOverTimeData = {
-            labels: sortedDates,
-            datasets: [
-                {
-                    label: 'Daily Sales Volume',
-                    data: sortedDates.map(date => salesByDay[date]),
-                    fill: false,
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1,
-                },
-            ],
-        };
+            // --- Sales Over Time Calculation (by day) ---
+            const salesByDay = $successArray.reduce((acc, curr) => {
+                const date = dayjs.unix(curr.timestamp).format('YYYY-MM-DD');
+                const usdValue = getTxnUsdValue(curr);
+                acc[date] = (acc[date] || 0) + usdValue;
+                return acc;
+            }, {});
+
+            const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
+            
+            salesOverTimeData = {
+                labels: sortedDates,
+                datasets: [
+                    {
+                        label: 'Daily Sales Volume (USD)',
+                        data: sortedDates.map(date => salesByDay[date]),
+                        fill: false,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                    },
+                ],
+            };
+            
+            ready = true;
+        });
+
+        return unsubscribe;
     });
 </script>
 
@@ -68,47 +89,53 @@
         <h1 class="text-4xl font-greycliffbold">Reporting & Analytics</h1>
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="card bg-base-100 shadow-xl border">
-            <div class="card-body items-center text-center">
-                <h2 class="card-title text-xl font-greycliffmed">Total Revenue</h2>
-                <p class="text-3xl font-mono">${totalRevenue.toFixed(2)}</p>
+    {#if ready}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="card bg-base-100 shadow-xl border">
+                <div class="card-body items-center text-center">
+                    <h2 class="card-title text-xl font-greycliffmed">Total Revenue</h2>
+                    <p class="text-3xl font-mono">${totalRevenue.toFixed(2)}</p>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow-xl border">
+                <div class="card-body items-center text-center">
+                    <h2 class="card-title text-xl font-greycliffmed">Total Transactions</h2>
+                    <p class="text-3xl font-mono">{totalTransactions}</p>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow-xl border">
+                <div class="card-body items-center text-center">
+                    <h2 class="card-title text-xl font-greycliffmed">Average Sale</h2>
+                    <p class="text-3xl font-mono">${averageSale.toFixed(2)}</p>
+                </div>
             </div>
         </div>
-        <div class="card bg-base-100 shadow-xl border">
-            <div class="card-body items-center text-center">
-                <h2 class="card-title text-xl font-greycliffmed">Total Transactions</h2>
-                <p class="text-3xl font-mono">{totalTransactions}</p>
-            </div>
-        </div>
-        <div class="card bg-base-100 shadow-xl border">
-            <div class="card-body items-center text-center">
-                <h2 class="card-title text-xl font-greycliffmed">Average Sale</h2>
-                <p class="text-3xl font-mono">${averageSale.toFixed(2)}</p>
-            </div>
-        </div>
-    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        <div class="card bg-base-100 shadow-xl border">
-            <div class="card-body">
-                <h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Token</h2>
-                {#if salesByTokenData.labels && salesByTokenData.labels.length}
-                    <Pie data={salesByTokenData} />
-                {:else}
-                    <p class="text-center">No sales data available.</p>
-                {/if}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+            <div class="card bg-base-100 shadow-xl border">
+                <div class="card-body">
+                    <h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Token</h2>
+                    {#if salesByTokenData.labels && salesByTokenData.labels.length}
+                        <Pie data={salesByTokenData} />
+                    {:else}
+                        <p class="text-center">No sales data available.</p>
+                    {/if}
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow-xl border">
+                <div class="card-body">
+                    <h2 class="card-title text-xl font-greycliffmed mb-4">Sales Over Time</h2>
+                    {#if salesOverTimeData.labels && salesOverTimeData.labels.length}
+                        <Line data={salesOverTimeData} />
+                    {:else}
+                        <p class="text-center">No sales data available.</p>
+                    {/if}
+                </div>
             </div>
         </div>
-        <div class="card bg-base-100 shadow-xl border">
-            <div class="card-body">
-                <h2 class="card-title text-xl font-greycliffmed mb-4">Sales Over Time</h2>
-                 {#if salesOverTimeData.labels && salesOverTimeData.labels.length}
-                    <Line data={salesOverTimeData} />
-                {:else}
-                    <p class="text-center">No sales data available.</p>
-                {/if}
-            </div>
+    {:else}
+        <div class="text-center p-8">
+            <p>Loading real-time price data...</p>
         </div>
-    </div>
+    {/if}
 </div>
