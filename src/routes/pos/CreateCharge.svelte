@@ -1,7 +1,8 @@
 <script lang='ts'>
     import { onMount } from "svelte";
     import { goto } from '$app/navigation';
-    import { pmtAmt, selectedMint, invoices } from '../stores.js';
+    import { pmtAmt, selectedMint } from '../stores.js';
+    import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
     import { browser } from '$app/environment';
     import bonkLogo from "../../lib/images/BonkLogo.png";
@@ -10,6 +11,7 @@
     import hntLogo from "../../lib/images/HNTLogo.png";
 
     let showInventoryModal = false;
+    let chargeItems = [];
 
     const keys = [
         { row: 0, value: "1"}, { row: 0, value: "2"}, { row: 0, value: "3"}, 
@@ -19,22 +21,102 @@
         value: "."}
     ];
     
+    // Numpad state
     let left = "";
     let right = "";
     let decimalsActive = false;
 
-    onMount(() => {
+    // --- Functions for charge management ---
+
+    function handleAddItem(event) {
+        const itemToAdd = event.detail;
+
+        // If cart is empty, set the currency for this transaction
+        if (chargeItems.length === 0) {
+            $selectedMint = itemToAdd.currency;
+        } 
+        // If cart is not empty, check if currency matches
+        else if (itemToAdd.currency !== $selectedMint) {
+            showToast('All items in a charge must have the same currency.', 'error');
+            return;
+        }
+
+        const existingItemIndex = chargeItems.findIndex(i => i.id === itemToAdd.id);
+
+        if (existingItemIndex > -1) {
+            // Increment quantity if item already exists
+            chargeItems[existingItemIndex].quantity += 1;
+        } else {
+            // Add new item with quantity of 1
+            chargeItems.push({ ...itemToAdd, quantity: 1 });
+        }
+        
+        chargeItems = chargeItems; // Trigger reactivity
+        showInventoryModal = false; // Close modal after adding
+    }
+
+    function removeItem(itemId) {
+        chargeItems = chargeItems.filter(i => i.id !== itemId);
+        if (chargeItems.length === 0) {
+            clearCharge();
+        }
+    }
+
+    function incrementQuantity(itemId) {
+        const itemIndex = chargeItems.findIndex(i => i.id === itemId);
+        if (itemIndex > -1) {
+            chargeItems[itemIndex].quantity += 1;
+            chargeItems = chargeItems;
+        }
+    }
+
+    function decrementQuantity(itemId) {
+        const itemIndex = chargeItems.findIndex(i => i.id === itemId);
+        if (itemIndex > -1) {
+            if (chargeItems[itemIndex].quantity > 1) {
+                chargeItems[itemIndex].quantity -= 1;
+                chargeItems = chargeItems;
+            } else {
+                // Remove item if quantity becomes 0
+                removeItem(itemId);
+            }
+        }
+    }
+
+    function clearCharge() {
+        chargeItems = [];
         $pmtAmt = "0.00";
         left = "";
         right = "";
         decimalsActive = false;
+        // The selectedMint will be reset when a new item is added
+    }
+
+    onMount(() => {
+        // Reset charge on component mount to ensure a clean state
+        clearCharge();
     });
+
+    // --- Reactive total calculation ---
+    $: {
+        if (chargeItems.length > 0) {
+            const total = chargeItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+            $pmtAmt = total.toLocaleString("en", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 4 
+            });
+            const firstItem = chargeItems[0];
+            if (firstItem && $selectedMint !== firstItem.currency) {
+                $selectedMint = firstItem.currency;
+            }
+        }
+    }
 
     function createQRCode() {
         if (parseFloat($pmtAmt.replace(/,/g, '')) > 0) {
             goto('/present');
         } else {
-            if(browser) alert("Please enter an amount greater than zero.");
+            if(browser) showToast("Please enter an amount greater than zero.", "error");
         }
 	}
 
@@ -68,12 +150,18 @@
 </script>
 
 {#if showInventoryModal}
-    <InventoryModal on:close={() => showInventoryModal = false} />
+    <InventoryModal 
+        currentCurrency={chargeItems.length > 0 ? $selectedMint : null}
+        on:addItem={handleAddItem} 
+        on:close={() => showInventoryModal = false} 
+    />
 {/if}
 
 <div class="card w-full max-w-md bg-base-100 shadow-xl border border-gray-200">
     <div class="card-body p-8 items-center text-center">
         <h2 class="card-title text-xl font-greycliffmed mb-4">Create Charge</h2>
+        
+        <!-- Display and Total -->
         <div class="flex items-center space-x-2">
             {#if $selectedMint === "USDC"}
                 <svg class="h-9 w-9" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
@@ -89,12 +177,48 @@
             {/if}
             <input bind:value={$pmtAmt} class="input input-bordered w-48 text-right text-xl font-mono" placeholder="0.00" readonly />
         </div>
-        <div class="mt-4 w-full max-w-xs">
-            <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
-        </div>
-        <div class="card-actions justify-center mt-6">
-            <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case">Add from Inventory</button>
-            <button on:click={createQRCode} class="btn btn-primary text-white font-greycliffbold normal-case">Create QR Code</button>
+        
+        <!-- Conditional UI: Keypad vs. Item List -->
+        {#if chargeItems.length === 0}
+            <!-- Keypad for manual entry -->
+            <div class="mt-4 w-full max-w-xs">
+                <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
+            </div>
+        {:else}
+            <!-- List of charged items -->
+            <div class="mt-4 w-full max-w-xs space-y-2 text-left">
+                <h3 class="font-greycliffmed text-lg text-center">Current Charge</h3>
+                {#each chargeItems as item (item.id)}
+                    <div class="grid grid-cols-4 gap-2 items-center">
+                        <span class="col-span-2 truncate">{item.name}</span>
+                        <div class="col-span-1 flex items-center justify-center space-x-1">
+                            <button on:click={() => decrementQuantity(item.id)} class="btn btn-xs btn-ghost">-</button>
+                            <span>{item.quantity}</span>
+                            <button on:click={() => incrementQuantity(item.id)} class="btn btn-xs btn-ghost">+</button>
+                        </div>
+                        <span class="col-span-1 text-right font-mono">{(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                {/each}
+                <div class="divider"></div>
+                <div class="flex justify-between font-bold">
+                    <span>Total</span>
+                    <span class="font-mono">{$pmtAmt} {$selectedMint}</span>
+                </div>
+            </div>
+        {/if}
+        
+        <!-- Actions -->
+        <div class="card-actions justify-center mt-6 w-full">
+            <div class="flex flex-col space-y-2 w-full max-w-xs">
+                <div class="flex space-x-2">
+                    <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case flex-1">Add Item</button>
+                    {#if chargeItems.length > 0}
+                        <button on:click={clearCharge} class="btn btn-warning normal-case">Clear</button>
+                    {/if}
+                </div>
+                 <button on:click={createQRCode} class="btn btn-primary text-white font-greycliffbold normal-case w-full">Create QR Code</button>
+            </div>
         </div>
     </div>
 </div>
+

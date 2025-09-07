@@ -1,20 +1,23 @@
 <script lang='ts'>
-    import { inventory, pmtAmt, selectedMint } from '../stores.js';
     import { createEventDispatcher } from 'svelte';
+    import { inventory } from '../stores.js';
+    export let currentCurrency;
 
     const dispatch = createEventDispatcher();
 
     function selectItem(item) {
-        $pmtAmt = item.price.toFixed(2);
-        $selectedMint = item.currency;
-        dispatch('close');
+        if (currentCurrency && item.currency !== currentCurrency) {
+            // Logic to prevent adding items with different currencies is in CreateCharge.svelte
+            // but we can also disable the button here for better UX.
+            return;
+        }
+        dispatch('addItem', item);
     }
 </script>
 
 <div class="modal modal-open">
     <div class="modal-box">
-        <h3 class="font-bold text-lg">Select an Item from Inventory</h3>
-        <button class="btn btn-sm btn-circle absolute right-2 top-2" on:click={() => dispatch('close')}>✕</button>
+        <h3 class="font-bold text-lg">Select an item from inventory</h3>
         <div class="py-4">
             <div class="overflow-x-auto">
                 <table class="table w-full">
@@ -22,7 +25,7 @@
                         <tr>
                             <th>Item Name</th>
                             <th class="text-right">Price</th>
-                            <th class="text-center">Action</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -31,14 +34,18 @@
                                 <td class="font-greycliffmed">{item.name}</td>
                                 <td class="text-right font-mono">{(item.price || 0).toFixed(2)} {item.currency}</td>
                                 <td class="text-center">
-                                    <button class="btn btn-xs btn-primary" on:click={() => selectItem(item)}>Add</button>
+                                    <button
+                                        class="btn btn-xs btn-outline btn-success"
+                                        on:click={() => selectItem(item)}
+                                        disabled={currentCurrency && item.currency !== currentCurrency}
+                                    >
+                                        Add
+                                    </button>
                                 </td>
                             </tr>
                         {/each}
                         {#if $inventory.length === 0}
-                            <tr>
-                                <td colspan="3" class="text-center text-gray-500 py-4">No items in inventory.</td>
-                            </tr>
+                            <tr><td colspan="3" class="text-center py-4">No items in inventory.</td></tr>
                         {/if}
                     </tbody>
                 </table>
