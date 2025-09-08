@@ -32,7 +32,7 @@ export async function getChartDataForCoin(coingeckoId, days = 7) {
 
     // Return cached data if it exists
     if (currentCharts[coingeckoId] && currentCharts[coingeckoId][days]) {
-        return currentCharts[coingeckoId][days];
+        return Promise.resolve(currentCharts[coingeckoId][days]);
     }
 
     try {
@@ -41,7 +41,7 @@ export async function getChartDataForCoin(coingeckoId, days = 7) {
             throw new Error(`Failed to fetch chart data for ${coingeckoId}`);
         }
         const data = await response.json();
-        const prices = data.prices;
+        const prices = data.prices || []; // Ensure prices is always an array
         
         // Update the cache in the store
         tokenCharts.update(charts => {
@@ -54,6 +54,12 @@ export async function getChartDataForCoin(coingeckoId, days = 7) {
 
     } catch (error) {
         console.error(error);
+        // In case of an error, update the cache with an empty array to prevent re-fetching a failing request
+        tokenCharts.update(charts => {
+            if (!charts[coingeckoId]) charts[coingeckoId] = {};
+            charts[coingeckoId][days] = [];
+            return charts;
+        });
         return []; // Return empty array on error
     }
 }

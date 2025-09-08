@@ -66,6 +66,7 @@
                     <li><a href="/invoicing">Invoicing</a></li>
                     <li><a href="/inventory">Inventory</a></li>
                     <li><a href="/analytics">Analytics</a></li>
+                    <li><a href="/documentation">Documentation</a></li>
                 </ul>
             </div>
             <div class="navbar-end">

@@ -16,14 +16,17 @@
     let ready = false;
 
     onMount(() => {
-        const mintMap = new Map($mints.map(m => [m.name, m.coingeckoId]));
+        const mintMap = new Map($mints.map(m => [m.mint, m.coingeckoId]));
         
         const unsubscribe = tokenPrices.subscribe(prices => {
             if (Object.keys(prices).length === 0) return;
 
             // --- Helper to get USD value of a transaction ---
             const getTxnUsdValue = (txn) => {
-                const coingeckoId = mintMap.get(txn.mint);
+                const mintInfo = $mints.find(m => m.name === txn.mint);
+                if (!mintInfo) return 0;
+                
+                const coingeckoId = mintMap.get(mintInfo.mint);
                 const price = prices[coingeckoId]?.usd || 0;
                 return txn.uiAmount * price;
             };

@@ -10,16 +10,9 @@
 
     let activeTab = 'solana';
     let activeTimeframe = 7; // Default to 7 days
-    let chartPromise;
     
     const timeframes = [ { label: '1D', days: 1 }, { label: '7D', days: 7 }, { label: '30D', days: 30 }, { label: '90D', days: 90 }];
     const chartableMints = $mints.filter(m => m.name !== 'USDC');
-
-    // --- Reactive Logic ---
-    // This reactive block re-triggers the data fetch whenever the active tab or timeframe changes
-    $: if (browser) {
-        chartPromise = getChartDataForCoin(activeTab, activeTimeframe);
-    }
     
     // Get the name of the active token
     $: activeTokenName = chartableMints.find(m => m.coingeckoId === activeTab)?.name;
@@ -95,8 +88,8 @@
     </div>
 
     <div class="mt-4 relative h-64 flex items-center justify-center">
-        {#if chartPromise}
-            {#await chartPromise}
+        {#key activeTab + activeTimeframe}
+            {#await getChartDataForCoin(activeTab, activeTimeframe)}
                  <p class="text-center">Loading chart data...</p>
             {:then prices}
                 {#if prices && prices.length > 0}
@@ -115,11 +108,11 @@
                         options={chartOptions} 
                     />
                 {:else}
-                    <p class="text-center text-error">Could not load chart data for this timeframe.</p>
+                    <p class="text-center text-error">No data available for this timeframe.</p>
                 {/if}
             {:catch error}
                  <p class="text-center text-error">Error: {error.message}</p>
             {/await}
-        {/if}
+        {/key}
     </div>
 </div>

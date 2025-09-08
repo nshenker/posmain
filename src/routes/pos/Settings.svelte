@@ -1,7 +1,12 @@
 <script lang='ts'>
     import { onMount, onDestroy } from "svelte";
     import { goto } from '$app/navigation';
-    import { storeName, publicKey, pmtAmt, showWarning, mints, selectedMint, merchantLogo, successArray, mostRecentTxn, fullScreen, theme, invoices, inventory } from '../stores.js';
+    import { 
+        storeName, publicKey, pmtAmt, showWarning, mints, selectedMint, 
+        merchantLogo, successArray, mostRecentTxn, fullScreen, theme, 
+        invoices, inventory, categories, inventoryHistory, currentChargeItems,
+        dashboardLayout
+    } from '../stores.js';
     import { get } from 'svelte/store';
     import { showToast } from '../toastStore.js';
 
@@ -21,7 +26,12 @@
             theme.set("light");
             invoices.set([]);
             inventory.set([]);
-            goto('/', { state: { foo: 'bar' } });
+            categories.set(["Default"]);
+            inventoryHistory.set({});
+            currentChargeItems.set([]);
+            // A default layout structure is needed here to avoid errors on reset
+            dashboardLayout.set({ widgets: [ { id: 'keyMetrics', name: 'Key Metrics', visible: true } ] });
+            goto('/', { replace: true });
         }
     }
 
@@ -50,8 +60,10 @@
             theme: get(theme),
             invoices: get(invoices),
             inventory: get(inventory),
+            categories: get(categories),
+            inventoryHistory: get(inventoryHistory),
+            dashboardLayout: get(dashboardLayout)
         };
-
         const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -82,10 +94,12 @@
                     theme.set(importedData.theme || "light");
                     invoices.set(importedData.invoices || []);
                     inventory.set(importedData.inventory || []);
+                    categories.set(importedData.categories || ["Default"]);
+                    inventoryHistory.set(importedData.inventoryHistory || {});
+                    dashboardLayout.set(importedData.dashboardLayout || { widgets: [] });
 
                     showToast('Data imported successfully! The page will now reload.', 'success');
                     setTimeout(() => window.location.reload(), 2000);
-
                 } catch (error) {
                     console.error("Failed to parse imported file:", error);
                     showToast('Invalid backup file. Please try again.', 'error');
@@ -104,7 +118,8 @@
             <label class="label cursor-pointer">
                 <span class="label-text font-greycliffmed">Show 'No Custody' Warning</span>
                 <input type="checkbox" bind:checked={$showWarning} class="toggle toggle-primary" />
-	        </label>
+	     
+	    </label>
         </div>
 
         <div class="form-control w-full mt-4">
@@ -113,7 +128,8 @@
             </label>
             <select id="currency-select" bind:value={$selectedMint} class="select select-bordered">
 			     {#each $mints as mint}
-                    <option>{mint.name}</option>
+         
+                   <option>{mint.name}</option>
                 {/each}
             </select>
         </div>
@@ -122,7 +138,8 @@
             <label for="logo-upload" class="label">
 			   <span class="label-text font-greycliffmed">Brand Logo</span>
             </label>
-            <input id="logo-upload" type="file" on:change={handleLogoUpload} class="file-input file-input-bordered w-full" />
+          
+	   <input id="logo-upload" type="file" on:change={handleLogoUpload} class="file-input file-input-bordered w-full" />
         </div>
         
         <div class="divider"></div>
@@ -132,7 +149,8 @@
         <div class="form-control w-full mt-4">
             <label for="export-data" class="label">
                 <span class="label-text font-greycliffmed">Export Data</span>
-            </label>
+         
+	    </label>
             <button id="export-data" on:click={exportData} class="btn btn-outline normal-case">Download Backup</button>
         </div>
 
@@ -140,7 +158,8 @@
             <label for="import-data" class="label">
                 <span class="label-text font-greycliffmed">Import Data</span>
             </label>
-            <input id="import-data" type="file" on:change={handleDataImport} accept=".json" class="file-input file-input-bordered w-full" />
+            <input id="import-data" type="file" 
+ on:change={handleDataImport} accept=".json" class="file-input file-input-bordered w-full" />
         </div>
 
         <div class="divider"></div>

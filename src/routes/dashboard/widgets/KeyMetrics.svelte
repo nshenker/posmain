@@ -8,13 +8,17 @@
     let averageSale = 0;
     
     onMount(() => {
-        const mintMap = new Map($mints.map(m => [m.name, m.coingeckoId]));
+        const mintMap = new Map($mints.map(m => [m.mint, m.coingeckoId]));
         
         const unsubscribe = tokenPrices.subscribe(prices => {
             if (Object.keys(prices).length === 0) return;
 
             const getTxnUsdValue = (txn) => {
-                const coingeckoId = mintMap.get(txn.mint);
+                // Find the mint address from the successArray's mint name (e.g., "SOL")
+                const mintInfo = $mints.find(m => m.name === txn.mint);
+                if (!mintInfo) return 0;
+
+                const coingeckoId = mintMap.get(mintInfo.mint);
                 const price = prices[coingeckoId]?.usd || 0;
                 return txn.uiAmount * price;
             };
