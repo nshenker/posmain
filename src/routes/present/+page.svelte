@@ -2,7 +2,8 @@
     import { onMount } from "svelte";
     import * as web3 from '@solana/web3.js';
     import { createQR, encodeURL, findReference, FindReferenceError} from "@solana/pay"
-    import { storeName, publicKey, pmtAmt, mostRecentTxn, showWarning, successArray, mints, selectedMint} from '../stores.js';
+    import { storeName, publicKey, pmtAmt, mostRecentTxn, showWarning, successArray, mints, selectedMint, inventory, currentChargeItems} from '../stores.js';
+    import { logHistory } from '../../utils/inventory.js';
     import { goto } from '$app/navigation';
     import BigNumber from 'bignumber.js';
 
@@ -62,16 +63,39 @@
 
             try {
                 const signatureInfo = await findReference(connection, reference, { commitment: 'confirmed' });
+                clearInterval(intervalId);
                 txnConfirmed = true;
                 statusMessage = "Transaction Confirmed!";
-                clearInterval(intervalId);
+
+                // --- BEGIN INVENTORY UPDATE LOGIC ---
+                if ($currentChargeItems && $currentChargeItems.length > 0) {
+                    inventory.update(inv => {
+                        const newInv = [...inv];
+                        for (const soldItem of $currentChargeItems) {
+                            // Find the item in our inventory by its unique ID
+                            const itemIndex = newInv.findIndex(i => i.id === soldItem.id);
+                            if (itemIndex > -1) {
+                                const originalQty = newInv[itemIndex].quantity;
+                                const newQty = originalQty - soldItem.quantity;
+                                newInv[itemIndex].quantity = newQty;
+
+                                // Log the sale to the item's history
+                                logHistory(soldItem.id, `Sale (Tx: ${signatureInfo.signature.substring(0, 4)}...)`, `-${soldItem.quantity}`, newQty);
+                            }
+                        }
+                        return newInv;
+                    });
+                    // Clear the charge items store after processing
+                    currentChargeItems.set([]);
+                }
+                // --- END INVENTORY UPDATE LOGIC ---
+
 
                 let confirmedTxn = await connection.getParsedTransaction(signatureInfo.signature, "confirmed");
                 if (confirmedTxn) {
                     const transferInstruction = confirmedTxn.transaction.message.instructions.find(
                         (instruction) => (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transfer' || (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transferChecked'
-                    ) as web3.PartiallyDecodedInstruction |
-undefined;
+                    ) as web3.PartiallyDecodedInstruction | undefined;
                     
                     let uiAmount = 0;
                     if (transferInstruction?.parsed?.info?.tokenAmount) {

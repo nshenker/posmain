@@ -73,9 +73,13 @@ export const selectedMint = createPersistentStore("selectedMint", "USDC");
 export const merchantLogo = createPersistentStore("merchantLogo", "");
 export const theme = createPersistentStore("theme", "light");
 
-// New stores for inventory and invoicing
+// --- Inventory & Invoicing Stores ---
 export const inventory = createPersistentStore("inventory", []);
+export const categories = createPersistentStore("categories", ["Default"]);
+export const inventoryHistory = createPersistentStore("inventoryHistory", {}); // { itemId: [ { date, reason, change, newQty } ] }
 export const invoices = createPersistentStore("invoices", []);
+export const currentChargeItems = createPersistentStore("currentChargeItems", []); // Holds items for the current transaction
+
 
 // New store for dashboard layout
 export const dashboardLayout = createPersistentStore("dashboardLayout", {

@@ -35,6 +35,7 @@
 		"date-fns": "^2.30.0",
 		"dayjs": "^1.11.7",
 		"focus-svelte": "^0.3.4",
+		"jsbarcode": "^3.11.5",
 		"kioskboard": "^2.3.0",
 		"svelte-chartjs": "2.1.0",
 		"svelte-french-toast": "^1.2.0",
