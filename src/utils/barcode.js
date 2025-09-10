@@ -1,82 +1,111 @@
 import JsBarcode from 'jsbarcode';
 
-function generateBarcodeSVG(item) {
-    const container = document.createElement('div');
+/**
+ * Creates an SVG element for a given item's barcode.
+ * @param {object} item - The inventory item.
+ * @returns {SVGSVGElement} - The generated SVG element.
+ */
+function createBarcodeSVG(item) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    container.appendChild(svg);
-    
     try {
         JsBarcode(svg, item.barcode, {
             format: "CODE128",
             displayValue: true,
-            text: `${item.name} - $${item.price}`,
-            fontSize: 14,
-            margin: 10
+            text: `${item.name}`,
+            fontSize: 16,
+            margin: 10,
+            width: 2,
+            height: 60,
         });
-        return container.innerHTML;
     } catch (e) {
         console.error("Error generating barcode for item:", item.name, e);
-        return `<p>Invalid barcode for ${item.name}</p>`;
+        // Return an empty SVG on error
     }
+    return svg;
 }
 
-export function printBarcode(item) {
-    const barcodeHTML = generateBarcodeSVG(item);
-    
-    const printWindow = window.open('', 'PRINT', 'height=400,width=600');
-    printWindow.document.write('<html><head><title>Print Barcode</title></head><body>');
-    printWindow.document.write(barcodeHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 250);
+
+/**
+ * Triggers a browser download for a given Blob.
+ * @param {Blob} blob - The data blob to download.
+ * @param {string} filename - The desired filename for the download.
+ */
+function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
-export function printMultipleBarcodes(items) {
-    const printWindow = window.open('', 'PRINT', 'height=800,width=600');
-    printWindow.document.write('<html><head><title>Print Barcodes</title>');
-    printWindow.document.write(`
-        <style>
-            @media print {
-                @page { margin: 0.5in; }
-                body { margin: 0; }
-                .barcode-container {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 20px;
-                    page-break-inside: avoid;
-                }
-                .barcode-item {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                }
-                svg {
-                    width: 100%;
-                }
-            }
-        </style>
-    `);
-    printWindow.document.write('</head><body><div class="barcode-container">');
 
-    items.forEach(item => {
-        if (item.barcode) {
-             const barcodeHTML = generateBarcodeSVG(item);
-             printWindow.document.write(`<div class="barcode-item">${barcodeHTML}</div>`);
-        }
+/**
+ * Generates and saves a single barcode as an SVG file.
+ * @param {object} item - The inventory item.
+ */
+export function saveBarcode(item) {
+    if (!item.barcode) return;
+    const svg = createBarcodeSVG(item);
+    const svgString = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    triggerDownload(blob, `${item.name.replace(/ /g, '_')}-barcode.svg`);
+}
+
+
+/**
+ * Generates and saves a single sheet of multiple barcodes as an SVG file.
+ * @param {Array<object>} items - An array of inventory items.
+ */
+export function saveMultipleBarcodes(items) {
+    const PADDING = 20;
+    const LABEL_WIDTH = 300;
+    const LABEL_HEIGHT = 150;
+    const COLS = 2;
+
+    const sheet = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    
+    items.forEach((item, index) => {
+        if (!item.barcode) return;
+
+        const row = Math.floor(index / COLS);
+        const col = index % COLS;
+
+        const offsetX = col * (LABEL_WIDTH + PADDING);
+        const offsetY = row * (LABEL_HEIGHT + PADDING);
+        
+        const svg = createBarcodeSVG(item);
+
+        // Create a group for each label and transform it into position
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
+        
+        // Optional: Add a border for easy cutting
+        const border = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        border.setAttribute('x', 0);
+        border.setAttribute('y', 0);
+        border.setAttribute('width', LABEL_WIDTH);
+        border.setAttribute('height', LABEL_HEIGHT);
+        border.setAttribute('fill', 'none');
+        border.setAttribute('stroke', '#ccc');
+        border.setAttribute('stroke-dasharray', '5,5');
+        
+        group.appendChild(border);
+        group.appendChild(svg);
+        sheet.appendChild(group);
     });
-
-    printWindow.document.write('</div></body></html>');
-    printWindow.document.close();
-    printWindow.focus();
     
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 250);
+    const numRows = Math.ceil(items.length / COLS);
+    const totalWidth = COLS * LABEL_WIDTH + (COLS - 1) * PADDING;
+    const totalHeight = numRows * LABEL_HEIGHT + (numRows - 1) * PADDING;
+
+    sheet.setAttribute('width', totalWidth);
+    sheet.setAttribute('height', totalHeight);
+    sheet.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+    const svgString = new XMLSerializer().serializeToString(sheet);
+    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    triggerDownload(blob, `barcodes-sheet.svg`);
 }

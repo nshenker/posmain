@@ -6,7 +6,7 @@
     import { showToast } from '../toastStore.js';
     import HistoryModal from './HistoryModal.svelte';
     import Reports from './Reports.svelte';
-    import { printBarcode, printMultipleBarcodes } from '../../utils/barcode.js';
+    import { saveBarcode, saveMultipleBarcodes } from '../../utils/barcode.js';
     import { logHistory } from '../../utils/inventory.js';
 
     let activeTab = 'inventory';
@@ -82,12 +82,12 @@
         showHistoryModal = true;
     }
     
-    function handlePrintSelected() {
-        const itemsToPrint = $inventory.filter(item => selectedItems.includes(item.id));
-        if (itemsToPrint.length > 0) {
-            printMultipleBarcodes(itemsToPrint);
+    function handleSaveSelected() {
+        const itemsToSave = $inventory.filter(item => selectedItems.includes(item.id));
+        if (itemsToSave.length > 0) {
+            saveMultipleBarcodes(itemsToSave);
         } else {
-            showToast("Please select items to print.", "error");
+            showToast("Please select items to save.", "error");
         }
     }
 
@@ -164,7 +164,7 @@
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="card-title text-xl font-greycliffmed">Current Inventory</h2>
                         {#if selectedItems.length > 0}
-                             <button class="btn btn-secondary" on:click={handlePrintSelected}>Print {selectedItems.length} Barcode(s)</button>
+                             <button class="btn btn-secondary" on:click={handleSaveSelected}>Save {selectedItems.length} Barcode(s)</button>
                         {/if}
                     </div>
                     <div class="overflow-x-auto">
@@ -189,7 +189,11 @@
                                         <td class="flex items-center gap-2">
                                             <span>{item.barcode}</span>
                                             {#if item.barcode}
-                                                <button class="btn btn-xs btn-ghost" on:click={() => printBarcode(item)}>🖨️</button>
+                                                <button class="btn btn-xs btn-ghost" title="Save Barcode" on:click={() => saveBarcode(item)}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    </svg>
+                                                </button>
                                             {/if}
                                         </td>
                                         <td class="text-center font-mono">{item.quantity}</td>
