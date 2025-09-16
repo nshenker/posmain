@@ -1,15 +1,22 @@
 <script lang='ts'>
-    import { successArray } from '../../stores.js';
-    import { onMount } from 'svelte';
+    import { successArray, invoices } from '../../stores.js';
     import { Chart, Title, Tooltip, Legend, ArcElement } from 'chart.js';
     import { Pie } from 'svelte-chartjs';
+    import dayjs from 'dayjs';
 
     Chart.register(Title, Tooltip, Legend, ArcElement);
 
     let salesByTokenData = {};
 
-    onMount(() => {
-        const salesByToken = $successArray.reduce((acc, curr) => {
+    $: {
+        const paidInvoicesAsSales = $invoices.filter(inv => inv.status === 'Paid').map(inv => ({
+            uiAmount: inv.total,
+            mint: inv.paymentCurrency,
+        }));
+
+        const allSales = [...$successArray, ...paidInvoicesAsSales];
+
+        const salesByToken = allSales.reduce((acc, curr) => {
             acc[curr.mint] = (acc[curr.mint] || 0) + curr.uiAmount;
             return acc;
         }, {});
@@ -25,7 +32,7 @@
                 },
             ],
         };
-    });
+    }
 </script>
 
 <div class="card-body">

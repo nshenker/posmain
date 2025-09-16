@@ -1,6 +1,5 @@
 <script lang='ts'>
-    import { successArray } from '../../stores.js';
-    import { onMount } from 'svelte';
+    import { successArray, invoices } from '../../stores.js';
     import { Chart, Title, Tooltip, Legend, PointElement, LineElement, CategoryScale, LinearScale } from 'chart.js';
     import { Line } from 'svelte-chartjs';
     import dayjs from 'dayjs';
@@ -9,8 +8,15 @@
 
     let salesOverTimeData = {};
 
-    onMount(() => {
-        const salesByDay = $successArray.reduce((acc, curr) => {
+    $: {
+        const paidInvoicesAsSales = $invoices.filter(inv => inv.status === 'Paid').map(inv => ({
+            timestamp: dayjs(inv.issueDate).unix(),
+            uiAmount: inv.total,
+        }));
+
+        const allSales = [...$successArray, ...paidInvoicesAsSales];
+
+        const salesByDay = allSales.reduce((acc, curr) => {
             const date = dayjs.unix(curr.timestamp).format('YYYY-MM-DD');
             acc[date] = (acc[date] || 0) + curr.uiAmount;
             return acc;
@@ -30,7 +36,7 @@
                 },
             ],
         };
-    });
+    }
 </script>
 
 <div class="card-body">

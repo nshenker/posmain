@@ -1,11 +1,11 @@
 <script lang='ts'>
-    import { successArray, mints, inventory, categories } from '../stores.js';
+    import { successArray, mints, inventory, categories, invoices } from '../stores.js';
     import { tokenPrices } from '../priceStore.js';
     import { onMount } from 'svelte';
+    import { get } from 'svelte/store';
     import { Chart, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement, PointElement, LineElement } from 'chart.js';
     import { Pie, Line, Bar } from 'svelte-chartjs';
     import dayjs from 'dayjs';
-
     Chart.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement, PointElement, LineElement);
 
     let totalRevenue = 0;
@@ -22,50 +22,59 @@
     
     let ready = false;
     let activeTimeframe = 'all';
-    let filteredSales = [];
 
     onMount(() => {
-        const mintMap = new Map($mints.map(m => [m.mint, m.coingeckoId]));
-        
         const unsubscribe = tokenPrices.subscribe(prices => {
-            if (Object.keys(prices).length === 0) return;
-            
-            updateAnalytics();
-            ready = true;
+            if (Object.keys(prices).length > 0) {
+                ready = true;
+            }
         });
 
         return unsubscribe;
     });
-    
-    function updateAnalytics() {
+
+    $: paidInvoicesAsSales = $invoices.filter(inv => inv.status === 'Paid').map(inv => ({
+        timestamp: dayjs(inv.issueDate).unix(),
+        uiAmount: inv.total,
+        mint: inv.paymentCurrency,
+        items: inv.items,
+        txid: `invoice-${inv.id}`
+    }));
+
+    $: allSales = [...$successArray, ...paidInvoicesAsSales];
+
+    $: filteredSales = (() => {
         const now = dayjs();
         if (activeTimeframe === '7') {
-            filteredSales = $successArray.filter(sale => now.diff(dayjs.unix(sale.timestamp), 'day') <= 7);
+            return allSales.filter(sale => now.diff(dayjs.unix(sale.timestamp), 'day') <= 7);
         } else if (activeTimeframe === '30') {
-            filteredSales = $successArray.filter(sale => now.diff(dayjs.unix(sale.timestamp), 'day') <= 30);
+            return allSales.filter(sale => now.diff(dayjs.unix(sale.timestamp), 'day') <= 30);
         } else {
-            filteredSales = $successArray;
+            return allSales;
         }
-        
+    })();
+
+    $: if (ready) {
         const mintMap = new Map($mints.map(m => [m.mint, m.coingeckoId]));
         const inventoryMap = new Map($inventory.map(item => [item.id, item]));
+        const currentTokenPrices = get(tokenPrices);
 
         const getTxnUsdValue = (txn) => {
             const mintInfo = $mints.find(m => m.name === txn.mint);
             if (!mintInfo) return 0;
             
             const coingeckoId = mintMap.get(mintInfo.mint);
-            const price = get(tokenPrices)[coingeckoId]?.usd || 0;
+            const price = currentTokenPrices[coingeckoId]?.usd || 0;
             return txn.uiAmount * price;
         };
-        
+
         totalTransactions = filteredSales.length;
-        if (totalTransactions > 0) {
+        if (totalTransactions > 0 && Object.keys(currentTokenPrices).length > 0) {
             totalRevenue = filteredSales.reduce((acc, curr) => acc + getTxnUsdValue(curr), 0);
             averageSale = totalRevenue / totalTransactions;
 
             totalProfit = filteredSales.reduce((acc, sale) => {
-                const saleProfit = sale.items.reduce((itemAcc, item) => {
+                const saleProfit = (sale.items || []).reduce((itemAcc, item) => {
                     const inventoryItem = inventoryMap.get(item.id);
                     if (inventoryItem) {
                         return itemAcc + (item.price - inventoryItem.cost) * item.quantity;
@@ -74,7 +83,6 @@
                 }, 0);
                 return acc + saleProfit;
             }, 0);
-
             averageProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
         } else {
             totalRevenue = 0;
@@ -88,7 +96,6 @@
             acc[curr.mint] = (acc[curr.mint] || 0) + usdValue;
             return acc;
         }, {});
-
         salesByTokenData = {
             labels: Object.keys(salesByToken),
             datasets: [
@@ -100,7 +107,7 @@
                 },
             ],
         };
-        
+
         const salesByDay = filteredSales.reduce((acc, curr) => {
             const date = dayjs.unix(curr.timestamp).format('YYYY-MM-DD');
             const usdValue = getTxnUsdValue(curr);
@@ -108,7 +115,6 @@
             return acc;
         }, {});
         const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
-
         salesOverTimeData = {
             labels: sortedDates,
             datasets: [
@@ -123,8 +129,7 @@
         };
 
         const salesByCategory = filteredSales.reduce((acc, sale) => {
-            const usdValue = getTxnUsdValue(sale);
-            sale.items.forEach(item => {
+            (sale.items || []).forEach(item => {
                 const inventoryItem = inventoryMap.get(item.id);
                 if (inventoryItem) {
                     const category = inventoryItem.category || 'Default';
@@ -133,7 +138,6 @@
             });
             return acc;
         }, {});
-
         salesByCategoryData = {
             labels: Object.keys(salesByCategory),
             datasets: [{
@@ -143,7 +147,7 @@
             }],
         };
         
-        topSellingProducts = filteredSales.flatMap(sale => sale.items).reduce((acc, item) => {
+        topSellingProducts = filteredSales.flatMap(sale => sale.items || []).reduce((acc, item) => {
             const existing = acc.find(i => i.id === item.id);
             if (existing) {
                 existing.quantity += item.quantity;
@@ -153,13 +157,12 @@
             }
             return acc;
         }, []).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
-        
+
         const salesByDayOfWeek = filteredSales.reduce((acc, sale) => {
             const dayOfWeek = dayjs.unix(sale.timestamp).format('dddd');
             acc[dayOfWeek] = (acc[dayOfWeek] || 0) + getTxnUsdValue(sale);
             return acc;
         }, {});
-
         salesByDayOfWeekData = {
             labels: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
             datasets: [{
@@ -177,7 +180,7 @@
         csvContent += "Date,Transaction ID,Amount,Currency,Profit\n";
         
         filteredSales.forEach(sale => {
-            const saleProfit = sale.items.reduce((itemAcc, item) => {
+            const saleProfit = (sale.items || []).reduce((itemAcc, item) => {
                 const inventoryItem = $inventory.find(i => i.id === item.id);
                 if (inventoryItem) {
                     return itemAcc + (item.price - inventoryItem.cost) * item.quantity;
@@ -194,7 +197,6 @@
             ].join(',');
             csvContent += row + "\r\n";
         });
-        
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -210,12 +212,13 @@
     </header>
 
     <div class="flex justify-end mb-4">
-        <select bind:value={activeTimeframe} on:change={updateAnalytics} class="select select-bordered">
+        <select bind:value={activeTimeframe} class="select select-bordered">
             <option value="all">All Time</option>
             <option value="30">Last 30 Days</option>
             <option value="7">Last 7 Days</option>
         </select>
-        <button class="btn btn-primary ml-4" on:click={exportToCsv}>Export to CSV</button>
+  
+		<button class="btn btn-primary ml-4" on:click={exportToCsv}>Export to CSV</button>
     </div>
 
     {#if ready}
@@ -223,19 +226,22 @@
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body items-center text-center">
               
-                    <h2 class="card-title text-xl font-greycliffmed">Total Revenue</h2>
+                 
+					<h2 class="card-title text-xl font-greycliffmed">Total Revenue</h2>
                     <p class="text-3xl font-mono">${totalRevenue.toFixed(2)}</p>
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body items-center text-center">
      
-                    <h2 class="card-title text-xl font-greycliffmed">Total Profit</h2>
+   
+					<h2 class="card-title text-xl font-greycliffmed">Total Profit</h2>
                     <p class="text-3xl font-mono">${totalProfit.toFixed(2)}</p>
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border">
-                <div class="card-body items-center text-center">
+             
+				<div class="card-body items-center text-center">
      
                     <h2 class="card-title text-xl font-greycliffmed">Total Transactions</h2>
                     <p class="text-3xl font-mono">{totalTransactions}</p>
@@ -253,7 +259,8 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
  
             <div class="card bg-base-100 shadow-xl border">
-                <div class="card-body">
+           
+				<div class="card-body">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Token</h2>
                     {#if salesByTokenData.labels && salesByTokenData.labels.length}
                    
@@ -263,61 +270,75 @@
                     {/if}
                 </div>
          
-            </div>
+       
+			</div>
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Sales Over Time</h2>
                     {#if salesOverTimeData.labels && salesOverTimeData.labels.length}
-               
+             
+   
                         <Line data={salesOverTimeData} />
                     {:else}
                         <p class="text-center">No sales data available.</p>
                     {/if}
-                </div>
+    
+				</div>
      
             </div>
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Category</h2>
-                    {#if salesByCategoryData.labels && salesByCategoryData.labels.length}
+            
+					{#if salesByCategoryData.labels && salesByCategoryData.labels.length}
                         <Pie data={salesByCategoryData} />
                     {:else}
                         <p class="text-center">No sales data available.</p>
-                    {/if}
+               
+					{/if}
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Top-Selling Products</h2>
-                    <div class="overflow-x-auto">
+         
+					<div class="overflow-x-auto">
                         <table class="table w-full">
                             <thead>
                                 <tr>
-                                    <th>Product</th>
+  
+									<th>Product</th>
                                     <th class="text-right">Units Sold</th>
-                                    <th class="text-right">Revenue</th>
+                            
+									<th class="text-right">Revenue</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {#each topSellingProducts as product}
+   
+								{#each topSellingProducts as product}
                                     <tr>
-                                        <td>{product.name}</td>
+                                
+										<td>{product.name}</td>
                                         <td class="text-right">{product.quantity}</td>
                                         <td class="text-right">${product.revenue.toFixed(2)}</td>
-                                    </tr>
+          
+									</tr>
                                 {/each}
                             </tbody>
-                        </table>
+              
+						</table>
                     </div>
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border col-span-full">
                 <div class="card-body">
-                    <h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Day of the Week</h2>
+        
+					<h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Day of the Week</h2>
                     <div class="h-64">
                         <Bar data={salesByDayOfWeekData} options={{ maintainAspectRatio: false }} />
                     </div>
-                </div>
+        
+				</div>
             </div>
         </div>
     {:else}

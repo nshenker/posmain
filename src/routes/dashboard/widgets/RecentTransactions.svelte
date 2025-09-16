@@ -1,6 +1,17 @@
 <script lang='ts'>
-    import { successArray } from '../../stores.js';
+    import { successArray, invoices } from '../../stores.js';
     import dayjs from 'dayjs';
+
+    $: paidInvoicesAsSales = $invoices.filter(inv => inv.status === 'Paid').map(inv => ({
+        timestamp: dayjs(inv.issueDate).unix(),
+        uiAmount: inv.total,
+        mint: inv.paymentCurrency,
+        txid: `Invoice #${inv.number}`
+    }));
+
+    $: allSales = [...$successArray, ...paidInvoicesAsSales];
+
+    $: recentSales = allSales.sort((a, b) => b.timestamp - a.timestamp).slice(0, 3);
 </script>
 
 <div class="card-body">
@@ -15,18 +26,22 @@
                 </tr>
             </thead>
             <tbody>
-                {#each $successArray.slice(-3).reverse() as item (item.txid)}
+                {#each recentSales as item (item.txid)}
                     <tr class="hover">
                         <td>{dayjs.unix(item.timestamp).format("YYYY-MM-DD HH:mm")}</td>
                         <td>
-                            <a class="link link-primary" href={`https://solscan.io/tx/${item.txid}`} target="_blank" rel="noopener noreferrer">
-                                {item.txid.substring(0, 4)}...{item.txid.substring(item.txid.length - 4)}
-                            </a>
+                            {#if item.txid.startsWith('Invoice')}
+                                <span>{item.txid}</span>
+                            {:else}
+                                <a class="link link-primary" href={`https://solscan.io/tx/${item.txid}`} target="_blank" rel="noopener noreferrer">
+                                    {item.txid.substring(0, 4)}...{item.txid.substring(item.txid.length - 4)}
+                                </a>
+                            {/if}
                         </td>
-                        <td class="text-right font-mono">{item.uiAmount} {item.mint}</td>
+                        <td class="text-right font-mono">{item.uiAmount.toFixed(2)} {item.mint}</td>
                     </tr>
                 {/each}
-                {#if $successArray.length === 0}
+                {#if allSales.length === 0}
                     <tr>
                         <td colspan="3" class="text-center text-gray-500 py-4">No transactions yet.</td>
                     </tr>

@@ -78,6 +78,8 @@ export const inventory = createPersistentStore("inventory", []);
 export const categories = createPersistentStore("categories", ["Default"]);
 export const inventoryHistory = createPersistentStore("inventoryHistory", {}); // { itemId: [ { date, reason, change, newQty } ] }
 export const invoices = createPersistentStore("invoices", []);
+export const customers = createPersistentStore("customers", []);
+export const customerGroups = createPersistentStore("customerGroups", []);
 export const currentChargeItems = createPersistentStore("currentChargeItems", []); // Holds items for the current transaction
 
 
