@@ -3,6 +3,7 @@
     import CustomerDetailsModal from './CustomerDetailsModal.svelte';
     import CustomerViewModal from './CustomerViewModal.svelte';
     import ManageGroupsModal from './ManageGroupsModal.svelte';
+    import { exportCustomersToCsv, importCustomersFromCsv } from '../../utils/csv.js';
 
     let showCustomerModal = false;
     let showViewModal = false;
@@ -57,9 +58,9 @@
         <h1 class="text-4xl font-greycliffbold">Customer Relationship Management</h1>
     </header>
 
-    <div class="flex justify-between items-center mb-4">
-        <div>
-            <select class="select select-bordered mr-2" bind:value={selectedTag}>
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+        <div class="flex gap-2">
+            <select class="select select-bordered" bind:value={selectedTag}>
                 <option value="">All Tags</option>
                 {#each allTags as tag}
                     <option value={tag}>{tag}</option>
@@ -72,8 +73,10 @@
                 {/each}
             </select>
         </div>
-        <div>
-            <button class="btn btn-secondary mr-2" on:click={() => showGroupsModal = true}>Manage Groups</button>
+        <div class="flex gap-2">
+            <button class="btn btn-secondary" on:click={() => importCustomersFromCsv()}>Import CSV</button>
+            <button class="btn btn-secondary" on:click={() => exportCustomersToCsv($customers)}>Export CSV</button>
+            <button class="btn btn-secondary" on:click={() => showGroupsModal = true}>Manage Groups</button>
             <button class="btn btn-primary" on:click={addNewCustomer}>Add New Customer</button>
         </div>
     </div>

@@ -2,12 +2,14 @@
     import { onMount, onDestroy } from 'svelte';
     import { browser } from '$app/environment';
     import "../app.css";
-    import { fullScreen, merchantLogo, theme } from './stores.js';
+    import { fullScreen, merchantLogo, theme, storeName } from './stores.js';
     import { fetchPrices } from './priceStore.js';
     import ThemeSwitcher from "./ThemeSwitcher.svelte";
     import { goto } from '$app/navigation';
     import { Toaster } from 'svelte-french-toast';
     import Toast from './Toast.svelte';
+    import { receiptToPrint } from './printStore.js';
+    import Receipt from './pos/Receipt.svelte';
 
     theme.subscribe(value => {
         if (browser) {
@@ -47,10 +49,21 @@
     });
 </script>
 
-<div class="bg-base-200 min-h-screen overflow-y-auto">
+<style>
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .print-area {
+            display: block !important;
+        }
+    }
+</style>
+
+<div class="bg-base-200 min-h-screen overflow-y-auto no-print">
     <Toaster />
     <Toast />
-    <div class="fixed top-0 left-0 right-0 z-50 bg-base-100 shadow-md no-print">
+    <div class="fixed top-0 left-0 right-0 z-50 bg-base-100 shadow-md">
         <div class="navbar px-4">
             <div class="navbar-start">
                 <div class="dropdown">
@@ -101,4 +114,14 @@
     <main class="pt-24 pb-16 md:pb-4">
       <slot />
     </main>
+</div>
+
+<div class="print-area" style="display: none;">
+    {#if $receiptToPrint}
+        <Receipt 
+            transaction={$receiptToPrint}
+            storeName={$storeName}
+            merchantLogo={$merchantLogo}
+        />
+    {/if}
 </div>

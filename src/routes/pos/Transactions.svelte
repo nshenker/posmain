@@ -1,6 +1,7 @@
 <script lang='ts'>
-  import { successArray } from '../stores.js';
-  import dayjs from 'dayjs';
+    import { successArray } from '../stores.js';
+    import dayjs from 'dayjs';
+    import { triggerPrint } from '../printStore.js';
 </script>
 
 <div class="card w-full max-w-4xl bg-base-100 shadow-xl border border-gray-200">
@@ -14,6 +15,7 @@
                         <th class="text-left">Transaction ID</th>
                         <th class="text-right">Amount</th>
                         <th class="text-right">Coin</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -27,11 +29,14 @@
                         </td>
                         <td class="text-right font-mono">{item.uiAmount}</td>
 					    <td class="text-right font-mono">{item.mint}</td>
+                        <td class="text-center">
+                            <button class="btn btn-xs btn-outline" on:click={() => triggerPrint(item)}>Print</button>
+                        </td>
                     </tr>
                     {/each}
                     {#if $successArray.length === 0}
                         <tr>
-	                     <td colspan="4" class="text-center text-gray-500 py-4">No transactions yet.</td>
+	                     <td colspan="5" class="text-center text-gray-500 py-4">No transactions yet.</td>
                         </tr>
                     {/if}
                 </tbody>

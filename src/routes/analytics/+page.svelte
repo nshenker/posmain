@@ -211,44 +211,37 @@
         <h1 class="text-4xl font-greycliffbold">Reporting & Analytics</h1>
     </header>
 
-    <div class="flex justify-end mb-4">
+    <div class="flex flex-col sm:flex-row justify-end mb-4 gap-2">
         <select bind:value={activeTimeframe} class="select select-bordered">
             <option value="all">All Time</option>
             <option value="30">Last 30 Days</option>
             <option value="7">Last 7 Days</option>
         </select>
   
-		<button class="btn btn-primary ml-4" on:click={exportToCsv}>Export to CSV</button>
+		<button class="btn btn-primary" on:click={exportToCsv}>Export to CSV</button>
     </div>
 
     {#if ready}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body items-center text-center">
-              
-                 
 					<h2 class="card-title text-xl font-greycliffmed">Total Revenue</h2>
                     <p class="text-3xl font-mono">${totalRevenue.toFixed(2)}</p>
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body items-center text-center">
-     
-   
 					<h2 class="card-title text-xl font-greycliffmed">Total Profit</h2>
                     <p class="text-3xl font-mono">${totalProfit.toFixed(2)}</p>
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border">
-             
 				<div class="card-body items-center text-center">
-     
                     <h2 class="card-title text-xl font-greycliffmed">Total Transactions</h2>
                     <p class="text-3xl font-mono">{totalTransactions}</p>
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border">
-               
                 <div class="card-body items-center text-center">
                     <h2 class="card-title text-xl font-greycliffmed">Avg. Profit Margin</h2>
                     <p class="text-3xl font-mono">{averageProfitMargin.toFixed(2)}%</p>
@@ -257,87 +250,67 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
- 
             <div class="card bg-base-100 shadow-xl border">
-           
 				<div class="card-body">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Token</h2>
                     {#if salesByTokenData.labels && salesByTokenData.labels.length}
-                   
                         <Pie data={salesByTokenData} />
                     {:else}
                         <p class="text-center">No sales data available.</p>
                     {/if}
                 </div>
-         
-       
 			</div>
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Sales Over Time</h2>
                     {#if salesOverTimeData.labels && salesOverTimeData.labels.length}
-             
-   
                         <Line data={salesOverTimeData} />
                     {:else}
                         <p class="text-center">No sales data available.</p>
                     {/if}
-    
 				</div>
-     
             </div>
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Category</h2>
-            
 					{#if salesByCategoryData.labels && salesByCategoryData.labels.length}
                         <Pie data={salesByCategoryData} />
                     {:else}
                         <p class="text-center">No sales data available.</p>
-               
 					{/if}
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border">
                 <div class="card-body">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Top-Selling Products</h2>
-         
 					<div class="overflow-x-auto">
                         <table class="table w-full">
                             <thead>
                                 <tr>
-  
 									<th>Product</th>
                                     <th class="text-right">Units Sold</th>
-                            
 									<th class="text-right">Revenue</th>
                                 </tr>
                             </thead>
                             <tbody>
-   
 								{#each topSellingProducts as product}
                                     <tr>
-                                
 										<td>{product.name}</td>
                                         <td class="text-right">{product.quantity}</td>
                                         <td class="text-right">${product.revenue.toFixed(2)}</td>
-          
 									</tr>
                                 {/each}
                             </tbody>
-              
 						</table>
                     </div>
                 </div>
             </div>
             <div class="card bg-base-100 shadow-xl border col-span-full">
                 <div class="card-body">
-        
 					<h2 class="card-title text-xl font-greycliffmed mb-4">Sales by Day of the Week</h2>
                     <div class="h-64">
                         <Bar data={salesByDayOfWeekData} options={{ maintainAspectRatio: false }} />
                     </div>
-        
 				</div>
             </div>
         </div>
