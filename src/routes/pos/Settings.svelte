@@ -5,36 +5,39 @@
         storeName, publicKey, pmtAmt, showWarning, mints, selectedMint, 
         merchantLogo, successArray, mostRecentTxn, fullScreen, theme, 
         invoices, inventory, categories, inventoryHistory, currentChargeItems,
-        dashboardLayout, customers, customerGroups
+        dashboardLayout, customers, customerGroups, lastBackupDate
     } from '../stores.js';
 	import { get } from 'svelte/store';
     import { showToast } from '../toastStore.js';
+    import ConfirmationModal from '../ConfirmationModal.svelte';
+
+    let showResetConfirmation = false;
 
 	async function reset() {
-        if (typeof window !== 'undefined' && confirm("Are you sure you want to reset your store? This will clear all settings, transaction history, invoices, and inventory permanently.")) {
-            localStorage.clear();
-			// Reset all stores to their default values
-            storeName.set("");
-			publicKey.set("");
-            pmtAmt.set("");
-            mostRecentTxn.set("");
-            showWarning.set(true);
-            fullScreen.set(false);
-            successArray.set([]);
-            selectedMint.set("USDC");
-            merchantLogo.set("");
-            theme.set("light");
-            invoices.set([]);
-            inventory.set([]);
-            categories.set(["Default"]);
-            inventoryHistory.set({});
-            currentChargeItems.set([]);
-            customers.set([]);
-            customerGroups.set([]);
-			// A default layout structure is needed here to avoid errors on reset
-            dashboardLayout.set({ widgets: [ { id: 'keyMetrics', name: 'Key Metrics', visible: true } ] });
-			goto('/', { replace: true });
-        }
+        showResetConfirmation = false;
+        localStorage.clear();
+        // Reset all stores to their default values
+        storeName.set("");
+        publicKey.set("");
+        pmtAmt.set("");
+        mostRecentTxn.set("");
+        showWarning.set(true);
+        fullScreen.set(false);
+        successArray.set([]);
+        selectedMint.set("USDC");
+        merchantLogo.set("");
+        theme.set("light");
+        invoices.set([]);
+        inventory.set([]);
+        categories.set(["Default"]);
+        inventoryHistory.set({});
+        currentChargeItems.set([]);
+        customers.set([]);
+        customerGroups.set([]);
+        lastBackupDate.set(null);
+        // A default layout structure is needed here to avoid errors on reset
+        dashboardLayout.set({ widgets: [ { id: 'keyMetrics', name: 'Key Metrics', visible: true } ] });
+        goto('/', { replace: true });
     }
 
     function handleLogoUpload(event) {
@@ -46,6 +49,11 @@
 			};
             reader.readAsDataURL(file);
         }
+    }
+
+    function removeLogo() {
+        $merchantLogo = "";
+        showToast('Logo removed.', 'success');
     }
 
     function exportData() {
@@ -75,6 +83,7 @@
         a.download = `posolana-backup-${new Date().toISOString().slice(0,10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        lastBackupDate.set(new Date().toISOString());
         showToast('Data exported successfully!', 'success');
 	}
 
@@ -114,6 +123,14 @@
     }
 </script>
 
+{#if showResetConfirmation}
+    <ConfirmationModal
+        message="Are you sure you want to reset your store? This will clear all settings, transaction history, invoices, and inventory permanently."
+        on:confirm={reset}
+        on:cancel={() => showResetConfirmation = false}
+    />
+{/if}
+
 <div class="card w-full max-w-md bg-base-100 shadow-xl border border-gray-200">
     <div class="card-body p-8">
         <h2 class="card-title text-xl font-greycliffmed mb-4">Settings</h2>
@@ -141,7 +158,10 @@
 			   <span class="label-text font-greycliffmed">Brand Logo</span>
             </label>
  
-	   <input id="logo-upload" type="file" on:change={handleLogoUpload} class="file-input file-input-bordered w-full" />
+	        <input id="logo-upload" type="file" on:change={handleLogoUpload} class="file-input file-input-bordered w-full" />
+            {#if $merchantLogo}
+                <button on:click={removeLogo} class="btn btn-xs btn-error mt-2">Remove Logo</button>
+            {/if}
         </div>
         
         <div class="divider"></div>
@@ -154,6 +174,9 @@
                 font-greycliffmed">Export Data</span>
 	    </label>
             <button id="export-data" on:click={exportData} class="btn btn-outline normal-case">Download Backup</button>
+            {#if $lastBackupDate}
+                <p class="text-xs text-center mt-2">Last backup: {new Date($lastBackupDate).toLocaleString()}</p>
+            {/if}
         </div>
 
         <div class="form-control w-full mt-4">
@@ -168,7 +191,7 @@
         <div class="divider"></div>
 
         <div class="card-actions justify-center mt-6">
-            <button on:click={reset} class="btn btn-outline btn-error normal-case">Reset Store</button>
+            <button on:click={() => showResetConfirmation = true} class="btn btn-outline btn-error normal-case">Reset Store</button>
    </div>
     </div>
 </div>

@@ -81,6 +81,7 @@ export const invoices = createPersistentStore("invoices", []);
 export const customers = createPersistentStore("customers", []);
 export const customerGroups = createPersistentStore("customerGroups", []);
 export const currentChargeItems = createPersistentStore("currentChargeItems", []); // Holds items for the current transaction
+export const lastBackupDate = createPersistentStore("lastBackupDate", null);
 
 
 // New store for dashboard layout

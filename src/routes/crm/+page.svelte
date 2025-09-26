@@ -4,11 +4,13 @@
     import CustomerViewModal from './CustomerViewModal.svelte';
     import ManageGroupsModal from './ManageGroupsModal.svelte';
     import { exportCustomersToCsv, importCustomersFromCsv } from '../../utils/csv.js';
+    import ConfirmationModal from '../ConfirmationModal.svelte';
 
     let showCustomerModal = false;
     let showViewModal = false;
     let showGroupsModal = false;
     let selectedCustomer = null;
+    let customerToRemove = null;
 
     let selectedTag = '';
     let selectedGroup = '';
@@ -28,9 +30,14 @@
         showViewModal = true;
     }
 
-    function removeCustomer(customerId) {
-        if (confirm('Are you sure you want to delete this customer?')) {
-            $customers = $customers.filter(c => c.id !== customerId);
+    function confirmRemoveCustomer(customerId) {
+        customerToRemove = customerId;
+    }
+
+    function doRemoveCustomer() {
+        if (customerToRemove) {
+            $customers = $customers.filter(c => c.id !== customerToRemove);
+            customerToRemove = null;
         }
     }
 
@@ -52,6 +59,14 @@
         };
     });
 </script>
+
+{#if customerToRemove}
+    <ConfirmationModal
+        message="Are you sure you want to delete this customer?"
+        on:confirm={doRemoveCustomer}
+        on:cancel={() => customerToRemove = null}
+    />
+{/if}
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
@@ -88,6 +103,7 @@
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>Tags</th>
                             <th>Email</th>
                             <th>Phone</th>
                             <th class="text-right">Total Spent</th>
@@ -98,19 +114,27 @@
                         {#each customersWithData as customer (customer.id)}
                             <tr class="hover">
                                 <td class="font-greycliffmed">{customer.name}</td>
+                                <td>
+                                    {#each (customer.tags || []).slice(0, 2) as tag}
+                                        <span class="badge badge-outline">{tag}</span>
+                                    {/each}
+                                    {#if (customer.tags || []).length > 2}
+                                        <span class="badge badge-outline">...</span>
+                                    {/if}
+                                </td>
                                 <td>{customer.email}</td>
                                 <td>{customer.phone}</td>
                                 <td class="text-right font-mono">${customer.totalSpent.toFixed(2)}</td>
                                 <td class="text-center space-x-1">
                                     <button class="btn btn-xs btn-outline" on:click={() => viewCustomer(customer)}>View</button>
                                     <button class="btn btn-xs btn-outline" on:click={() => editCustomer(customer)}>Edit</button>
-                                    <button class="btn btn-xs btn-outline btn-error" on:click={() => removeCustomer(customer.id)}>Delete</button>
+                                    <button class="btn btn-xs btn-outline btn-error" on:click={() => confirmRemoveCustomer(customer.id)}>Delete</button>
                                 </td>
                             </tr>
                         {/each}
                         {#if $customers.length === 0}
                             <tr>
-                                <td colspan="5" class="text-center py-4">No customers yet.</td>
+                                <td colspan="6" class="text-center py-4">No customers yet.</td>
                             </tr>
                         {/if}
                     </tbody>

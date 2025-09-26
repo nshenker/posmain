@@ -8,6 +8,7 @@
     import jsPDF from 'jspdf';
     import html2canvas from 'html2canvas';
     import { logHistory } from '../../utils/inventory.js';
+    import ConfirmationModal from '../ConfirmationModal.svelte';
 
 	// --- State for the invoice form ---
     let currentInvoice = createNewInvoice();
@@ -15,6 +16,9 @@
 	let selectedItemQty = 1;
     let customItem = { name: '', quantity: 1, price: null, currency: 'USDC' };
 	let selectedCustomerId = '';
+    let customerSearch = '';
+
+    let invoiceToRemove = null;
 
 	// --- Module variables for dynamically imported libraries ---
     let createQR, encodeURL, BigNumber, web3, findReference, FindReferenceError;
@@ -50,6 +54,8 @@
             }
         }
     });
+
+    $: filteredCustomers = $customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()));
 
     $: {
         if (selectedCustomerId) {
@@ -149,12 +155,17 @@
         }
     }
 
-    function removeInvoice(invoiceId) {
-        if (browser && confirm("Are you sure you want to permanently delete this invoice?")) {
-            $invoices = $invoices.filter(inv => inv.id !== invoiceId);
-            if (currentInvoice.id === invoiceId) {
+    function confirmRemoveInvoice(invoiceId) {
+        invoiceToRemove = invoiceId;
+    }
+
+    function doRemoveInvoice() {
+        if (invoiceToRemove) {
+            $invoices = $invoices.filter(inv => inv.id !== invoiceToRemove);
+            if (currentInvoice.id === invoiceToRemove) {
                 currentInvoice = createNewInvoice();
-			}
+            }
+            invoiceToRemove = null;
         }
     }
     
@@ -267,6 +278,14 @@
     }
 </style>
 
+{#if invoiceToRemove}
+    <ConfirmationModal
+        message="Are you sure you want to permanently delete this invoice?"
+        on:confirm={doRemoveInvoice}
+        on:cancel={() => invoiceToRemove = null}
+    />
+{/if}
+
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6 no-print">
         <h1 class="text-4xl font-greycliffbold">Invoicing</h1>
@@ -275,9 +294,10 @@
         <div class="no-print space-y-6">
             <div class="card bg-base-100 shadow-xl border"><div class="card-body p-6">
                 <h2 class="card-title text-xl font-greycliffmed">Invoice Details</h2>
+                <input type="text" placeholder="Search for a customer..." class="input input-bordered" bind:value={customerSearch} />
                 <select class="select select-bordered" bind:value={selectedCustomerId}>
                     <option value="" disabled>Select a customer</option>
-                    {#each $customers as customer (customer.id)}
+                    {#each filteredCustomers as customer (customer.id)}
                         <option value={customer.id}>{customer.name}</option>
                     {/each}
                 </select>
@@ -375,7 +395,7 @@
                         <td class="space-x-1">
                             <button class="btn btn-xs btn-outline" on:click={() => loadInvoice(invoice.id)}>View</button>
 							<button class="btn btn-xs btn-outline btn-success" on:click={() => markAsPaid(invoice.id)}>Mark Paid</button>
-                            <button class="btn btn-xs btn-outline btn-error" on:click={() => removeInvoice(invoice.id)}>Delete</button>
+                            <button class="btn btn-xs btn-outline btn-error" on:click={() => confirmRemoveInvoice(invoice.id)}>Delete</button>
                         </td>
 					</tr>
                     {/each}
