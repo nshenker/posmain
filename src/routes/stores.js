@@ -28,7 +28,22 @@ const createPersistentStore = (key, startValue) => {
         const storedValue = localStorage.getItem(key);
         if (storedValue) {
             try {
-                const parsedStoredValue = JSON.parse(storedValue);
+                let parsedStoredValue = JSON.parse(storedValue);
+                
+                // --- DATA MIGRATION FIX ---
+                // This block automatically updates old inventory items to the new structure.
+                if (key === 'inventory' && Array.isArray(parsedStoredValue)) {
+                    parsedStoredValue = parsedStoredValue.map(item => {
+                        // Ensure every item has a 'type' and 'variants' property to prevent errors
+                        return {
+                            ...item,
+                            type: item.type || 'simple',
+                            variants: item.variants || [],
+                        };
+                    });
+                }
+                // --- END OF FIX ---
+
                 // If this is the dashboardLayout store, merge it to handle updates.
                 if (key === 'dashboardLayout') {
                     initialValue = mergeLayouts(parsedStoredValue, startValue);

@@ -18,6 +18,7 @@
     let customItem = { name: '', quantity: 1, price: null, currency: 'USDC' };
     let selectedCustomerId = '';
     let customerSearch = '';
+    let selectedItemWithVariants = null; // <-- New state for variant selection
 
     let invoiceToRemove = null;
     // --- Module variables for dynamically imported libraries ---
@@ -86,8 +87,27 @@
 	function handleAddItemFromInventory() {
         const itemToAdd = $inventory.find(i => i.id === selectedItemId);
         if (!itemToAdd) { if (browser) showToast('Please select an item.', 'error'); return; }
-        addItemToInvoice(itemToAdd, selectedItemQty);
-        selectedItemId = ''; selectedItemQty = 1;
+        
+        if (itemToAdd.type === 'variable' && itemToAdd.variants.length > 0) {
+            selectedItemWithVariants = itemToAdd; // Open variant selection modal
+        } else {
+            addItemToInvoice(itemToAdd, selectedItemQty);
+        }
+
+        selectedItemId = ''; 
+        selectedItemQty = 1;
+    }
+
+    function handleSelectVariant(variant) {
+        const itemWithVariant = {
+            ...selectedItemWithVariants,
+            price: variant.price,
+            sku: variant.sku,
+            name: `${selectedItemWithVariants.name} - ${variant.name}`,
+            variantId: variant.id,
+        };
+        addItemToInvoice(itemWithVariant, selectedItemQty);
+        selectedItemWithVariants = null; // Close the variant modal
     }
     
     function handleAddCustomItem() {
@@ -101,14 +121,17 @@
     }
 
     function addItemToInvoice(item, quantity) {
-        const existingItem = currentInvoice.items.find(i => i.id === item.id);
+        const uniqueId = item.variantId || item.id;
+        const existingItem = currentInvoice.items.find(i => (i.variantId || i.id) === uniqueId);
+        
         if (existingItem) existingItem.quantity += quantity;
         else currentInvoice.items.push({ ...item, quantity });
+        
         currentInvoice.items = currentInvoice.items;
     }
     
     function removeItem(itemId) {
-        currentInvoice.items = currentInvoice.items.filter(i => i.id !== itemId);
+        currentInvoice.items = currentInvoice.items.filter(i => (i.variantId || i.id) !== itemId);
     }
 
     function saveInvoice() {
@@ -121,11 +144,8 @@
             const existingCustomer = $customers.find(c => c.name.toLowerCase() === currentInvoice.customerName.trim().toLowerCase());
             if (!existingCustomer) {
                 const newCustomer = {
-                    id: Date.now().toString(),
-                    name: currentInvoice.customerName.trim(),
-                    email: '',
-                    phone: '',
-                    wallet: ''
+                    id: Date.now().toString(), name: currentInvoice.customerName.trim(),
+                    email: '', phone: '', wallet: ''
                 };
                 $customers = [...$customers, newCustomer];
                 currentInvoice.customerId = newCustomer.id;
@@ -190,9 +210,23 @@
                 inventory.update(invs => {
                     return invs.map(i => {
                         if (i.id === item.id) {
-                            const newQuantity = i.quantity - item.quantity;
-                            logHistory(item.id, `Sale (Invoice ${invoice.number})`, `-${item.quantity}`, newQuantity);
-                            return { ...i, quantity: newQuantity };
+                            if (i.type === 'variable' && item.variantId) {
+                                let variantFound = false;
+                                i.variants = i.variants.map(v => {
+                                    if (v.id === item.variantId) {
+                                        const newQty = v.quantity - item.quantity;
+                                        logHistory(v.id, `Sale (Invoice ${invoice.number})`, `-${item.quantity}`, newQty);
+                                        v.quantity = newQty;
+                                        variantFound = true;
+                                    }
+                                    return v;
+                                });
+                                if(variantFound) i.quantity = i.variants.reduce((acc, v) => acc + v.quantity, 0);
+                            } else {
+                                const newQuantity = i.quantity - item.quantity;
+                                logHistory(item.id, `Sale (Invoice ${invoice.number})`, `-${item.quantity}`, newQuantity);
+                                i.quantity = newQuantity;
+                            }
                         }
                         return i;
                     });
@@ -284,6 +318,36 @@
     />
 {/if}
 
+{#if selectedItemWithVariants}
+    <div class="modal modal-open">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">Select Variant for {selectedItemWithVariants.name}</h3>
+            <div class="py-4">
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <tbody>
+                            {#each selectedItemWithVariants.variants as variant}
+                                <tr class="hover">
+                                    <td>{variant.name}</td>
+                                    <td class="text-right font-mono">{(variant.price || 0).toFixed(2)}</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-xs btn-outline btn-success" on:click={() => handleSelectVariant(variant)} disabled={variant.quantity < selectedItemQty}>
+                                            {#if variant.quantity >= selectedItemQty}Select{:else}Out of Stock{/if}
+                                        </button>
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-action">
+                <button class="btn" on:click={() => selectedItemWithVariants = null}>Back</button>
+            </div>
+        </div>
+    </div>
+{/if}
+
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6 no-print">
         <h1 class="text-4xl font-greycliffbold">Invoicing</h1>
@@ -358,7 +422,7 @@
                 <div class="overflow-x-auto mt-6">
                     <table class="table w-full"><thead class="bg-gray-50 text-gray-700"><tr><th>Item</th><th class="text-center">Qty</th><th class="text-right">Price</th><th class="text-right">Total</th><th class="no-print"></th></tr></thead>
                     <tbody>
-                        {#each currentInvoice.items as item (item.id)}<tr><td>{item.name}</td><td class="text-center">{item.quantity}</td><td class="text-right">${(item.price || 0).toFixed(2)}</td><td class="text-right">${(item.quantity * (item.price || 0)).toFixed(2)}</td><td class="no-print text-center p-1"><button class="btn btn-ghost btn-xs" on:click={() => removeItem(item.id)}>✕</button></td></tr>{/each}
+                        {#each currentInvoice.items as item (item.variantId || item.id)}<tr><td>{item.name}</td><td class="text-center">{item.quantity}</td><td class="text-right">${(item.price || 0).toFixed(2)}</td><td class="text-right">${(item.quantity * (item.price || 0)).toFixed(2)}</td><td class="no-print text-center p-1"><button class="btn btn-ghost btn-xs" on:click={() => removeItem(item.variantId || item.id)}>✕</button></td></tr>{/each}
                         {#if currentInvoice.items.length === 0}<tr><td colspan="5" class="text-center opacity-70 py-4">No items added yet.</td></tr>{/if}
                     </tbody>
                     </table>

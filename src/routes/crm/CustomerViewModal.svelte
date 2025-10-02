@@ -6,15 +6,22 @@
     export let customer;
     const dispatch = createEventDispatcher();
 
+    let expandedTransactions = {}; // To track which transaction details are visible
+
     $: customerTransactions = [
         ...$successArray.filter(tx => tx.customerId === customer.id),
         ...$invoices.filter(inv => inv.customerId === customer.id && inv.status === 'Paid').map(inv => ({
             timestamp: dayjs(inv.issueDate).unix(),
             uiAmount: inv.total,
             mint: inv.paymentCurrency,
-            txid: `invoice-${inv.id}`
+            txid: `invoice-${inv.id}`,
+            items: inv.items // Make sure items from invoices are included
         }))
     ].sort((a, b) => b.timestamp - a.timestamp);
+
+    function toggleTransaction(txid) {
+        expandedTransactions[txid] = !expandedTransactions[txid];
+    }
 </script>
 
 <div class="modal modal-open">
@@ -69,6 +76,7 @@
                     <table class="table w-full">
                         <thead>
                             <tr>
+                                <th></th>
                                 <th>Date</th>
                                 <th>Transaction ID</th>
                                 <th class="text-right">Amount</th>
@@ -78,6 +86,13 @@
                         <tbody>
                             {#each customerTransactions as tx (tx.txid)}
                                 <tr class="hover">
+                                    <td>
+                                        {#if tx.items && tx.items.length}
+                                            <button class="btn btn-xs btn-ghost" on:click={() => toggleTransaction(tx.txid)}>
+                                                {expandedTransactions[tx.txid] ? '▼' : '►'}
+                                            </button>
+                                        {/if}
+                                    </td>
                                     <td>{dayjs.unix(tx.timestamp).format("YYYY-MM-DD HH:mm")}</td>
                                     <td>
                                         {#if tx.txid.startsWith('invoice-')}
@@ -91,10 +106,24 @@
                                     <td class="text-right font-mono">{tx.uiAmount.toFixed(2)}</td>
                                     <td class="text-right font-mono">{tx.mint}</td>
                                 </tr>
+                                {#if expandedTransactions[tx.txid] && tx.items && tx.items.length}
+                                    <tr class="bg-base-200">
+                                        <td colspan="5" class="p-0">
+                                            <div class="p-4">
+                                                <h5 class="font-bold text-sm mb-2">Purchased Items:</h5>
+                                                <ul class="list-disc pl-6">
+                                                    {#each tx.items as item}
+                                                        <li>{item.quantity}x {item.name} @ ${(item.price || 0).toFixed(2)} each</li>
+                                                    {/each}
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {/if}
                             {/each}
                             {#if customerTransactions.length === 0}
                                 <tr>
-                                    <td colspan="4" class="text-center py-4">No transactions for this customer.</td>
+                                    <td colspan="5" class="text-center py-4">No transactions for this customer.</td>
                                 </tr>
                             {/if}
                         </tbody>

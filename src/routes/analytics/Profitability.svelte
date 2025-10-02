@@ -1,20 +1,28 @@
 <script lang='ts'>
     import { inventory } from '../stores.js';
     export let sales;
-
+    
     $: inventoryMap = new Map($inventory.map(item => [item.id, item]));
 
     $: totalProfit = sales.reduce((acc, sale) => {
         const saleProfit = (sale.items || []).reduce((itemAcc, item) => {
             const inventoryItem = inventoryMap.get(item.id);
             if (inventoryItem) {
-                return itemAcc + (item.price - inventoryItem.cost) * item.quantity;
+                let cost = inventoryItem.cost; // Default to parent cost
+                // If it's a variant, find the specific variant's cost
+                if (inventoryItem.type === 'variable' && item.variantId) {
+                    const variant = inventoryItem.variants.find(v => v.id === item.variantId);
+                    if (variant) {
+                        cost = variant.cost;
+                    }
+                }
+                return itemAcc + (item.price - cost) * item.quantity;
             }
             return itemAcc;
         }, 0);
         return acc + saleProfit;
     }, 0);
-
+    
     $: totalRevenue = sales.reduce((acc, sale) => acc + sale.uiAmount, 0);
 
     $: averageProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;

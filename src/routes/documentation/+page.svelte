@@ -2,6 +2,21 @@
     // To add future updates, simply add a new object to the top of this array.
     const updateNotes = [
         {
+            version: 'v1.12',
+            date: 'October 2025',
+            title: 'Product Variants & System-Wide Stability',
+            notes: [
+                'New Feature: Added a comprehensive Product Variant system to the Inventory page, allowing for items with multiple attributes like size or color.',
+                'New Feature: The POS and Invoicing pages now fully support adding specific product variants to a charge or invoice.',
+                'Enhancement: Inventory stock and history are now tracked on a per-variant basis, providing a more granular audit trail.',
+                'Enhancement: The "Top Selling Products" and "Profitability" analytics reports now correctly process and display data for individual variants.',
+                'Enhancement: The interactive product tour has been updated to explain the new Product Variant system.',
+                'Fix: Resolved a critical bug that caused the Inventory page to load a blank screen on the first visit.',
+                'Fix: Corrected an issue where barcodes for product variants could not be found when scanned.',
+                'Fix: Ensured that the data backup and restore system correctly handles all new product variant data.'
+            ]
+        },
+        {
             version: 'v1.11',
             date: 'October 2025',
             title: 'Major Mobile Redesign & Interactive Tour',

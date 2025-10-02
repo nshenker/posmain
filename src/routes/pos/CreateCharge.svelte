@@ -16,7 +16,8 @@
     let barcodeInput = '';
     // --- Scanner State ---
     let scanner = null;
-    let isScannerVisible = false; // Controls the visibility of the scanner UI
+    let isScannerVisible = false;
+    // Controls the visibility of the scanner UI
     let lastScanTime = 0;
     let lastScanResult = '';
     const SCAN_COOLDOWN = 3000; // 3 seconds
@@ -27,6 +28,7 @@
         { row: 1, value: "4"}, { row: 1, value: "5"}, { row: 1, value: "6"},
         { row: 2, value: "7"}, { row: 2, value: "8"}, { row: 2, value: "9"},
         { row: 3, value: "<" }, { row: 3, value: "0"}, { 
+            
             row: 3, value: "."}
     ];
     // Numpad state
@@ -48,14 +50,18 @@
             return;
         }
 
-        const existingItemIndex = chargeItems.findIndex(i => i.id === itemToAdd.id);
+        // Use variantId for uniqueness if it exists, otherwise use the parent item id
+        const uniqueId = itemToAdd.variantId || itemToAdd.id;
+        const existingItemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === uniqueId);
+        
         if (existingItemIndex > -1) {
             chargeItems[existingItemIndex].quantity += 1;
         } else {
             chargeItems.push({ ...itemToAdd, quantity: 1 });
         }
         
-        chargeItems = chargeItems; // Trigger reactivity
+        chargeItems = chargeItems;
+        // Trigger reactivity
     }
 
 
@@ -65,10 +71,44 @@
     }
 
     function addItemByBarcode(barcode) {
-        const item = $inventory.find(i => i.barcode === barcode.trim());
-        if (item) {
-            addItemToCart(item);
-            showToast(`Added: ${item.name}`, 'success');
+        let foundItem = null;
+        let foundVariant = null;
+
+        // Iterate through the inventory to find the item/variant
+        for (const item of $inventory) {
+            if (item.type === 'simple' && item.barcode === barcode.trim()) {
+                foundItem = item;
+                break; // Exit loop once found
+            } else if (item.type === 'variable' && item.variants) {
+                foundVariant = item.variants.find(v => v.barcode === barcode.trim());
+                if (foundVariant) {
+                    foundItem = item; // We found the parent item
+                    break; // Exit loop once found
+                }
+            }
+        }
+
+        if (foundItem) {
+            if (foundVariant) {
+                // It's a variant, construct the specific object for the cart
+                const itemToAdd = {
+                    id: foundItem.id, // Parent ID is still the main reference
+                    variantId: foundVariant.id, // Variant ID is crucial for stock depletion
+                    name: `${foundItem.name} - ${foundVariant.name}`,
+                    price: foundVariant.price,
+                    cost: foundVariant.cost,
+                    sku: foundVariant.sku,
+                    barcode: foundVariant.barcode,
+                    currency: foundItem.currency, // Inherit from parent
+                    category: foundItem.category, // Inherit from parent
+                };
+                addItemToCart(itemToAdd);
+                showToast(`Added: ${itemToAdd.name}`, 'success');
+            } else {
+                // It's a simple product
+                addItemToCart(foundItem);
+                showToast(`Added: ${foundItem.name}`, 'success');
+            }
         } else {
             showToast(`Barcode "${barcode}" not found.`, 'error');
         }
@@ -117,6 +157,7 @@
                 { 
                     fps: 10, 
                     qrbox: 
+                    
                     qrboxFunction,
                     useBarCodeDetectorIfSupported: true // Improves performance
                 },
@@ -143,14 +184,14 @@
 
     // --- Functions for charge management ---
     function removeItem(itemId) {
-        chargeItems = chargeItems.filter(i => i.id !== itemId);
+        chargeItems = chargeItems.filter(i => (i.variantId || i.id) !== itemId);
         if (chargeItems.length === 0) {
             clearCharge();
         }
     }
 
     function incrementQuantity(itemId) {
-        const itemIndex = chargeItems.findIndex(i => i.id === itemId);
+        const itemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === itemId);
         if (itemIndex > -1) {
             chargeItems[itemIndex].quantity += 1;
             chargeItems = chargeItems;
@@ -158,7 +199,7 @@
     }
 
     function decrementQuantity(itemId) {
-        const itemIndex = chargeItems.findIndex(i => i.id === itemId);
+        const itemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === itemId);
         if (itemIndex > -1) {
             if (chargeItems[itemIndex].quantity > 1) {
                 chargeItems[itemIndex].quantity -= 1;
@@ -208,7 +249,17 @@
 
     function createQRCode() {
         if (parseFloat($pmtAmt.replace(/,/g, '')) > 0) {
-            $currentChargeItems = chargeItems; // Save cart to store before navigating
+            // Create a clean, serializable array of items for the transaction log
+            const itemsForTx = chargeItems.map(item => ({
+                id: item.id,
+                variantId: item.variantId,
+                name: item.name,
+                price: item.price,
+                cost: item.cost,
+                quantity: item.quantity,
+                sku: item.sku
+            }));
+            $currentChargeItems = itemsForTx;
             goto('/present');
         } else {
             if(browser) showToast("Please enter an amount greater than zero.", "error");
@@ -251,18 +302,17 @@
         <div class="flex flex-col md:w-1/2 h-full">
             <h2 class="card-title text-xl font-greycliffmed mb-2">Current Charge</h2>
             
-  
             <div class="flex-grow overflow-y-auto pr-2 -mr-2">
                 {#if chargeItems.length > 0}
                     <div class="space-y-2 text-left">
-                        {#each chargeItems as item (item.id)}
+                        {#each chargeItems as item (item.variantId || item.id)}
                             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
                                 <span class="flex-grow truncate font-greycliffmed">{item.name}</span>
                                 <div class="flex items-center justify-end gap-2">
                                     <div class="flex items-center justify-center space-x-2">
-                                        <button on:click={() => decrementQuantity(item.id)} class="btn btn-xs btn-ghost">-</button>
+                                        <button on:click={() => decrementQuantity(item.variantId || item.id)} class="btn btn-xs btn-ghost">-</button>
                                         <span>{item.quantity}</span>
-                                        <button on:click={() => incrementQuantity(item.id)} class="btn btn-xs btn-ghost">+</button>
+                                        <button on:click={() => incrementQuantity(item.variantId || item.id)} class="btn btn-xs btn-ghost">+</button>
                                     </div>
                                     <span class="w-20 text-right font-mono">{(item.price * item.quantity).toFixed(2)}</span>
                                 </div>

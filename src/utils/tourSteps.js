@@ -174,8 +174,28 @@ export const tourSteps = (tour) => [
     {
         id: 'inventory-add',
         title: "Add New Products",
-        text: "Use this form to add a product, specifying its quantity, cost, and price. Adding a barcode here allows for fast item lookup using the scanner on the POS screen.",
+        text: "Use this form to add products. You can now choose between 'Simple' products with a single stock count, or 'Variable' products for items with different options, like sizes or colors.",
         attachTo: { element: '#add-item-card', on: 'bottom' },
+        buttons: [
+            { text: 'Back', action: tour.back, secondary: true },
+            { text: 'Next', action: tour.next }
+        ]
+    },
+    {
+        id: 'inventory-variants',
+        title: "Product Variants",
+        text: "When creating a 'Variable' product, you can define attributes (like 'Size') and their values (e.g., 'Small, Medium, Large'). This will generate a list of all possible product variations, allowing you to set a unique price and quantity for each one.",
+        attachTo: { element: 'div.space-y-4.p-4.border.rounded-lg.bg-base-200', on: 'bottom' },
+         when: {
+            show: () => {
+                // This step should only appear if the "Variable" product type is selected
+                const select = document.querySelector('select');
+                if (select) {
+                    select.value = 'variable';
+                    select.dispatchEvent(new Event('change'));
+                }
+            }
+        },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next', action: tour.next }
@@ -184,12 +204,12 @@ export const tourSteps = (tour) => [
     {
         id: 'inventory-management',
         title: "Stock Management & History",
-        text: "From the item list, you can perform quick manual stock adjustments, view a comprehensive inventory history log for every change, and save/print single or multiple barcode labels.",
-        attachTo: { element: '.responsive-table thead', on: 'top' }, 
+        text: "From the item list, you can see all your products, including their type and total stock. You can perform quick manual stock adjustments, view a comprehensive inventory history log for every change, and save or print barcode labels.",
+        attachTo: { element: '.table.w-full.responsive-table', on: 'top' }, 
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next: Inventory Reports', action: () => { 
-                switchTab('inventory', 2); // Switch to the 'Reports' tab
+                switchTab('inventory', 2); 
                 tour.next(); 
             } }
         ]

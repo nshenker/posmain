@@ -8,29 +8,39 @@
     import Reports from './Reports.svelte';
     import { saveBarcode, saveMultipleBarcodes } from '../../utils/barcode.js';
     import { logHistory } from '../../utils/inventory.js';
+    import VariantEditor from './VariantEditor.svelte';
 
     let activeTab = 'inventory';
     let showHistoryModal = false;
     let selectedItemForHistory = null;
     let newCategory = '';
     let selectedItems = [];
-    let newItem = {
-        name: '',
-        sku: '',
-        barcode: '',
-        quantity: null,
-        price: null,
-        cost: null,
-        currency: 'USDC',
-        category: 'Default'
-    };
+    let loading = true;
+    let expandedItems = {}; // Tracks which variable products are expanded
+
+    function getInitialNewItem() {
+        return {
+            id: null, type: 'simple', name: '', sku: '', barcode: '',
+            quantity: null, price: null, cost: null, currency: 'USDC',
+            category: 'Default', variants: [], bundledItems: []
+        };
+    }
+    let newItem = getInitialNewItem();
+
+    function resetNewItem() {
+        newItem = getInitialNewItem();
+    }
+    
     onMount(() => {
         if (browser && !$publicKey) {
             showToast("Please set your merchant wallet address first.", "error");
             goto('/');
         }
+        loading = false;
     });
+
     $: allSelected = $inventory.length > 0 && selectedItems.length === $inventory.length;
+
     function toggleSelectAll(e) {
         if (e.target.checked) {
             selectedItems = $inventory.map(i => i.id);
@@ -40,15 +50,25 @@
     }
 
     function addItem() {
-        const { name, quantity, price, cost } = newItem;
-        if (name.trim() && quantity > 0 && price >= 0 && cost >= 0) {
-            const newId = Date.now().toString();
-            $inventory = [...$inventory, { ...newItem, id: newId }];
-            logHistory(newId, 'Item Created', `+${quantity}`, quantity);
-            newItem = { name: '', sku: '', barcode: '', quantity: null, price: null, cost: null, currency: 'USDC', category: 'Default' };
-        } else {
-            if (browser) showToast("Please fill out all required fields with valid values.", "error");
+        const { name, type } = newItem;
+        if (!name.trim()) {
+            showToast("Please enter an item name.", "error"); return;
         }
+        const newId = Date.now().toString();
+        let itemToAdd = { ...newItem, id: newId };
+        
+        if (type === 'simple') {
+            logHistory(newId, 'Item Created', `+${itemToAdd.quantity}`, itemToAdd.quantity);
+        } else if (type === 'variable') {
+            itemToAdd.quantity = itemToAdd.variants.reduce((total, v) => total + (v.quantity || 0), 0);
+            itemToAdd.variants.forEach(v => {
+                if (v.quantity > 0) {
+                    logHistory(v.id, 'Variant Created', `+${v.quantity}`, v.quantity);
+                }
+            });
+        }
+        $inventory = [...$inventory, itemToAdd];
+        resetNewItem();
     }
 
     function removeItem(itemId) {
@@ -57,18 +77,34 @@
             selectedItems = selectedItems.filter(id => id !== itemId);
             inventoryHistory.update(history => {
                 delete history[itemId];
+                // Also remove variant histories
+                const item = $inventory.find(i => i.id === itemId);
+                if (item && item.type === 'variable') {
+                    item.variants.forEach(v => delete history[v.id]);
+                }
                 return history;
             });
         }
     }
     
-    function updateQuantity(itemId, amount) {
+    function updateQuantity(itemId, amount, variantId = null) {
         $inventory = $inventory.map(item => {
             if (item.id === itemId) {
-                const newQuantity = Math.max(0, item.quantity + amount);
-                logHistory(itemId, 'Manual Adjustment', `${amount > 0 ? '+' : ''}${amount}`, newQuantity);
-         
-				return { ...item, quantity: newQuantity };
+                if (item.type === 'simple') {
+                    const newQuantity = Math.max(0, item.quantity + amount);
+                    logHistory(itemId, 'Manual Adjustment', `${amount > 0 ? '+' : ''}${amount}`, newQuantity);
+                    return { ...item, quantity: newQuantity };
+                } else if (item.type === 'variable' && variantId) {
+                    item.variants = item.variants.map(v => {
+                        if (v.id === variantId) {
+                             const newVariantQty = Math.max(0, v.quantity + amount);
+                             logHistory(v.id, 'Manual Adjustment', `${amount > 0 ? '+' : ''}${amount}`, newVariantQty);
+                             return { ...v, quantity: newVariantQty };
+                        }
+                        return v;
+                    });
+                    item.quantity = item.variants.reduce((total, v) => total + v.quantity, 0);
+                }
             }
             return item;
         });
@@ -80,6 +116,7 @@
     }
     
     function handleSaveSelected() {
+        // This logic needs to be enhanced to handle selected variants
         const itemsToSave = $inventory.filter(item => selectedItems.includes(item.id));
         if (itemsToSave.length > 0) {
             saveMultipleBarcodes(itemsToSave);
@@ -97,14 +134,12 @@
 
     function removeCategory(category) {
         if (category === 'Default') {
-            showToast("The 'Default' category cannot be removed.", "error");
-            return;
+            showToast("The 'Default' category cannot be removed.", "error"); return;
         }
         if (browser && confirm(`Are you sure you want to remove the "${category}" category? Items in this category will be moved to 'Default'.`)) {
             $inventory = $inventory.map(item => {
                 if (item.category === category) {
                     return { ...item, category: 'Default' };
-        
 				}
                 return item;
             });
@@ -114,34 +149,12 @@
 </script>
 
 <style>
-    /* Custom styles for the responsive table */
-    @media (max-width: 767px) {
-        .responsive-table thead {
-            display: none;
-        }
-        .responsive-table tbody, .responsive-table tr, .responsive-table td {
-            display: block;
-            width: 100%;
-        }
-        .responsive-table tr {
-            margin-bottom: 1rem;
-            border-bottom: 2px solid oklch(var(--b2));
-            padding-bottom: 1rem;
-        }
-        .responsive-table td {
-            text-align: right;
-            padding-left: 50%;
-            position: relative;
-        }
-        .responsive-table td::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 0.5rem;
-            width: 45%;
-            padding-right: 0.5rem;
-            text-align: left;
-            font-weight: bold;
-        }
+    .responsive-table td, .responsive-table th {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    .variant-row td {
+        background-color: oklch(var(--b2) / 0.5);
     }
 </style>
 
@@ -160,31 +173,51 @@
         <button role="tab" class="tab" class:tab-active={activeTab === 'reports'} on:click={() => activeTab = 'reports'}>Reports</button>
     </div>
 
+    {#if !loading}
     <div class="mt-6">
         {#if activeTab === 'inventory'}
             <div id="add-item-card" class="card w-full bg-base-100 shadow-xl border mx-auto">
-                <div class="card-body p-4 sm:p-8">
+                 <div class="card-body p-4 sm:p-8">
                     <h2 class="card-title text-xl font-greycliffmed mb-4">Add New Item</h2>
-                    <form on:submit|preventDefault={addItem} class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <input type="text" placeholder="Item Name*" class="input input-bordered lg:col-span-2" bind:value={newItem.name} />
-                        <input type="number" placeholder="Quantity*" class="input input-bordered" bind:value={newItem.quantity} min="0" step="1" />
-                        <select class="select select-bordered" bind:value={newItem.category}>
-                             {#each $categories as category}<option value={category}>{category}</option>{/each}
-                        </select>
-                        <div class="input-group">
-                             <span>Cost*</span>
-							<input type="number" placeholder="0.00" class="input input-bordered w-full" bind:value={newItem.cost} min="0" step="0.01" />
-                        </div>
-                        <div class="input-group">
-                            <span>Price*</span>
-							<input type="number" placeholder="0.00" class="input input-bordered w-full" bind:value={newItem.price} min="0" step="0.01" />
-                            <select class="select select-bordered" bind:value={newItem.currency}>
-                                {#each $mints as mint}<option value={mint.name}>{mint.name}</option>{/each}
+                    <form on:submit|preventDefault={addItem} class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <select class="select select-bordered lg:col-span-1" bind:value={newItem.type}>
+                                <option value="simple">Simple Product</option>
+                                <option value="variable">Variable Product</option>
+                                <option value="bundle" disabled>Bundle (Coming Soon)</option>
                             </select>
+                            <input type="text" placeholder="Item Name*" class="input input-bordered lg:col-span-3" bind:value={newItem.name} />
                         </div>
-                        <input type="text" placeholder="SKU (Optional)" class="input input-bordered" bind:value={newItem.sku} />
-						<input type="text" placeholder="Barcode (Optional)" class="input input-bordered" bind:value={newItem.barcode} />
-                        <button type="submit" class="btn btn-primary sm:col-start-2 lg:col-start-auto">Add Item</button>
+
+                        {#if newItem.type === 'simple'}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <input type="number" placeholder="Quantity*" class="input input-bordered" bind:value={newItem.quantity} min="0" step="1" />
+                                <select class="select select-bordered" bind:value={newItem.category}>
+                                    {#each $categories as category}<option value={category}>{category}</option>{/each}
+                                </select>
+                                <div class="input-group">
+                                    <span>Cost*</span>
+                                    <input type="number" placeholder="0.00" class="input input-bordered w-full" bind:value={newItem.cost} min="0" step="0.01" />
+                                </div>
+                                <div class="input-group">
+                                    <span>Price*</span>
+                                    <input type="number" placeholder="0.00" class="input input-bordered w-full" bind:value={newItem.price} min="0" step="0.01" />
+                                    <select class="select select-bordered" bind:value={newItem.currency}>
+                                        {#each $mints as mint}<option value={mint.name}>{mint.name}</option>{/each}
+                                    </select>
+                                </div>
+                                <input type="text" placeholder="SKU (Optional)" class="input input-bordered" bind:value={newItem.sku} />
+						        <input type="text" placeholder="Barcode (Optional)" class="input input-bordered" bind:value={newItem.barcode} />
+                            </div>
+                        {/if}
+
+                        {#if newItem.type === 'variable'}
+                           <VariantEditor bind:variants={newItem.variants} basePrice={newItem.price} baseCost={newItem.cost} />
+                        {/if}
+
+                        <div class="card-actions justify-end">
+                            <button type="submit" class="btn btn-primary">Add Item to Inventory</button>
+                        </div>
 					</form>
                 </div>
             </div>
@@ -198,14 +231,13 @@
 						{/if}
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="table w-full responsive-table">
+                        <table class="table w-full">
                             <thead>
 								<tr>
-                                    <th class="w-10"><input type="checkbox" class="checkbox" on:change={toggleSelectAll} checked={allSelected} /></th>
+                                    <th></th>
 									<th>Item Name</th>
-                                    <th>SKU</th>
-                                    <th>Barcode</th>
-									<th class="text-center">Quantity</th>
+                                    <th>Type</th>
+									<th class="text-center">Total Qty</th>
                                     <th class="text-right">Price</th>
                                     <th class="text-center">Actions</th>
 								</tr>
@@ -213,35 +245,57 @@
                             <tbody>
 								{#each $inventory as item (item.id)}
                                     <tr class="hover">
-                                        <td data-label="Select"><input type="checkbox" class="checkbox" bind:group={selectedItems} value={item.id} /></td>
-										<td data-label="Name" class="font-greycliffmed">{item.name}</td>
-                                        <td data-label="SKU">{item.sku}</td>
-										<td data-label="Barcode">
-                                            <div class="flex items-center justify-end md:justify-start gap-2">
-                                                <span>{item.barcode}</span>
-                                                {#if item.barcode}
-                                                    <button class="btn btn-xs btn-ghost" title="Save Barcode" on:click={() => saveBarcode(item)}>
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                                        </svg>
-                                                    </button>
-                                                {/if}
-                                            </div>
+                                        <td>
+                                            {#if item.type === 'variable'}
+                                                <button class="btn btn-xs btn-ghost" on:click={() => expandedItems[item.id] = !expandedItems[item.id]}>
+                                                    {expandedItems[item.id] ? '▼' : '►'}
+                                                </button>
+                                            {/if}
                                         </td>
-										<td data-label="Quantity" class="text-right md:text-center font-mono">{item.quantity}</td>
-                                        <td data-label="Price" class="text-right font-mono">{(item.price || 0).toFixed(2)} {item.currency}</td>
-                                        <td data-label="Actions" class="md:text-center">
-                                            <div class="flex flex-wrap justify-end md:justify-center gap-1">
+										<td class="font-greycliffmed">{item.name}</td>
+                                        <td><span class="badge badge-ghost badge-sm">{item.type}</span></td>
+										<td class="text-center font-mono">{item.quantity}</td>
+                                        <td class="text-right font-mono">
+                                            {#if item.type === 'simple'}{(item.price || 0).toFixed(2)} {item.currency}{:else}From ${(Math.min(...item.variants.map(v => v.price)) || 0).toFixed(2)}{/if}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="flex flex-wrap justify-center gap-1">
+                                                {#if item.type === 'simple' && item.barcode}
+                                                    <button class="btn btn-xs btn-outline" on:click={() => saveBarcode(item)}>Barcode</button>
+                                                {/if}
                                                 <button class="btn btn-xs btn-outline" on:click={() => viewHistory(item)}>History</button>
-                                                <button class="btn btn-xs btn-outline btn-success" on:click={() => updateQuantity(item.id, 1)}>+</button>
-                                                <button class="btn btn-xs btn-outline btn-warning" on:click={() => updateQuantity(item.id, -1)}>-</button>
                                                 <button class="btn btn-xs btn-outline btn-error" on:click={() => removeItem(item.id)}>Remove</button>
                                             </div>
                                         </td>
 									</tr>
+                                    {#if expandedItems[item.id] && item.type === 'variable'}
+                                        {#each item.variants as variant (variant.id)}
+                                            <tr class="hover variant-row">
+                                                <td></td>
+                                                <td class="pl-8">{variant.name}</td>
+                                                <td><span class="badge badge-sm">Variant</span></td>
+                                                <td class="text-center font-mono">
+                                                     <div class="flex items-center justify-center space-x-2">
+                                                        <button on:click={() => updateQuantity(item.id, -1, variant.id)} class="btn btn-xs btn-ghost">-</button>
+                                                        <span>{variant.quantity}</span>
+                                                        <button on:click={() => updateQuantity(item.id, 1, variant.id)} class="btn btn-xs btn-ghost">+</button>
+                                                    </div>
+                                                </td>
+                                                <td class="text-right font-mono">{(variant.price || 0).toFixed(2)}</td>
+                                                <td class="text-center">
+                                                     <div class="flex flex-wrap justify-center gap-1">
+                                                        {#if variant.barcode}
+                                                            <button class="btn btn-xs btn-outline" on:click={() => saveBarcode({ name: `${item.name} - ${variant.name}`, price: variant.price, barcode: variant.barcode })}>Barcode</button>
+                                                        {/if}
+                                                        <button class="btn btn-xs btn-outline" on:click={() => viewHistory({ id: variant.id, name: `${item.name} - ${variant.name}` })}>History</button>
+                                                     </div>
+                                                </td>
+                                            </tr>
+                                        {/each}
+                                    {/if}
                                 {/each}
                                 {#if $inventory.length === 0}
-									<tr><td colspan="7" class="text-center py-4">No items in inventory.</td></tr>
+									<tr><td colspan="6" class="text-center py-4">No items in inventory.</td></tr>
                                 {/if}
                             </tbody>
 						</table>
@@ -256,7 +310,7 @@
                         <h2 class="card-title text-xl font-greycliffmed mb-4">Add New Category</h2>
                          <form on:submit|preventDefault={addCategory} class="input-group">
 							<input type="text" placeholder="Category Name" class="input input-bordered w-full" bind:value={newCategory} />
-                             <button type="submit" class="btn btn-primary">Add</button>
+                            <button type="submit" class="btn btn-primary">Add</button>
                          </form>
 					</div>
                 </div>
@@ -286,4 +340,5 @@
             <Reports/>
         {/if}
     </div>
+    {/if}
 </div>

@@ -2,12 +2,19 @@
     export let sales;
 
     $: topSellingProducts = sales.flatMap(sale => sale.items || []).reduce((acc, item) => {
-        const existing = acc.find(i => i.id === item.id);
+        const uniqueId = item.variantId || item.id;
+        const existing = acc.find(i => i.id === uniqueId);
+        
         if (existing) {
             existing.quantity += item.quantity;
             existing.revenue += item.price * item.quantity;
         } else {
-            acc.push({ ...item, revenue: item.price * item.quantity });
+            acc.push({ 
+                id: uniqueId,
+                name: item.name, // The name will now include the variant (e.g., "T-Shirt - Small")
+                quantity: item.quantity,
+                revenue: item.price * item.quantity 
+            });
         }
         return acc;
     }, []).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
