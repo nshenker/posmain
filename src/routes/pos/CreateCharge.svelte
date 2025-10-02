@@ -1,27 +1,25 @@
 <script lang='ts'>
     import { onMount, onDestroy, tick } from "svelte";
     import { goto } from '$app/navigation';
-	import { pmtAmt, selectedMint, currentChargeItems, inventory } from '../stores.js';
+    import { pmtAmt, selectedMint, currentChargeItems, inventory } from '../stores.js';
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
-	import { browser } from '$app/environment';
+    import { browser } from '$app/environment';
     import { Html5QrcodeScanner } from 'html5-qrcode';
     import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
-	import InventoryModal from "./InventoryModal.svelte";
+    import InventoryModal from "./InventoryModal.svelte";
     import hntLogo from "../../lib/images/HNTLogo.png";
 
     let showInventoryModal = false;
     let chargeItems = [];
     let barcodeInput = '';
-
-	// --- Scanner State ---
+    // --- Scanner State ---
     let scanner = null;
-    let isScannerVisible = false;
-	// Controls the visibility of the scanner UI
+    let isScannerVisible = false; // Controls the visibility of the scanner UI
     let lastScanTime = 0;
     let lastScanResult = '';
-	const SCAN_COOLDOWN = 3000; // 3 seconds
+    const SCAN_COOLDOWN = 3000; // 3 seconds
 
 
     const keys = [
@@ -31,71 +29,68 @@
         { row: 3, value: "<" }, { row: 3, value: "0"}, { 
             row: 3, value: "."}
     ];
-
-	// Numpad state
+    // Numpad state
     let left = "";
     let right = "";
     let decimalsActive = false;
-
-	// --- Functions for adding items ---
+    // --- Functions for adding items ---
     function addItemToCart(itemToAdd) {
         if (!itemToAdd) {
             showToast('Item not found in inventory.', 'error');
-			return;
+            return;
         }
 
         if (chargeItems.length === 0) {
             $selectedMint = itemToAdd.currency;
-		} 
+        } 
         else if (itemToAdd.currency !== $selectedMint) {
             showToast('All items in a charge must have the same currency.', 'error');
-			return;
+            return;
         }
 
         const existingItemIndex = chargeItems.findIndex(i => i.id === itemToAdd.id);
-		if (existingItemIndex > -1) {
+        if (existingItemIndex > -1) {
             chargeItems[existingItemIndex].quantity += 1;
-		} else {
+        } else {
             chargeItems.push({ ...itemToAdd, quantity: 1 });
-		}
+        }
         
-        chargeItems = chargeItems;
-		// Trigger reactivity
+        chargeItems = chargeItems; // Trigger reactivity
     }
 
 
     function handleAddItemFromModal(event) {
         addItemToCart(event.detail);
-		showInventoryModal = false;
+        showInventoryModal = false;
     }
 
     function addItemByBarcode(barcode) {
         const item = $inventory.find(i => i.barcode === barcode.trim());
-		if (item) {
+        if (item) {
             addItemToCart(item);
             showToast(`Added: ${item.name}`, 'success');
-		} else {
+        } else {
             showToast(`Barcode "${barcode}" not found.`, 'error');
-		}
+        }
     }
 
     function handleBarcodeSubmit() {
         if (barcodeInput.trim()) {
             addItemByBarcode(barcodeInput);
-			barcodeInput = ''; // Clear input after scan
+            barcodeInput = ''; // Clear input after scan
         }
     }
     
     // --- Camera Scanner Logic ---
     function onScanSuccess(decodedText) {
         const now = Date.now();
-		// Cooldown logic: if the same code is scanned within the cooldown period, ignore it.
-		if (decodedText === lastScanResult && (now - lastScanTime < SCAN_COOLDOWN)) {
+        // Cooldown logic: if the same code is scanned within the cooldown period, ignore it.
+        if (decodedText === lastScanResult && (now - lastScanTime < SCAN_COOLDOWN)) {
             return;
-		}
+        }
         
         lastScanTime = now;
-		lastScanResult = decodedText;
+        lastScanResult = decodedText;
         
         addItemByBarcode(decodedText);
     }
@@ -104,17 +99,17 @@
 
     async function startScanner() {
         isScannerVisible = true;
-		// Wait for the DOM to update so the "reader" div is visible
+        // Wait for the DOM to update so the "reader" div is visible
         await tick();
-		// This function makes the scanning box responsive
+        // This function makes the scanning box responsive
         const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
             let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-			let qrboxSize = Math.floor(minEdge * 0.8);
+            let qrboxSize = Math.floor(minEdge * 0.8);
             return {
                 width: qrboxSize,
                 height: qrboxSize
             };
-		}
+        }
 
         try {
             scanner = new Html5QrcodeScanner(
@@ -127,12 +122,12 @@
                 },
                 false // verbose
             );
-			await scanner.render(onScanSuccess, onScanFailure);
+            await scanner.render(onScanSuccess, onScanFailure);
         } catch (err) {
             console.error("Error rendering scanner:", err);
-			showToast("Could not start camera. Check permissions.", "error");
+            showToast("Could not start camera. Check permissions.", "error");
             isScannerVisible = false;
-		}
+        }
     }
 
     function stopScanner() {
@@ -140,69 +135,67 @@
             scanner.clear().catch(error => {
                 console.error("Failed to clear html5-qrcode-scanner.", error);
             });
-			scanner = null;
+            scanner = null;
         }
         isScannerVisible = false;
-	}
+    }
 
 
     // --- Functions for charge management ---
     function removeItem(itemId) {
         chargeItems = chargeItems.filter(i => i.id !== itemId);
-		if (chargeItems.length === 0) {
+        if (chargeItems.length === 0) {
             clearCharge();
-		}
+        }
     }
 
     function incrementQuantity(itemId) {
         const itemIndex = chargeItems.findIndex(i => i.id === itemId);
-		if (itemIndex > -1) {
+        if (itemIndex > -1) {
             chargeItems[itemIndex].quantity += 1;
-			chargeItems = chargeItems;
+            chargeItems = chargeItems;
         }
     }
 
     function decrementQuantity(itemId) {
         const itemIndex = chargeItems.findIndex(i => i.id === itemId);
-		if (itemIndex > -1) {
+        if (itemIndex > -1) {
             if (chargeItems[itemIndex].quantity > 1) {
                 chargeItems[itemIndex].quantity -= 1;
-				chargeItems = chargeItems;
+                chargeItems = chargeItems;
             } else {
                 removeItem(itemId);
-			}
+            }
         }
     }
 
     function clearCharge() {
         chargeItems = [];
-		$pmtAmt = "0.00";
+        $pmtAmt = "0.00";
         left = "";
         right = "";
         decimalsActive = false;
         $currentChargeItems = [];
-	}
+    }
 
     onMount(() => {
         clearCharge();
     });
-
-	onDestroy(() => {
+    onDestroy(() => {
         stopScanner(); // Ensure camera is released when leaving the page
     });
-
-	// --- Reactive total calculation ---
+    // --- Reactive total calculation ---
     $: {
         if (chargeItems.length > 0) {
             const total = chargeItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-			$pmtAmt = total.toLocaleString("en", {
+            $pmtAmt = total.toLocaleString("en", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 4 
             });
-			const firstItem = chargeItems[0];
+            const firstItem = chargeItems[0];
             if (firstItem && $selectedMint !== firstItem.currency) {
                 $selectedMint = firstItem.currency;
-			}
+            }
         } else {
              // Reset to manual entry mode if cart is empty
             const fullAmount = `${left || '0'}${right ? '.' + right : ''}`;
@@ -210,37 +203,36 @@
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 4 
             });
-		}
+        }
     }
 
     function createQRCode() {
         if (parseFloat($pmtAmt.replace(/,/g, '')) > 0) {
-            $currentChargeItems = chargeItems;
-			// Save cart to store before navigating
+            $currentChargeItems = chargeItems; // Save cart to store before navigating
             goto('/present');
-		} else {
+        } else {
             if(browser) showToast("Please enter an amount greater than zero.", "error");
-		}
+        }
 	}
 
     const onKeydown = (event) => {
         const detail = event.detail;
-		if ($pmtAmt === "0.00" && detail !== ".") left = "";
-		if (detail === "<") {
+        if ($pmtAmt === "0.00" && detail !== ".") left = "";
+        if (detail === "<") {
             if (decimalsActive) {
                 right = right.slice(0, -1);
-				if (right === "") decimalsActive = false;
+                if (right === "") decimalsActive = false;
             } else {
                 left = left.slice(0, -1);
-			}
+            }
         } else if (detail === ".") {
             if (!decimalsActive) decimalsActive = true;
-		} else {
+        } else {
             if (!decimalsActive) {
                 left += detail;
-			} else if (right.length < 4) {
+            } else if (right.length < 4) {
                 right += detail;
-			}
+            }
         }
     }
 </script>
@@ -253,24 +245,27 @@
     />
 {/if}
 
-<div class="card w-full max-w-5xl h-full bg-base-100 shadow-xl border flex-grow">
+<div id="pos-card" class="card w-full max-w-5xl h-full bg-base-100 shadow-xl border flex-grow">
     <div class="card-body p-4 sm:p-6 flex flex-col md:flex-row gap-4 h-full">
         
         <div class="flex flex-col md:w-1/2 h-full">
             <h2 class="card-title text-xl font-greycliffmed mb-2">Current Charge</h2>
             
+  
             <div class="flex-grow overflow-y-auto pr-2 -mr-2">
                 {#if chargeItems.length > 0}
                     <div class="space-y-2 text-left">
                         {#each chargeItems as item (item.id)}
-                            <div class="grid grid-cols-5 gap-2 items-center">
-                                <span class="col-span-2 truncate">{item.name}</span>
-                                <div class="col-span-2 flex items-center justify-center space-x-2">
-                                    <button on:click={() => decrementQuantity(item.id)} class="btn btn-xs btn-ghost">-</button>
-                                    <span>{item.quantity}</span>
-                                    <button on:click={() => incrementQuantity(item.id)} class="btn btn-xs btn-ghost">+</button>
+                            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
+                                <span class="flex-grow truncate font-greycliffmed">{item.name}</span>
+                                <div class="flex items-center justify-end gap-2">
+                                    <div class="flex items-center justify-center space-x-2">
+                                        <button on:click={() => decrementQuantity(item.id)} class="btn btn-xs btn-ghost">-</button>
+                                        <span>{item.quantity}</span>
+                                        <button on:click={() => incrementQuantity(item.id)} class="btn btn-xs btn-ghost">+</button>
+                                    </div>
+                                    <span class="w-20 text-right font-mono">{(item.price * item.quantity).toFixed(2)}</span>
                                 </div>
-                                <span class="col-span-1 text-right font-mono">{(item.price * item.quantity).toFixed(2)}</span>
                             </div>
                         {/each}
                     </div>
@@ -292,7 +287,7 @@
             </div>
         </div>
 
-        <div class="flex flex-col md:w-1/2 h-full">
+        <div id="pos-input-section" class="flex flex-col md:w-1/2 h-full">
             <div class="flex items-center justify-center space-x-2 p-2 bg-base-200 rounded-lg mb-2">
                 {#if $selectedMint === "USDC"}
                     <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">

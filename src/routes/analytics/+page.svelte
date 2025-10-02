@@ -80,11 +80,11 @@
 </script>
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <header class="text-center py-6">
+    <header id="analytics-header" class="text-center py-6">
         <h1 class="text-4xl font-greycliffbold">Reporting & Analytics</h1>
     </header>
 
-    <div class="flex flex-col sm:flex-row justify-end mb-4 gap-2">
+    <div id="analytics-controls" class="flex flex-col sm:flex-row justify-end mb-4 gap-2">
         <select bind:value={activeTimeframe} class="select select-bordered">
             <option value="all">All Time</option>
             <option value="30">Last 30 Days</option>

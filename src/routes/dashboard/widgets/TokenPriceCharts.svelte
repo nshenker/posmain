@@ -1,118 +1,102 @@
-<script lang='ts'>
-    import { getChartDataForCoin } from '../../priceStore.js';
-    import { mints } from '../../stores.js';
-    import { browser } from '$app/environment';
-    import { Chart, Title, Tooltip, Legend, PointElement, LineElement, CategoryScale, LinearScale, TimeScale } from 'chart.js';
+<script>
+    import { onMount } from 'svelte';
+    import { tokenPrices } from '../../priceStore.js';
     import { Line } from 'svelte-chartjs';
+    import {
+        Chart as ChartJS,
+        Title,
+        Tooltip,
+        Legend,
+        LineElement,
+        CategoryScale,
+        LinearScale,
+        PointElement,
+        TimeScale
+    } from 'chart.js';
     import 'chartjs-adapter-date-fns';
 
-    Chart.register(Title, Tooltip, Legend, PointElement, LineElement, CategoryScale, LinearScale, TimeScale);
+    let chartData = {};
+    let timeframe = '7d'; // Default to 7 days
+    let ready = false;
 
-    let activeTab = 'solana';
-    let activeTimeframe = 7; // Default to 7 days
-    
-    const timeframes = [ { label: '1D', days: 1 }, { label: '7D', days: 7 }, { label: '30D', days: 30 }, { label: '90D', days: 90 }];
-    const chartableMints = $mints.filter(m => m.name !== 'USDC');
-    
-    // Get the name of the active token
-    $: activeTokenName = chartableMints.find(m => m.coingeckoId === activeTab)?.name;
+    onMount(() => {
+        ChartJS.register(
+            Title,
+            Tooltip,
+            Legend,
+            LineElement,
+            CategoryScale,
+            LinearScale,
+            PointElement,
+            TimeScale
+        );
 
-    // --- Chart Configuration ---
-    $: chartOptions = {
-        maintainAspectRatio: false,
-        scales: {
-            x: {
-                type: 'time',
-                time: {
-                    unit: activeTimeframe <= 2 ? 'hour' : 'day', // Use 'hour' for 1D, 'day' for longer
-                },
-                ticks: {
-                    maxTicksLimit: 8,
-                    color: 'rgba(128, 128, 128, 0.8)'
-                },
-                grid: {
-                    color: 'rgba(128, 128, 128, 0.1)'
-                }
-            },
-            y: {
-                ticks: {
-                    callback: function(value) {
-                        if (typeof value === 'number' && value < 0.001) {
-                            return value.toExponential(2);
-                        }
-                        return '$' + value.toLocaleString('en-US');
-                    },
-                    color: 'rgba(128, 128, 128, 0.8)'
-                },
-                 grid: {
-                    color: 'rgba(128, 128, 128, 0.1)'
-                }
+        const unsubscribe = tokenPrices.subscribe(prices => {
+            if (prices && Object.keys(prices).length > 0) {
+                updateChartData(prices);
+                ready = true;
             }
-        },
-        plugins: {
-            legend: {
-                display: false
-            }
+        });
+
+        return unsubscribe;
+    });
+
+    function updateChartData(prices) {
+        const datasets = Object.entries(prices).map(([id, data]) => {
+            // Check if history exists before trying to access it
+            const history = data.history ? data.history[timeframe] || [] : [];
+            return {
+                label: id.toUpperCase(),
+                data: history.map(point => ({ x: new Date(point[0]), y: point[1] })),
+                borderColor: getRandomColor(),
+                tension: 0.1,
+            };
+        });
+
+        chartData = {
+            datasets,
+        };
+    }
+
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
         }
-    };
+        return color;
+    }
 </script>
 
 <div class="card-body">
-    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-        <h2 class="card-title text-xl font-greycliffmed">Token Price Charts</h2>
-        <div class="join">
-            {#each timeframes as timeframe}
-                <button 
-                    class="btn btn-xs join-item"
-                    class:btn-primary={activeTimeframe === timeframe.days}
-                    on:click={() => activeTimeframe = timeframe.days}
-                >
-                    {timeframe.label}
-                </button>
-            {/each}
-        </div>
+    <div class="flex justify-between items-center">
+        <h2 class="card-title text-xl font-greycliffmed">Token Prices</h2>
+        <select class="select select-bordered select-sm" bind:value={timeframe}>
+            <option value="1d">24h</option>
+            <option value="7d">7d</option>
+            <option value="30d">30d</option>
+        </select>
     </div>
-
-
-    <div role="tablist" class="tabs tabs-boxed">
-        {#each chartableMints as mint}
-            <button
-                role="tab"
-                class="tab"
-                class:tab-active={activeTab === mint.coingeckoId}
-                on:click={() => activeTab = mint.coingeckoId}
-            >
-                {mint.name}
-            </button>
-        {/each}
-    </div>
-
-    <div class="mt-4 relative h-64 flex items-center justify-center">
-        {#key activeTab + activeTimeframe}
-            {#await getChartDataForCoin(activeTab, activeTimeframe)}
-                 <p class="text-center">Loading chart data...</p>
-            {:then prices}
-                {#if prices && prices.length > 0}
-                     <Line 
-                        data={{
-                            datasets: [
-                                {
-                                    label: `${activeTokenName} Price (USD)`,
-                                    data: prices.map(([timestamp, price]) => ({ x: timestamp, y: price })),
-                                    borderColor: 'rgb(75, 192, 192)',
-                                    tension: 0.1,
-                                    pointRadius: 0,
-                                },
-                            ],
-                        }} 
-                        options={chartOptions} 
-                    />
-                {:else}
-                    <p class="text-center text-error">No data available for this timeframe.</p>
-                {/if}
-            {:catch error}
-                 <p class="text-center text-error">Error: {error.message}</p>
-            {/await}
-        {/key}
+    <div class="relative h-64 mt-4">
+        {#if ready}
+            <Line
+                data={chartData}
+                options={{
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day'
+                            }
+                        }
+                    }
+                }}
+            />
+        {:else}
+            <div class="flex items-center justify-center h-full">
+                <p>Loading chart data...</p>
+            </div>
+        {/if}
     </div>
 </div>

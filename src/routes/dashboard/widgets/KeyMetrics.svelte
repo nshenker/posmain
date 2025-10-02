@@ -1,27 +1,26 @@
 <script lang='ts'>
-    import { successArray, mints, invoices } from '../../stores.js';
+    import { successArray, mints, invoices, customers } from '../../stores.js';
     import { tokenPrices } from '../../priceStore.js';
-    import { onMount } from 'svelte';
+    import { get } from 'svelte/store';
     import dayjs from 'dayjs';
 
     let totalRevenue = 0;
     let totalTransactions = 0;
     let averageSale = 0;
 
-    onMount(() => {
-        const unsubscribe = tokenPrices.subscribe(prices => {
-            if (Object.keys(prices).length === 0) return;
-            
-            // Combine direct sales with paid invoices
-            const paidInvoicesAsSales = $invoices.filter(inv => inv.status === 'Paid').map(inv => ({
-                timestamp: dayjs(inv.issueDate).unix(),
-                uiAmount: inv.total,
-                mint: inv.paymentCurrency,
-                items: inv.items,
-                txid: `invoice-${inv.id}`
-            }));
-            const allSales = [...$successArray, ...paidInvoicesAsSales];
+    $: paidInvoicesAsSales = $invoices.filter(inv => inv.status === 'Paid').map(inv => ({
+        timestamp: dayjs(inv.issueDate).unix(),
+        uiAmount: inv.total,
+        mint: inv.paymentCurrency,
+        items: inv.items,
+        txid: `invoice-${inv.id}`
+    }));
+    
+    $: allSales = [...$successArray, ...paidInvoicesAsSales];
 
+    $: {
+        const prices = get(tokenPrices);
+        if (prices && Object.keys(prices).length > 0) {
             const getTxnUsdValue = (txn) => {
                 const mintInfo = $mints.find(m => m.name === txn.mint);
                 if (!mintInfo) return 0;
@@ -37,10 +36,8 @@
                 totalRevenue = 0;
                 averageSale = 0;
             }
-        });
-
-        return unsubscribe;
-    });
+        }
+    }
 </script>
 
 <div class="card-body items-center text-center">

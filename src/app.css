@@ -1,28 +1,68 @@
+/* Import Shepherd.js theme */
+@import 'shepherd.js/dist/css/shepherd.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-	@font-face {
-        font-family: 'GreycliffCF-Bold';
-        src: local('GreycliffCF-Bold'), url('/fonts/GreycliffCF-Bold.woff2');
-        
-    }
-	@font-face {
-        font-family: 'GreycliffCF-Medium';
-        src: local('GreycliffCF-Medium'), url('/fonts/GreycliffCF-Medium.woff2');
-        
-    }
-	@font-face {
-        font-family: 'GreycliffCF-Regular';
-        src: local('GreycliffCF-Regular'), url('/fonts/GreycliffCF-Regular.woff2');
-        
-    }
-    html, body {
-        font-family: 'GreycliffCF-Regular', sans-serif;
-        height: 100%;
-    }
-    body {
-        overscroll-behavior-y: contain;
-    }
+:root {
+  font-family: "Greycliff", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
 }
+@font-face {
+  font-family: 'Greycliff';
+  src: url('/fonts/GreycliffCF-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'GreycliffMed';
+  src: url('/fonts/GreycliffCF-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'GreycliffBold';
+  src: url('/fonts/GreycliffCF-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Shepherd.js button styles */
+.shepherd-button {
+    @apply btn;
+}
+.shepherd-button-secondary {
+    @apply btn-ghost;
+}
+
+/* === NEW CODE START === */
+/* Custom overrides for Shepherd.js tour to ensure theme compatibility */
+.shepherd-element, .shepherd-text, .shepherd-header .shepherd-title {
+  color: oklch(var(--bc)); /* Use the theme's base content (text) color */
+}
+
+/* Ensure the close icon in the header is also visible */
+.shepherd-header .shepherd-cancel-icon {
+  color: oklch(var(--bc));
+  opacity: 0.75;
+}
+.shepherd-header .shepherd-cancel-icon:hover {
+  opacity: 1;
+}
+/* === NEW CODE END === */

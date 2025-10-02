@@ -59,10 +59,10 @@
                     <ul class="menu bg-base-100 rounded-box">
                         {#each $customerGroups as group}
                             <li>
-                                <a class:active={selectedGroupId === group.id} on:click={() => selectedGroupId = group.id}>
+                                <button class:active={selectedGroupId === group.id} on:click={() => selectedGroupId = group.id} class="w-full justify-between">
                                     {group.name}
-                                    <button class="btn btn-xs btn-error" on:click|stopPropagation={() => removeGroup(group.id)}>✕</button>
-                                </a>
+                                    <span on:click|stopPropagation={() => removeGroup(group.id)}>✕</span>
+                                </button>
                             </li>
                         {/each}
                     </ul>

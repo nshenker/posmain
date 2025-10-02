@@ -1,6 +1,5 @@
 <script lang='ts'>
     export let sales;
-    export let customers;
 
     $: newCustomers = new Set(sales.map(s => s.customerId)).size;
     $: returningCustomers = sales.length - newCustomers;

@@ -5,11 +5,14 @@
     import { fullScreen, merchantLogo, theme, storeName } from './stores.js';
     import { fetchPrices } from './priceStore.js';
     import ThemeSwitcher from "./ThemeSwitcher.svelte";
-    import { goto } from '$app/navigation';
+    import { goto, afterNavigate } from '$app/navigation';
     import { Toaster } from 'svelte-french-toast';
     import Toast from './Toast.svelte';
     import { receiptToPrint } from './printStore.js';
     import Receipt from './pos/Receipt.svelte';
+    import { tour } from '../utils/tourStore.js';
+    import { page } from '$app/stores';
+    import { tourSteps } from '../utils/tourSteps.js';
 
     theme.subscribe(value => {
         if (browser) {
@@ -34,17 +37,116 @@
         }
     }
 
-    onMount(() => {
+    onMount(async () => {
         if(browser) {
-            fetchPrices(); // Fetch current prices when the app loads
+            const Shepherd = (await import('shepherd.js')).default;
+
+            fetchPrices();
             document.documentElement.setAttribute('data-theme', $theme);
             document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+            const newTour = new Shepherd.Tour({
+                defaultStepOptions: {
+                    classes: 'shadow-lg bg-base-200 p-4 rounded-lg',
+                    cancelIcon: {
+                        enabled: true
+                    },
+                    scrollTo: { behavior: 'smooth', block: 'center' },
+                    tippyOptions: {
+                        maxWidth: 320,
+                        popperOptions: {
+                            modifiers: [{ name: 'preventOverflow', options: { mainAxis: false } }]
+                        }
+                    },
+                },
+                useModalOverlay: true
+            });
+
+            const steps = tourSteps(newTour);
+            steps.forEach(step => {
+                const stepOptions = { ...step };
+                stepOptions.buttons = step.buttons.map(b => ({
+                    ...b,
+                    classes: b.secondary ? 'btn btn-ghost' : 'btn-primary'
+                }));
+                newTour.addStep(stepOptions);
+            });
+            tour.set(newTour);
+
+            newTour.on('active', () => {
+                // document.body.style.overflow = 'hidden'; // COMMENTED OUT TO FIX SCROLLING
+            });
+            newTour.on('inactive', () => {
+                // document.body.style.overflow = ''; // COMMENTED OUT TO FIX SCROLLING
+            });
         }
     });
 
     onDestroy(() => {
         if (browser) {
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            if ($tour) {
+                $tour.complete();
+                tour.set(null);
+            }
+        }
+    });
+    
+    function showStepWhenReady(tourInstance, stepId) {
+        if (!tourInstance) return;
+        const step = tourInstance.getById(stepId);
+        if (!step || !step.options.attachTo || !step.options.attachTo.element) {
+            tourInstance.show(stepId);
+            return;
+        }
+
+        const elementSelector = step.options.attachTo.element;
+
+        let attempts = 0;
+        const maxAttempts = 100; // Wait up to 5 seconds
+
+        const interval = setInterval(() => {
+            const element = document.querySelector(elementSelector);
+            
+            if (element) {
+                clearInterval(interval);
+                tourInstance.show(stepId);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                console.error(`Tour Error: Could not find element "${elementSelector}" for step "${stepId}".`);
+                step.options.attachTo = undefined; 
+                tourInstance.show(stepId);
+            }
+            attempts++;
+        }, 50);
+    }
+
+    afterNavigate(() => {
+        if (browser && $tour) {
+            const currentPath = $page.url.pathname;
+            const currentStep = $tour.getCurrentStep();
+            
+            const pageToStepsMap = {
+                '/dashboard': ['welcome', 'dashboard-metrics', 'dashboard-widgets', 'dashboard-nav'],
+                '/pos': ['pos-intro', 'pos-create-charge', 'pos-transactions-list', 'pos-settings-wallet', 'pos-settings-data'],
+                '/invoicing': ['invoicing-intro', 'invoicing-items', 'invoicing-actions', 'invoicing-table'],
+                '/inventory': ['inventory-intro', 'inventory-add', 'inventory-management', 'inventory-reports-view'],
+                '/crm': ['crm-intro', 'crm-actions'],
+                '/analytics': ['analytics-intro', 'analytics-filter', 'analytics-charts']
+            };
+
+            const stepsForCurrentPage = pageToStepsMap[currentPath];
+            if (!stepsForCurrentPage && $tour.isActive()) {
+                $tour.cancel();
+                return;
+            }
+
+            if(stepsForCurrentPage) {
+                const entryStepForCurrentPage = stepsForCurrentPage[0];
+                if ($tour.isActive() && (!currentStep || !stepsForCurrentPage.includes(currentStep.id))) {
+                    showStepWhenReady($tour, entryStepForCurrentPage);
+                }
+            }
         }
     });
 </script>

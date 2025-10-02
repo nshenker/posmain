@@ -2,6 +2,17 @@
     // To add future updates, simply add a new object to the top of this array.
     const updateNotes = [
         {
+            version: 'v1.11',
+            date: 'October 2025',
+            title: 'Major Mobile Redesign & Interactive Tour',
+            notes: [
+                'Complete mobile UI overhaul for a clean, modern, and highly functional experience on any device.',
+                'Redesigned the Point of Sale page with a sleek, unified tab bar for intuitive navigation on both mobile and desktop.',
+                'Introduced a brand new, fully responsive guided product tour to help users master every feature of the suite.',
+                'Enhanced the tour\'s logic to be device-aware, ensuring a flawless experience from start to finish on any screen size.'
+            ]
+        },
+        {
             version: 'v1.10',
             date: 'September 2025',
             title: 'UI Overhaul & Advanced CRM',
@@ -151,6 +162,8 @@
                             2. Getting Started: A Detailed Tutorial
                         </h2>
                         <p class="mt-4">Follow these simple steps to get your store up and running in minutes.</p>
+                        <p class="mt-2">For a hands-on walkthrough, we highly recommend using our new interactive product tour. You can start it from the Dashboard at any time to get a guided look at all the suite's features.</p>
+                        
                         <ul class="timeline timeline-vertical mt-6">
                             <li>
                                 <div class="timeline-start">Step 1</div>
@@ -229,7 +242,7 @@
                                     <p>Our <strong>POS</strong> is engineered for speed, flexibility, and ease of use in any retail environment. You can create charges in two primary ways: either by adding pre-defined products from your inventory to build a customer's cart, or by entering a custom amount on the built-in keypad for services or miscellaneous items. The system supports multiple cryptocurrencies, and once a transaction is initiated, a Solana Pay QR code is generated for the customer to scan. The transaction status updates in real-time as soon as the payment is confirmed on the Solana network, ensuring a smooth and efficient checkout process for both you and your customers.</p>
                                 </div>
                             </div>
-                            
+                         
                             <div class="collapse collapse-arrow bg-base-200">
                                 <input type="checkbox" /> 
                                 <div class="collapse-title text-xl font-medium">
