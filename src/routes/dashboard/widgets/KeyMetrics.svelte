@@ -1,7 +1,6 @@
 <script lang='ts'>
-    import { successArray, mints, invoices, customers } from '../../stores.js';
+    import { successArray, mints, invoices } from '../../stores.js';
     import { tokenPrices } from '../../priceStore.js';
-    import { get } from 'svelte/store';
     import dayjs from 'dayjs';
 
     let totalRevenue = 0;
@@ -15,15 +14,17 @@
         items: inv.items,
         txid: `invoice-${inv.id}`
     }));
-    
     $: allSales = [...$successArray, ...paidInvoicesAsSales];
 
+    // This block is now reactive to both `allSales` and `tokenPrices`
     $: {
-        const prices = get(tokenPrices);
+        const prices = $tokenPrices; // Use the reactive '$' syntax
+        
         if (prices && Object.keys(prices).length > 0) {
             const getTxnUsdValue = (txn) => {
                 const mintInfo = $mints.find(m => m.name === txn.mint);
-                if (!mintInfo) return 0;
+                if (!mintInfo || !mintInfo.coingeckoId) return 0;
+                
                 const price = prices[mintInfo.coingeckoId]?.usd || 0;
                 return txn.uiAmount * price;
             };
@@ -36,6 +37,11 @@
                 totalRevenue = 0;
                 averageSale = 0;
             }
+        } else {
+            // Set default values if prices are not yet available
+            totalRevenue = 0;
+            totalTransactions = allSales.length;
+            averageSale = 0;
         }
     }
 </script>
