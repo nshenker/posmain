@@ -9,6 +9,7 @@
     import PendingInvoices from './widgets/PendingInvoices.svelte';
     import TokenPriceCharts from './widgets/TokenPriceCharts.svelte';
     import { startTour as initTour } from '../../utils/tours.js';
+    import WidgetEditor from './WidgetEditor.svelte'; // <-- Import the new component
 
     const widgetComponents = {
         keyMetrics: KeyMetrics,
@@ -19,12 +20,17 @@
         pendingInvoices: PendingInvoices,
         tokenPriceCharts: TokenPriceCharts,
     };
+
     let isEditing = false;
 
     function startTour() {
         initTour();
     }
 </script>
+
+{#if isEditing}
+    <WidgetEditor on:close={() => isEditing = false} />
+{/if}
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <div id="dashboard-header" class="flex flex-col sm:flex-row justify-between items-center py-6 gap-4">
@@ -41,13 +47,13 @@
         <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
             <div class="card-body items-center text-center">
                 <h2 class="card-title text-2xl font-greycliffmed">Point of Sale</h2>
-                 <p>Create charges and accept payments in Solana.</p>
+                <p>Create charges and accept payments in Solana.</p>
                 <div class="card-actions justify-center mt-4">
                     <a href="/pos" id="tour-pos-link" class="btn btn-primary">Go to POS</a>
                 </div>
             </div>
         </div>
-    
+     
         <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
             <div class="card-body items-center text-center">
                 <h2 class="card-title text-2xl font-greycliffmed">Invoicing</h2>
@@ -60,7 +66,7 @@
         <div class="card bg-base-100 shadow-xl border border-gray-200 hover:shadow-2xl transition-shadow">
             <div class="card-body items-center text-center">
                 <h2 class="card-title text-2xl font-greycliffmed">Inventory</h2>
-                 <p>Keep track of your product inventory.</p>
+                <p>Keep track of your product inventory.</p>
                 <div class="card-actions justify-center mt-4">
                     <a href="/inventory" id="tour-inventory-link" class="btn btn-primary">Manage Inventory</a>
                 </div>
@@ -81,8 +87,7 @@
     <div id="dashboard-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
         {#each $dashboardLayout.widgets as widget}
             {#if widget.visible}
-                <div class="card 
- bg-base-100 shadow-xl border">
+                <div class="card bg-base-100 shadow-xl border">
                     <svelte:component this={widgetComponents[widget.id]} />
                 </div>
             {/if}

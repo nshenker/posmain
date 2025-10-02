@@ -1,6 +1,8 @@
 <script>
     import { onMount } from 'svelte';
-    import { tokenPrices } from '../../priceStore.js';
+    import { get } from 'svelte/store'; // Corrected import
+    import { mints } from '../../stores.js'; // Import mints to know which tokens to fetch
+    import { getChartDataForCoin } from '../../priceStore.js'; // Import the correct function
     import { Line } from 'svelte-chartjs';
     import {
         Chart as ChartJS,
@@ -15,9 +17,10 @@
     } from 'chart.js';
     import 'chartjs-adapter-date-fns';
 
-    let chartData = {};
-    let timeframe = '7d'; // Default to 7 days
+    let chartData = { datasets: [] };
+    let timeframe = '7'; // Default to 7 days, as a string to match API
     let ready = false;
+    let loading = true;
 
     onMount(() => {
         ChartJS.register(
@@ -30,32 +33,36 @@
             PointElement,
             TimeScale
         );
-
-        const unsubscribe = tokenPrices.subscribe(prices => {
-            if (prices && Object.keys(prices).length > 0) {
-                updateChartData(prices);
-                ready = true;
-            }
-        });
-
-        return unsubscribe;
+        ready = true;
     });
 
-    function updateChartData(prices) {
-        const datasets = Object.entries(prices).map(([id, data]) => {
-            // Check if history exists before trying to access it
-            const history = data.history ? data.history[timeframe] || [] : [];
-            return {
-                label: id.toUpperCase(),
-                data: history.map(point => ({ x: new Date(point[0]), y: point[1] })),
-                borderColor: getRandomColor(),
-                tension: 0.1,
-            };
-        });
+    // Reactive statement to refetch data when timeframe changes
+    $: if (ready) {
+        updateAllChartData(timeframe);
+    }
 
-        chartData = {
-            datasets,
-        };
+    async function updateAllChartData(days) {
+        loading = true;
+        const allMints = get(mints);
+        const datasets = [];
+
+        for (const mint of allMints) {
+            if (mint.coingeckoId) {
+                const history = await getChartDataForCoin(mint.coingeckoId, days);
+                if (history.length > 0) {
+                     datasets.push({
+                        label: mint.name,
+                        data: history.map(point => ({ x: new Date(point[0]), y: point[1] })),
+                        borderColor: getRandomColor(),
+                        tension: 0.1,
+                        fill: false,
+                    });
+                }
+            }
+        }
+        
+        chartData = { datasets };
+        loading = false;
     }
 
     function getRandomColor() {
@@ -72,19 +79,23 @@
     <div class="flex justify-between items-center">
         <h2 class="card-title text-xl font-greycliffmed">Token Prices</h2>
         <select class="select select-bordered select-sm" bind:value={timeframe}>
-            <option value="1d">24h</option>
-            <option value="7d">7d</option>
-            <option value="30d">30d</option>
+            <option value="1">24h</option>
+            <option value="7">7d</option>
+            <option value="30">30d</option>
         </select>
     </div>
     <div class="relative h-64 mt-4">
-        {#if ready}
-            <Line
+        {#if loading}
+             <div class="flex items-center justify-center h-full">
+                <p>Loading chart data...</p>
+            </div>
+        {:else if chartData.datasets.length > 0}
+           <Line
                 data={chartData}
                 options={{
                     maintainAspectRatio: false,
                     scales: {
-                        x: {
+                         x: {
                             type: 'time',
                             time: {
                                 unit: 'day'
@@ -92,10 +103,10 @@
                         }
                     }
                 }}
-            />
+             />
         {:else}
             <div class="flex items-center justify-center h-full">
-                <p>Loading chart data...</p>
+                <p>Could not load chart data.</p>
             </div>
         {/if}
     </div>
