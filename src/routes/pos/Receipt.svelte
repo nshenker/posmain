@@ -1,118 +1,150 @@
 <script lang="ts">
+    import dayjs from 'dayjs';
     export let transaction;
     export let storeName;
     export let merchantLogo;
+    export let businessAddress;
+
+    // Calculate tax and subtotal for display. NOTE: This is a display approximation.
+    // In a real-world scenario, tax should be stored with the transaction.
+    const taxRate = 0.08875; // Assuming a fixed tax rate for display
+    const total = transaction.uiAmount;
+    const subtotal = total / (1 + taxRate);
+    const taxAmount = total - subtotal;
 </script>
 
 <style>
+    /* These styles are scoped to this component and will only be applied for printing */
     .receipt-container {
-        display: none; /* Hidden by default, only visible for printing */
+        font-family: 'monospace', monospace;
+        width: 280px;
+        padding: 15px;
+        color: #000;
+        background-color: #fff;
+    }
+    
+    .text-center { text-align: center; }
+    .font-bold { font-weight: bold; }
+    .block { display: block; }
+    .mt-4 { margin-top: 1rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .text-xs { font-size: 11px; }
+    .whitespace-pre-line { white-space: pre-line; }
+
+    .header-main {
+        font-size: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 5px;
     }
 
-    @media print {
-        /* Basic print reset */
-        @page {
-            size: 80mm auto; /* Standard thermal printer roll width */
-            margin: 0;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #fff;
-        }
+    .header-sub {
+        font-size: 11px;
+        margin: 0;
+    }
 
-        .receipt-container {
-            display: block;
-            font-family: 'Courier New', Courier, monospace;
-            width: 280px; /* A bit of padding for 300px/80mm rolls */
-            padding: 10px;
-            font-size: 12px;
-            color: #000;
-            line-height: 1.4;
-        }
-        
-        /* Utility classes for printing */
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .font-bold { font-weight: bold; }
-        .block { display: block; }
-        .w-full { width: 100%; }
-        .mt-4 { margin-top: 1rem; }
-        .mb-2 { margin-bottom: 0.5rem; }
-        .text-xs { font-size: 10px; }
-        .break-all { word-break: break-all; }
+    .hr {
+        border-top: 1px dashed #000;
+        margin: 12px 0;
+    }
+    
+    .flex-between {
+        display: flex;
+        justify-content: space-between;
+    }
 
-        .hr {
-            border-top: 1px dashed #000;
-            margin: 8px 0;
-        }
-        
-        .logo {
-            max-width: 120px;
-            margin: 0 auto 10px;
-        }
+    .item-row span:first-child {
+        text-align: left;
+        flex-grow: 1;
+        padding-right: 8px;
+    }
+    .item-row span:last-child {
+        text-align: right;
+    }
+    
+    .total-row {
+        font-size: 16px;
+        font-weight: bold;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 2px 0;
-        }
-        th {
-            border-bottom: 1px solid #000;
-        }
+    .success-banner {
+        font-size: 18px;
+        font-weight: bold;
+        color: #28a745; /* Green color */
+        margin-top: 15px;
+        margin-bottom: 15px;
     }
 </style>
 
 <div class="receipt-container">
     <div class="text-center">
         {#if merchantLogo}
-            <img src={merchantLogo} alt="Logo" class="logo" />
+            <img src={merchantLogo} alt="Logo" style="max-width: 120px; margin: 0 auto 10px;" />
         {/if}
-        <span class="block font-bold text-lg">{storeName}</span>
-        <span class="block text-xs">{new Date(transaction.timestamp * 1000).toLocaleString()}</span>
+        <div class="header-main">{storeName || 'GROCERIA MARKET'}</div>
+        {#if businessAddress}
+            <p class="header-sub whitespace-pre-line">{businessAddress}</p>
+        {/if}
     </div>
 
     <div class="hr"></div>
 
-    <table class="w-full">
-        <thead>
-            <tr>
-                <th style="text-align: left;">Item</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            {#if transaction.items && transaction.items.length > 0}
-                {#each transaction.items as item}
-                    <tr>
-                        <td>{item.name}</td>
-                        <td class="text-right">{item.quantity}</td>
-                        <td class="text-right">{(item.price * item.quantity).toFixed(2)}</td>
-                    </tr>
-                {/each}
-            {:else}
-                <tr>
-                    <td>Custom Amount</td>
-                    <td class="text-right">1</td>
-                    <td class="text-right">{transaction.uiAmount.toFixed(2)}</td>
-                </tr>
-            {/if}
-        </tbody>
-    </table>
-
-    <div class="hr"></div>
+    <div class="text-xs">
+        <div class="flex-between">
+            <span>Receipt #: {transaction.txid.substring(0, 8).toUpperCase()}</span>
+            <span>Time: {dayjs.unix(transaction.timestamp).format("h:mm A")}</span>
+        </div>
+    </div>
     
-    <div class="mt-4 text-right">
-        <p class="font-bold">TOTAL: {transaction.uiAmount} {transaction.mint}</p>
+    <div class="hr"></div>
+
+    <div>
+        <div class="font-bold mb-2">Items Purchased</div>
+        {#if transaction.items && transaction.items.length > 0}
+            {#each transaction.items as item}
+                <div class="item-row flex-between text-xs">
+                    <span>{item.quantity} x {item.name}</span>
+                    <span>{(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+            {/each}
+        {:else}
+             <div class="item-row flex-between text-xs">
+                <span>1 x Custom Amount</span>
+                <span>{transaction.uiAmount.toFixed(2)}</span>
+            </div>
+        {/if}
     </div>
 
     <div class="hr"></div>
+
+    <div class="text-xs">
+        <div class="flex-between">
+            <span>Subtotal:</span>
+            <span>{subtotal.toFixed(2)}</span>
+        </div>
+        <div class="flex-between">
+            <span>Sales Tax ({ (taxRate * 100).toFixed(3) }%):</span>
+            <span>{taxAmount.toFixed(2)}</span>
+        </div>
+        <div class="flex-between total-row" style="margin-top: 8px;">
+            <span>Total:</span>
+            <span>{total.toFixed(2)} {transaction.mint}</span>
+        </div>
+    </div>
     
-    <div class="text-center mt-4">
-        <p>Thank you for your business!</p>
-        <p class="text-xs break-all">TX: {transaction.txid}</p>
+    <div class="hr"></div>
+
+    <div class="text-xs">
+        <p>Payment Method: Solana Wallet</p>
+        <p style="word-break: break-all;">Transaction Hash: {transaction.txid}</p>
+        <p>Network Fee: ~0.00001 SOL</p>
+    </div>
+
+    <div class="success-banner text-center">
+        PAYMENT SUCCESSFUL
+    </div>
+
+    <div class="text-center text-xs">
+        <p>Thank you for shopping with us!</p>
     </div>
 </div>

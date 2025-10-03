@@ -70,7 +70,7 @@ export const tourSteps = (tour) => [
     {
         id: 'pos-create-charge',
         title: "Creating a Charge",
-        text: "You can build a customer's cart using the 'Add Item' button from your inventory, manually enter a barcode, or input a custom amount using the numeric keypad. Click 'Create QR Code' to generate the Solana Pay request.",
+        text: "You can build a customer's cart using the 'Add Item' button, scan a barcode, or use the keypad. Notice the new 'Apply Tax' toggle, which lets you control sales tax on a per-transaction basis.",
         attachTo: { element: '#pos-input-section', on: 'left' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -85,7 +85,7 @@ export const tourSteps = (tour) => [
     {
         id: 'pos-transactions-list',
         title: "Sales History",
-        text: "This table shows a detailed, time-stamped log of all successful sales. You can click the transaction ID to view it on Solscan or use the 'Print' button to generate a customer receipt.",
+        text: "This table shows a detailed log of all successful sales. You can now expand each transaction to see a breakdown of the specific items and variants purchased.",
         attachTo: { element: '.table.w-full', on: 'top' }, // Targeting the table in Transactions.svelte
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -99,8 +99,8 @@ export const tourSteps = (tour) => [
     // --- Point of Sale (POS): Settings (Tab 3) ---
     {
         id: 'pos-settings-wallet',
-        title: "Wallet & Branding",
-        text: "Here you can set your default payment currency, upload your company logo (which appears on receipts), and check the 'No Custody' warning visibility.",
+        title: "Store & Tax Settings",
+        text: "Here you can set your wallet, logo, and business address. We've also added a new section to define your sales tax rate and set whether tax should be applied by default.",
         attachTo: { element: '.card-body > div:nth-child(3)', on: 'left' }, // Targeting the first control (warning toggle)
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -110,8 +110,8 @@ export const tourSteps = (tour) => [
     {
         id: 'pos-settings-data',
         title: "Data Management & Backup",
-        text: "Since all your data is stored locally in the browser, regular backups are critical. Use the Export Data feature to download a JSON file and Import Data to restore it to any device.",
-        attachTo: { element: '.card-body > div:nth-child(10)', on: 'top' }, // Targeting the Data Management section header
+        text: "Since all your data is stored locally in the browser, regular backups are critical. The export function now includes all your new settings and product variant data.",
+        attachTo: { element: '#data-management-section', on: 'top' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next: Invoicing', action: () => goto('/invoicing') }

@@ -2,10 +2,11 @@
     import { onMount } from "svelte";
     import * as web3 from '@solana/web3.js';
     import { createQR, encodeURL, findReference, FindReferenceError} from "@solana/pay"
-    import { storeName, publicKey, pmtAmt, mostRecentTxn, showWarning, successArray, mints, selectedMint, inventory, currentChargeItems} from '../stores.js';
+    import { storeName, publicKey, pmtAmt, mostRecentTxn, showWarning, successArray, mints, selectedMint, inventory, currentChargeItems, chargeMetadata} from '../stores.js';
     import { logHistory } from '../../utils/inventory.js';
     import { goto } from '$app/navigation';
     import BigNumber from 'bignumber.js';
+    import { get } from 'svelte/store';
 
 	let txnConfirmed = false;
     let statusMessage = "Awaiting Payment...";
@@ -76,19 +77,43 @@
 				if (confirmedTxn) {
                     let uiAmount = 0;
                     const meta = confirmedTxn.meta;
+                    const pubkey = get(publicKey);
+                    const mintsArray = get(mints);
+                    const currentMintInfo = mintsArray.find(m => m.name === $selectedMint);
 
-                    if (meta && meta.postTokenBalances && meta.preTokenBalances) {
-                        const postBalances = meta.postTokenBalances.find(b => b.owner === $publicKey);
-                        const preBalances = meta.preTokenBalances.find(b => b.owner === $publicKey);
+                    if (meta) {
+                        if ($selectedMint !== 'SOL' && currentMintInfo) {
+                            // Method 1: Check SPL token balance changes (most reliable for SPL tokens)
+                            const preBalance = meta.preTokenBalances?.find(
+                                b => b.owner === pubkey && b.mint === currentMintInfo.mint
+                            )?.uiTokenAmount?.uiAmount ?? 0;
+                            
+                            const postBalance = meta.postTokenBalances?.find(
+                                b => b.owner === pubkey && b.mint === currentMintInfo.mint
+                            )?.uiTokenAmount?.uiAmount ?? 0;
 
-                        if (postBalances && preBalances && postBalances.uiTokenAmount && preBalances.uiTokenAmount) {
-                            uiAmount = postBalances.uiTokenAmount.uiAmount - preBalances.uiTokenAmount.uiAmount;
+                            if (postBalance > preBalance) {
+                                uiAmount = postBalance - preBalance;
+                            }
+                        } else {
+                            // Method 2: Check native SOL balance changes
+                            const accountIndex = confirmedTxn.transaction.message.accountKeys.findIndex(
+                                key => key.pubkey.toBase58() === pubkey
+                            );
+                            if (accountIndex !== -1 && meta.preBalances && meta.postBalances) {
+                                const preBalance = meta.preBalances[accountIndex];
+                                const postBalance = meta.postBalances[accountIndex];
+                                if (postBalance > preBalance) {
+                                    uiAmount = (postBalance - preBalance) / web3.LAMPORTS_PER_SOL;
+                                }
+                            }
                         }
                     }
 
-                    // Fallback for SOL or if token balances are not available
-                    if (uiAmount === 0) {
-                         const transferInstruction = confirmedTxn.transaction.message.instructions.find(
+                    // Method 3: Fallback to instruction parsing if balance checks fail
+                    if ((uiAmount === 0 || isNaN(uiAmount)) && confirmedTxn.transaction?.message?.instructions) {
+                         const instructions = confirmedTxn.transaction.message.instructions;
+                         const transferInstruction = instructions.find(
                             (instruction) => (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transfer' || (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transferChecked'
                         ) as web3.PartiallyDecodedInstruction | undefined;
 
@@ -101,13 +126,18 @@
 
 
                     if (uiAmount > 0) {
+                        const chargeMeta = get(chargeMetadata);
                         const new_entry = {
                             timestamp: confirmedTxn.blockTime,
                             txid: confirmedTxn.transaction.signatures[0],
                             uiAmount: uiAmount,
                             mint: $selectedMint,
                             // Ensure items are clean, serializable objects
-                            items: JSON.parse(JSON.stringify($currentChargeItems))
+                            items: JSON.parse(JSON.stringify($currentChargeItems)),
+                            subtotal: chargeMeta?.subtotal,
+                            taxAmount: chargeMeta?.taxAmount,
+                            taxRate: chargeMeta?.taxRate,
+                            taxable: chargeMeta?.applyTax
                         };
                         successArray.update(items => {
                             if (!items.some(item => item.txid === new_entry.txid)) {
@@ -150,6 +180,7 @@
                 mostRecentTxn.set(signatureInfo.signature);
                 // Clear the cart only after all processing is complete
                 currentChargeItems.set([]);
+                chargeMetadata.set(null);
             } catch (e) {
                 if (e instanceof FindReferenceError) {
 					return;

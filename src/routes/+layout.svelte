@@ -2,7 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { browser } from '$app/environment';
     import "../app.css";
-    import { fullScreen, merchantLogo, theme, storeName } from './stores.js';
+    import { fullScreen, merchantLogo, theme, storeName, businessAddress } from './stores.js';
     import { fetchPrices } from './priceStore.js';
     import ThemeSwitcher from "./ThemeSwitcher.svelte";
     import { goto, afterNavigate } from '$app/navigation';
@@ -19,6 +19,13 @@
             document.documentElement.setAttribute('data-theme', value);
         }
     });
+
+    // Clean up the store after printing is done
+    if (browser) {
+        window.onafterprint = () => {
+            receiptToPrint.set(null);
+        };
+    }
 
     function handleFullscreenChange() {
         const isCurrentlyFullscreen = document.fullscreenElement != null;
@@ -130,7 +137,7 @@
                 '/dashboard': ['welcome', 'dashboard-metrics', 'dashboard-widgets', 'dashboard-nav'],
                 '/pos': ['pos-intro', 'pos-create-charge', 'pos-transactions-list', 'pos-settings-wallet', 'pos-settings-data'],
                 '/invoicing': ['invoicing-intro', 'invoicing-items', 'invoicing-actions', 'invoicing-table'],
-                '/inventory': ['inventory-intro', 'inventory-add', 'inventory-management', 'inventory-reports-view'],
+                '/inventory': ['inventory-intro', 'inventory-add', 'inventory-variants', 'inventory-management', 'inventory-reports-view'],
                 '/crm': ['crm-intro', 'crm-actions'],
                 '/analytics': ['analytics-intro', 'analytics-filter', 'analytics-charts']
             };
@@ -158,6 +165,9 @@
         }
         .print-area {
             display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
         }
     }
 </style>
@@ -224,6 +234,7 @@
             transaction={$receiptToPrint}
             storeName={$storeName}
             merchantLogo={$merchantLogo}
+            businessAddress={$businessAddress}
         />
     {/if}
 </div>

@@ -1,7 +1,7 @@
 <script lang='ts'>
     import { onMount, onDestroy, tick } from "svelte";
     import { goto } from '$app/navigation';
-    import { pmtAmt, selectedMint, currentChargeItems, inventory } from '../stores.js';
+    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata } from '../stores.js';
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
     import { browser } from '$app/environment';
@@ -14,10 +14,11 @@
     let showInventoryModal = false;
     let chargeItems = [];
     let barcodeInput = '';
+    let applyTax = $defaultTaxable;
+
     // --- Scanner State ---
     let scanner = null;
     let isScannerVisible = false;
-    // Controls the visibility of the scanner UI
     let lastScanTime = 0;
     let lastScanResult = '';
     const SCAN_COOLDOWN = 3000; // 3 seconds
@@ -216,6 +217,7 @@
         left = "";
         right = "";
         decimalsActive = false;
+        applyTax = $defaultTaxable;
         $currentChargeItems = [];
     }
 
@@ -227,39 +229,48 @@
     });
     // --- Reactive total calculation ---
     $: {
+        let subtotal = 0;
         if (chargeItems.length > 0) {
-            const total = chargeItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-            $pmtAmt = total.toLocaleString("en", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 4 
-            });
+            subtotal = chargeItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
             const firstItem = chargeItems[0];
             if (firstItem && $selectedMint !== firstItem.currency) {
                 $selectedMint = firstItem.currency;
             }
         } else {
-             // Reset to manual entry mode if cart is empty
             const fullAmount = `${left || '0'}${right ? '.' + right : ''}`;
-            $pmtAmt = parseFloat(fullAmount).toLocaleString("en", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 4 
-            });
+            subtotal = parseFloat(fullAmount) || 0;
         }
+        
+        const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
+        const total = subtotal + taxAmount;
+
+        $pmtAmt = total.toLocaleString("en", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 4 
+        });
     }
 
     function createQRCode() {
-        if (parseFloat($pmtAmt.replace(/,/g, '')) > 0) {
-            // Create a clean, serializable array of items for the transaction log
+        let subtotal = 0;
+        if(chargeItems.length > 0) {
+            subtotal = chargeItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        } else {
+            subtotal = parseFloat($pmtAmt.replace(/,/g, '')) / (applyTax ? (1 + ($taxRate / 100)) : 1);
+        }
+        
+        const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
+        const total = subtotal + taxAmount;
+        
+        if (total > 0) {
             const itemsForTx = chargeItems.map(item => ({
-                id: item.id,
-                variantId: item.variantId,
-                name: item.name,
-                price: item.price,
-                cost: item.cost,
-                quantity: item.quantity,
+                id: item.id, variantId: item.variantId, name: item.name,
+                price: item.price, cost: item.cost, quantity: item.quantity,
                 sku: item.sku
             }));
             $currentChargeItems = itemsForTx;
+
+            chargeMetadata.set({ subtotal, taxAmount, taxRate: $taxRate, applyTax });
+
             goto('/present');
         } else {
             if(browser) showToast("Please enter an amount greater than zero.", "error");
@@ -327,6 +338,12 @@
             </div>
 
             <div class="mt-auto pt-2 space-y-2">
+                 <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Apply Tax ({$taxRate}%)</span> 
+                        <input type="checkbox" class="toggle toggle-primary" bind:checked={applyTax} />
+                    </label>
+                </div>
                 <div class="flex space-x-2">
                     <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case flex-1">Add Item</button>
                     {#if chargeItems.length > 0}

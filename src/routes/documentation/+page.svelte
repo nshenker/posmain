@@ -1,6 +1,18 @@
 <script lang="ts">
     // To add future updates, simply add a new object to the top of this array.
     const updateNotes = [
+         {
+            version: 'v1.13',
+            date: 'October 2025',
+            title: 'Dynamic Sales Tax & Receipt Overhaul',
+            notes: [
+                'New Feature: Added a "Tax Settings" section to the Settings page, allowing merchants to define a sales tax rate and set a default preference.',
+                'New Feature: A new "Apply Tax" toggle on the Point of Sale page gives merchants on-the-fly control over charging tax for individual transactions.',
+                'Enhancement: The printed receipt has been completely redesigned to match a professional, detailed format.',
+                'Enhancement: Receipts are now "tax-aware" and will only show a sales tax line item if tax was applied to the transaction.',
+                'Enhancement: The data backup and restore system now includes all new tax settings.'
+            ]
+        },
         {
             version: 'v1.12',
             date: 'October 2025',

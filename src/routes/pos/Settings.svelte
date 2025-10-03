@@ -3,9 +3,10 @@
     import { goto } from '$app/navigation';
     import { 
         storeName, publicKey, pmtAmt, showWarning, mints, selectedMint, 
-        merchantLogo, successArray, mostRecentTxn, fullScreen, theme, 
+        merchantLogo, businessAddress, successArray, mostRecentTxn, fullScreen, theme, 
         invoices, inventory, categories, inventoryHistory, currentChargeItems,
-        dashboardLayout, customers, customerGroups, lastBackupDate
+        dashboardLayout, customers, customerGroups, lastBackupDate,
+        taxRate, defaultTaxable
     } from '../stores.js';
     import { get } from 'svelte/store';
     import { showToast } from '../toastStore.js';
@@ -25,6 +26,9 @@
         successArray.set([]);
         selectedMint.set("USDC");
         merchantLogo.set("");
+        businessAddress.set("");
+        taxRate.set(8.875);
+        defaultTaxable.set(true);
         theme.set("light");
         invoices.set([]);
         inventory.set([]);
@@ -66,6 +70,9 @@
             successArray: get(successArray),
             selectedMint: get(selectedMint),
             merchantLogo: get(merchantLogo),
+            businessAddress: get(businessAddress),
+            taxRate: get(taxRate),
+            defaultTaxable: get(defaultTaxable),
             theme: get(theme),
             invoices: get(invoices),
             inventory: get(inventory),
@@ -102,6 +109,9 @@
                     successArray.set(importedData.successArray || []);
                     selectedMint.set(importedData.selectedMint || "USDC");
                     merchantLogo.set(importedData.merchantLogo || "");
+                    businessAddress.set(importedData.businessAddress || "");
+                    taxRate.set(importedData.taxRate || 8.875);
+                    defaultTaxable.set(importedData.defaultTaxable !== undefined ? importedData.defaultTaxable : true);
                     theme.set(importedData.theme || "light");
                     invoices.set(importedData.invoices || []);
                     inventory.set(importedData.inventory || []);
@@ -162,8 +172,31 @@
                 <button on:click={removeLogo} class="btn btn-xs btn-error mt-2">Remove Logo</button>
             {/if}
         </div>
-        
+
+         <div class="form-control w-full mt-4">
+            <label for="address-input" class="label">
+                <span class="label-text font-greycliffmed">Business Address</span>
+            </label>
+            <textarea id="address-input" bind:value={$businessAddress} class="textarea textarea-bordered" placeholder="123 Main St&#10;Anytown, USA 12345"></textarea>
+        </div>
+
         <div class="divider"></div>
+
+        <h2 class="card-title text-xl font-greycliffmed mb-4">Tax Settings</h2>
+        <div class="form-control w-full">
+            <label for="tax-rate-input" class="label">
+                <span class="label-text font-greycliffmed">Sales Tax Rate (%)</span>
+            </label>
+            <input id="tax-rate-input" type="number" step="0.001" bind:value={$taxRate} class="input input-bordered" />
+        </div>
+        <div class="form-control mt-2">
+            <label class="label cursor-pointer">
+                <span class="label-text font-greycliffmed">Apply Tax by Default</span>
+                <input type="checkbox" bind:checked={$defaultTaxable} class="toggle toggle-primary" />
+	        </label>
+        </div>
+
+        <div class="divider" id="data-management-section"></div>
 
         <h2 class="card-title text-xl font-greycliffmed mb-4">Data Management</h2>
 

@@ -86,7 +86,11 @@ export const mints = writable([
 
 export const selectedMint = createPersistentStore("selectedMint", "USDC");
 export const merchantLogo = createPersistentStore("merchantLogo", "");
+export const businessAddress = createPersistentStore("businessAddress", "");
 export const theme = createPersistentStore("theme", "light");
+export const taxRate = createPersistentStore("taxRate", 8.875);
+export const defaultTaxable = createPersistentStore("defaultTaxable", true);
+
 
 // --- Inventory & Invoicing Stores ---
 export const inventory = createPersistentStore("inventory", []);
@@ -97,6 +101,9 @@ export const customers = createPersistentStore("customers", []);
 export const customerGroups = createPersistentStore("customerGroups", []);
 export const currentChargeItems = createPersistentStore("currentChargeItems", []); // Holds items for the current transaction
 export const lastBackupDate = createPersistentStore("lastBackupDate", null);
+
+// A temporary store to pass charge metadata to the payment page
+export const chargeMetadata = writable(null);
 
 
 // New store for dashboard layout
