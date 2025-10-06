@@ -20,15 +20,15 @@ export const tourSteps = (tour) => [
     // --- Dashboard: Overview ---
     {
         id: 'welcome',
-        title: "Welcome to PoSolana Suite",
-        text: "This is the official tour to guide you through the complete functionality of your decentralized Point of Sale application.",
+        title: "Welcome to the PoSolana Suite!",
+        text: "This guided tour will walk you through all the powerful features of your new, fully decentralized business management platform. Let's get started!",
         attachTo: { element: '#dashboard-header', on: 'bottom' },
         buttons: [{ text: 'Start Tour', action: tour.next }]
     },
     {
         id: 'dashboard-metrics',
-        title: "Your Key Metrics",
-        text: "The dashboard provides a real-time summary of your performance. All revenue figures are automatically converted to their USD value using live price feeds for accuracy.",
+        title: "Your Business At a Glance",
+        text: "This is your command center. The Key Metrics widget gives you a real-time summary of your store's performance. All revenue figures are automatically converted to their current USD value using live price feeds, so you always know exactly how you're doing.",
         attachTo: { element: '.stats', on: 'bottom' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -37,18 +37,18 @@ export const tourSteps = (tour) => [
     },
     {
         id: 'dashboard-widgets',
-        title: "Customizable Widgets",
-        text: "The dashboard is built from a grid of customizable widgets. Use the 'Edit Widgets' button above to choose which modules, like sales charts and inventory alerts, are visible to you.",
+        title: "A Personalized Command Center",
+        text: "The dashboard is made of modular widgets like sales charts and low stock alerts. You can use the 'Edit Widgets' button to customize your layout and prioritize the data that's most important to your business.",
         attachTo: { element: '#dashboard-grid', on: 'top' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next: POS', action: tour.next }
+            { text: 'Next', action: tour.next }
         ]
     },
     {
         id: 'dashboard-nav',
-        title: "Main Navigation",
-        text: "These cards serve as quick links to the primary application modules. Let's begin by exploring the Point of Sale system.",
+        title: "Navigating the Suite",
+        text: "These cards are your quick links to the core sections of the application. Let's dive into the most important one: the Point of Sale.",
         attachTo: { element: '#dashboard-nav-cards', on: 'bottom' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -56,11 +56,11 @@ export const tourSteps = (tour) => [
         ]
     },
 
-    // --- Point of Sale (POS): Create Charge (Tab 1) ---
+    // --- Point of Sale (POS) ---
     {
         id: 'pos-intro',
-        title: "Point of Sale (POS) Overview",
-        text: "This page is the heart of your business, split into three tabs: Create Charge, Transactions, and Settings. We will go through them in order.",
+        title: "The Point of Sale (POS)",
+        text: "This is the heart of your daily operations. We've organized it into three simple tabs: 'Charge' for new sales, 'Transactions' for your history, and 'Settings' for configuration.",
         attachTo: { element: '.tabs-bordered', on: 'bottom' },
         buttons: [
             { text: 'Back', action: () => goto('/dashboard'), secondary: true },
@@ -69,60 +69,77 @@ export const tourSteps = (tour) => [
     },
     {
         id: 'pos-create-charge',
-        title: "Creating a Charge",
-        text: "You can build a customer's cart, scan barcodes, or use the keypad. Notice the new 'Apply Tax' toggle for on-the-fly tax adjustments, and the new 'Pay with Card' button for Stripe payments.",
+        title: "Accepting Payments",
+        text: "Here, you can build a customer's cart by adding items, scanning barcodes, or using the keypad for custom amounts. You can apply sales tax on the fly and, most importantly, you can accept both Crypto and Credit Card payments, giving your customers maximum flexibility.",
         attachTo: { element: '#pos-input-section', on: 'left' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next: Transactions', action: () => { 
-                switchTab('pos', 1); // Switch to the 'Transactions' tab
+                switchTab('pos', 1);
                 tour.next(); 
             } }
         ]
     },
-    
-    // --- Point of Sale (POS): Transactions (Tab 2) ---
     {
         id: 'pos-transactions-list',
-        title: "Sales History",
-        text: "This table shows a detailed log of all successful sales. You can now expand each transaction to see a breakdown of the specific items and variants purchased.",
-        attachTo: { element: '.table.w-full', on: 'top' }, // Targeting the table in Transactions.svelte
+        title: "Your Complete Sales History",
+        text: "This is your digital ledger. Every sale, whether crypto or card, is recorded here. You can now expand each transaction to see a breakdown of the specific items and variants purchased.",
+        attachTo: { element: '.table.w-full', on: 'top' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next: Settings', action: () => { 
-                switchTab('pos', 2); // Switch to the 'Settings' tab
+                switchTab('pos', 2);
                 tour.next(); 
             } }
         ]
     },
-
-    // --- Point of Sale (POS): Settings (Tab 3) ---
     {
-        id: 'pos-settings-wallet',
-        title: "Store & Payment Settings",
-        text: "Here you can set your Solana wallet, logo, and business address. We've also added new sections to define your sales tax rate and to add your Stripe API keys for credit card payments.",
-        attachTo: { element: '.card-body > div:nth-child(3)', on: 'left' }, // Targeting the first control (warning toggle)
+        id: 'pos-settings-general',
+        title: "General Store Settings",
+        text: "This first section lets you customize your store's identity. You can set your default crypto currency for charges, upload your brand logo, and add your business address, which will appear on printed receipts.",
+        attachTo: { element: '#tour-settings-general', on: 'right' },
+        buttons: [
+            { text: 'Back', action: () => { switchTab('pos', 1); tour.back(); }, secondary: true },
+            { text: 'Next', action: tour.next }
+        ]
+    },
+    {
+        id: 'pos-settings-tax',
+        title: "Tax Configuration",
+        text: "Here you can define your local sales tax rate and choose whether tax should be applied by default on the checkout page. This gives you full control over how you handle taxes for your business.",
+        attachTo: { element: '#tour-settings-tax', on: 'right' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next: Data Management', action: tour.next }
+            { text: 'Next', action: tour.next }
+        ]
+    },
+    {
+        id: 'pos-settings-stripe',
+        title: "Credit Card Payments",
+        text: "To accept credit card payments, simply enter your Stripe API keys here. This integration is secure and allows you to serve customers who prefer traditional payment methods.",
+        attachTo: { element: '#tour-settings-stripe', on: 'right' },
+        buttons: [
+            { text: 'Back', action: tour.back, secondary: true },
+            { text: 'Next', action: tour.next }
         ]
     },
     {
         id: 'pos-settings-data',
-        title: "Data Management & Backup",
-        text: "Since all your data is stored locally, regular backups are critical. The export function now includes all your new settings, product variant data, and Stripe keys.",
-        attachTo: { element: '#data-management-section', on: 'top' },
+        title: "Data Management & Backups",
+        text: "Since all your data is stored locally in your browser, regular backups are critical. Use the 'Export Data' button to download a complete backup of your store, including all settings, products, and transaction history.",
+        attachTo: { element: '#tour-settings-data', on: 'right' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next: Invoicing', action: () => goto('/invoicing') }
         ]
     },
 
-    // --- Invoicing: Detail & Actions ---
+
+    // --- Invoicing ---
     {
         id: 'invoicing-intro',
-        title: "Invoicing: Create & Manage",
-        text: "The Invoicing page lets you create professional, digital invoices. Start by selecting a customer or entering a new one. The real-time invoice preview is on the right.",
+        title: "Professional Invoicing",
+        text: "Create, manage, and track professional invoices for your clients. You can pull customers directly from your CRM, add items from your inventory, and see a live preview of the invoice as you build it.",
         attachTo: { element: '#invoice-details-card', on: 'right' },
         buttons: [
             { text: 'Back', action: () => goto('/pos'), secondary: true },
@@ -130,29 +147,9 @@ export const tourSteps = (tour) => [
         ]
     },
     {
-        id: 'invoicing-items',
-        title: "Adding Items to the Invoice",
-        text: "You can quickly populate the invoice by either selecting items directly from your inventory, or by manually adding a custom line item with a specified name, quantity, and price.",
-        attachTo: { element: '#add-from-inventory-title', on: 'top' }, 
-        buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next', action: tour.next }
-        ]
-    },
-    {
-        id: 'invoicing-actions',
-        title: "Payment Link & Exports",
-        text: "The main invoice preview allows you to generate a unique Solana Pay QR code, print the invoice, or download it as a professional PDF document for your client.",
-        attachTo: { element: '#invoice-actions-container', on: 'top' }, 
-        buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next', action: tour.next }
-        ]
-    },
-    {
         id: 'invoicing-table',
-        title: "Saved Invoices List",
-        text: "All of your saved invoices are tracked here. The system continuously checks the Solana network for payment confirmation and automatically updates the status from 'Unpaid' to 'Paid.'",
+        title: "Automated Payment Tracking",
+        text: "Your saved invoices are listed here. The system automatically monitors the Solana network for payments and updates an invoice's status from 'Unpaid' to 'Paid' the moment a client pays, so you don't have to.",
         attachTo: { element: '#saved-invoices-card', on: 'top' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -160,11 +157,11 @@ export const tourSteps = (tour) => [
         ]
     },
 
-    // --- Inventory: Management ---
+    // --- Inventory ---
     {
         id: 'inventory-intro',
-        title: "Inventory Management",
-        text: "Your digital stockroom is organized into three powerful tabs: Inventory (item list), Categories, and Reports. We will proceed through the tabs in order.",
+        title: "Advanced Inventory Management",
+        text: "This is your digital stockroom. It's designed to handle everything from simple products to complex items with multiple variations.",
         attachTo: { element: '#inventory-tabs', on: 'bottom' },
         buttons: [
             { text: 'Back', action: () => goto('/invoicing'), secondary: true },
@@ -173,63 +170,30 @@ export const tourSteps = (tour) => [
     },
     {
         id: 'inventory-add',
-        title: "Add New Products",
-        text: "Use this form to add products. You can now choose between 'Simple' products with a single stock count, or 'Variable' products for items with different options, like sizes or colors.",
+        title: "Simple vs. Variable Products",
+        text: "When adding an item, you can choose its type. 'Simple' is for standard products with one price and stock count. 'Variable' is for items with different options, like a t-shirt that comes in multiple sizes and colors.",
         attachTo: { element: '#add-item-card', on: 'bottom' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next', action: tour.next }
         ]
     },
-    {
-        id: 'inventory-variants',
-        title: "Product Variants",
-        text: "When creating a 'Variable' product, you can define attributes (like 'Size') and their values (e.g., 'Small, Medium, Large'). This will generate a list of all possible product variations, allowing you to set a unique price and quantity for each one.",
-        attachTo: { element: 'div.space-y-4.p-4.border.rounded-lg.bg-base-200', on: 'bottom' },
-         when: {
-            show: () => {
-                // This step should only appear if the "Variable" product type is selected
-                const select = document.querySelector('select');
-                if (select) {
-                    select.value = 'variable';
-                    select.dispatchEvent(new Event('change'));
-                }
-            }
-        },
-        buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next', action: tour.next }
-        ]
-    },
-    {
+     {
         id: 'inventory-management',
-        title: "Stock Management & History",
-        text: "From the item list, you can see all your products, including their type and total stock. You can perform quick manual stock adjustments, view a comprehensive inventory history log for every change, and save or print barcode labels.",
-        attachTo: { element: '.table.w-full.responsive-table', on: 'top' }, 
-        buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next: Inventory Reports', action: () => { 
-                switchTab('inventory', 2); 
-                tour.next(); 
-            } }
-        ]
-    },
-    {
-        id: 'inventory-reports-view',
-        title: "Inventory Reports",
-        text: "This section provides valuable business insights, such as Inventory Valuation (total stock cost), Sales Velocity, and Dead Stock (unsold items).",
-        attachTo: { element: '.card-body p.text-sm.text-gray-500:first-child', on: 'top' }, 
+        title: "Detailed Stock Control",
+        text: "The main inventory list gives you a clear overview of all your products. For variable items, you can expand the entry to see and manage the stock for each individual variant. Every stock change is automatically logged, giving you a complete audit trail.",
+        attachTo: { element: '.table.w-full', on: 'top' }, 
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next: CRM', action: () => goto('/crm') }
         ]
     },
     
-    // --- CRM: Customer Management ---
+    // --- CRM ---
     {
         id: 'crm-intro',
         title: "Customer Relationship Management (CRM)",
-        text: "The CRM is your central hub for managing customer profiles. It tracks total spending, communication logs, and all contact and wallet information for each client.",
+        text: "The CRM is your central hub for building strong customer relationships. It automatically tracks each customer's total spending and full purchase history, including the specific product variants they bought.",
         attachTo: { element: '#crm-table', on: 'top' },
         buttons: [
             { text: 'Back', action: () => goto('/inventory'), secondary: true },
@@ -238,8 +202,8 @@ export const tourSteps = (tour) => [
     },
     {
         id: 'crm-actions',
-        title: "Tools & Segmentation",
-        text: "Use this panel to filter the customer list by tags or custom groups, and manage your database by importing or exporting your customer data via CSV.",
+        title: "Segmentation and Data Tools",
+        text: "Use this panel to filter your customer list by tags or custom groups for targeted marketing. You can also manage your entire database by importing or exporting your customer data via CSV at any time.",
         attachTo: { element: '#crm-actions', on: 'bottom' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -247,11 +211,11 @@ export const tourSteps = (tour) => [
         ]
     },
 
-    // --- Analytics: Data-Driven Decisions ---
+    // --- Analytics ---
     {
         id: 'analytics-intro',
-        title: "Analytics & Reporting",
-        text: "The Analytics page is where you transform sales data into actionable business intelligence with various charts and profitability metrics.",
+        title: "Data-Driven Decisions",
+        text: "The Analytics page is where you transform your sales data into actionable business intelligence. It's designed to give you a clear and comprehensive overview of your store's performance.",
         attachTo: { element: '#analytics-header', on: 'bottom' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -259,19 +223,9 @@ export const tourSteps = (tour) => [
         ]
     },
     {
-        id: 'analytics-filter',
-        title: "Filtering & Export",
-        text: "All data displayed can be filtered by a specific time frame, and the raw sales report can be downloaded as a comprehensive CSV file for detailed external analysis.",
-        attachTo: { element: '#analytics-controls', on: 'bottom' },
-        buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next', action: tour.next }
-        ]
-    },
-    {
         id: 'analytics-charts',
-        title: "Performance Breakdowns",
-        text: "Review visual breakdowns for sales by token, sales over time, profitability, and top-selling products to gain a complete picture of your store's performance.",
+        title: "Deep Performance Insights",
+        text: "Review visual breakdowns for sales by token (including USD for card payments), sales over time, and your most profitable items. Because we track costs for each product variant, your profit margin calculations are always precise.",
         attachTo: { element: '.space-y-6 > .grid', on: 'top' }, 
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
