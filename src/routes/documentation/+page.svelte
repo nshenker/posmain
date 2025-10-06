@@ -4,7 +4,7 @@
         {
             version: 'v1.14',
             date: 'October 2025',
-            title: 'Credit Card Payments & Advanced Inventory',
+            title: 'Credit Card Payments & System-Wide Integration',
             notes: [
                 'New Feature: Integrated Stripe to allow merchants to accept credit card payments directly through the POS.',
                 'New Feature: Added a comprehensive Product Variant system to the Inventory page for items with multiple options like size or color.',
@@ -268,20 +268,19 @@
                             <div class="collapse collapse-arrow bg-base-200">
                                 <input type="checkbox" /> 
                                 <div class="collapse-title text-xl font-medium">
-                                    <strong>The Dashboard:</strong> Your Business at a Glance
+                                    <strong>Credit Card & Hybrid Payments:</strong> Bridge Web2 and Web3
                                 </div>
                                 <div class="collapse-content"> 
-                                    <p>The <strong>Dashboard</strong> is the central hub of the PoSolana Suite, designed to give you a real-time, high-level overview of your business's health and performance. It is composed of a series of customizable widgets, each providing a unique insight into your operations. You can use the <strong>"Edit Widgets"</strong> button to choose which data modules are most important to you, allowing you to tailor the dashboard to your specific needs. This flexibility ensures that you see the information that matters most to you, right when you log in.</p>
+                                    <p>The PoSolana Suite now allows you to serve all your customers, regardless of how they prefer to pay. By integrating with <strong>Stripe</strong>, you can now accept credit and debit card payments alongside your existing crypto options. To enable this, simply add your secure Stripe API keys in the settings. When you create a charge, you'll see a "Pay with Card" button. The system will automatically convert any crypto amount to its current USD value for the card transaction, providing a seamless experience for you and your customer.</p>
                                 </div>
                             </div>
-
                             <div class="collapse collapse-arrow bg-base-200">
                                 <input type="checkbox" /> 
                                 <div class="collapse-title text-xl font-medium">
                                     <strong>Point of Sale (POS):</strong> The Heart of Your Operations
                                 </div>
                                 <div class="collapse-content"> 
-                                    <p>Our <strong>POS</strong> is engineered for speed, flexibility, and ease of use in any retail environment. You can create charges in two primary ways: either by adding pre-defined products from your inventory to build a customer's cart, or by entering a custom amount on the built-in keypad for services or miscellaneous items. The system supports multiple cryptocurrencies, and once a transaction is initiated, a Solana Pay QR code is generated for the customer to scan. The transaction status updates in real-time as soon as the payment is confirmed on the Solana network, ensuring a smooth and efficient checkout process for both you and your customers.</p>
+                                    <p>Our <strong>POS</strong> is engineered for speed, flexibility, and ease of use in any retail environment. You can create charges by adding pre-defined products from your inventory, or by entering a custom amount on the built-in keypad. The system supports multiple cryptocurrencies and now, with Stripe, traditional card payments. For crypto, a Solana Pay QR code is generated for the customer to scan, and the transaction status updates in real-time as soon as the payment is confirmed on the Solana network.</p>
                                 </div>
                             </div>
                          
@@ -291,7 +290,7 @@
                                     <strong>Receipts and Printing:</strong> Professional and Reliable
                                 </div>
                                 <div class="collapse-content"> 
-                                    <p>After each transaction, you can provide customers with a clean, professional receipt. From the <strong>Transaction History</strong> page, simply click the "Print" button next to any sale. This will generate a receipt that is optimized for standard thermal receipt printers, ensuring a perfect, single-page print every time. The receipt includes your store's logo and name, a detailed list of items purchased, and the transaction ID for the customer's records.</p>
+                                    <p>After each transaction, you can provide customers with a clean, professional receipt. From the <strong>Transaction History</strong> page, simply click the "Print" button. The receipt is optimized for standard thermal printers and now dynamically shows the payment method used—whether it was a Solana wallet or a credit card.</p>
                                 </div>
                             </div>
 
@@ -301,12 +300,7 @@
                                     <strong>Inventory Management:</strong> Your Digital Stockroom
                                 </div>
                                 <div class="collapse-content"> 
-                                    <p>A comprehensive inventory system is crucial for any retail business, and ours is organized into three main tabs to provide full control over your stock:</p>
-                                    <ul>
-                                        <li><strong>Inventory:</strong> Here you can add, edit, and remove products. Each item can be assigned a name, SKU, barcode, quantity, cost, price, and category. This allows for precise tracking and management of your stock, giving you a clear view of your inventory at all times.</li>
-                                        <li><strong>Categories:</strong> Organize your products into custom categories to streamline your inventory and gain better insights into your sales data. This helps you understand which product lines are performing best and where you might need to make adjustments.</li>
-                                        <li><strong>Reports:</strong> This tab offers powerful analytical tools, including an <strong>Inventory Valuation</strong> report to see the total value of your stock, a <strong>Sales Velocity</strong> report to identify your best-selling items, and a <strong>Dead Stock</strong> report to highlight products that aren't moving, helping you make informed decisions about your inventory.</li>
-                                    </ul>
+                                    <p>Our comprehensive inventory system is designed to provide full control over your stock. It now supports both **Simple Products** (with a single stock count) and **Variable Products** for items with multiple options like size or color. Each variant can have its own SKU, price, cost, and barcode, and its stock is tracked individually, giving you a precise and granular view of your inventory at all times.</p>
                                 </div>
                             </div>
 
@@ -316,7 +310,7 @@
                                     <strong>CRM (Customer Relationship Management):</strong> Build Stronger Relationships
                                 </div>
                                 <div class="collapse-content"> 
-                                    <p>Our <strong>CRM</strong> is a powerful suite of tools designed to help you build and maintain strong relationships with your customers. You can create and manage detailed customer profiles, including contact information, private notes, and a full transaction history. The CRM is seamlessly integrated with the invoicing module and features <strong>customer tagging</strong> for easy segmentation, a <strong>communication log</strong> to track all your interactions, and <strong>custom groups</strong> for targeted marketing campaigns, giving you all the tools you need to provide personalized and effective customer service.</p>
+                                    <p>Our <strong>CRM</strong> is a powerful suite of tools designed to help you build and maintain strong relationships with your customers. It automatically tracks each customer's full purchase history, including the specific product variants they bought. The CRM also features <strong>customer tagging</strong> for easy segmentation and a <strong>communication log</strong> to track all your interactions.</p>
                                 </div>
                             </div>
 
@@ -326,7 +320,7 @@
                                     <strong>Invoicing:</strong> Professional and Seamless Billing
                                 </div>
                                 <div class="collapse-content"> 
-                                    <p>Create, manage, and track professional invoices for your clients with our streamlined invoicing module. You can either select an existing customer from your CRM or add a new one on the fly. Invoices can be populated with items from your inventory or with custom line items, and you can apply taxes as needed. Each invoice generates a unique <strong>Solana Pay QR code</strong> for direct payment, simplifying the billing process. The system automatically checks for on-chain payment confirmation and updates the invoice status accordingly. For your records, you can also download invoices as PDFs to send to your clients or for your own bookkeeping.</p>
+                                    <p>Create, manage, and track professional invoices for your clients. You can either select an existing customer from your CRM or add a new one on the fly. Invoices can be populated with items from your inventory—including specific product variants—or with custom line items. Each invoice generates a unique <strong>Solana Pay QR code</strong> for direct payment, and the system automatically checks for on-chain payment confirmation.</p>
                                 </div>
                             </div>
 
@@ -336,17 +330,7 @@
                                     <strong>Analytics:</strong> Data-Driven Decisions
                                 </div>
                                 <div class="collapse-content"> 
-                                    <p>The <strong>Analytics</strong> page gives you a clear and comprehensive overview of your business's performance. All financial data is converted to its real-time USD value using live price feeds for accuracy. You can view total revenue, transaction counts, and charts for sales by token and sales over time. The analytics page also includes profitability metrics, a list of your top-selling products, and a breakdown of sales by category. For more in-depth analysis, you can filter your data by date range and export it to a CSV file, giving you the power to make informed, data-driven decisions.</p>
-                                </div>
-                            </div>
-
-                            <div class="collapse collapse-arrow bg-base-200">
-                                <input type="checkbox" /> 
-                                <div class="collapse-title text-xl font-medium">
-                                    <strong>Settings & Customization:</strong> Make It Your Own
-                                </div>
-                                <div class="collapse-content"> 
-                                    <p>Tailor the suite to your brand and workflow in the <strong>Settings</strong> section. Here you can change the visual theme to match your brand, upload your company logo for a professional touch, and manage your data with our import/export tools. The data import/export feature is designed to include all application data, ensuring a complete backup of your store can be made at any time. And if you ever need to start fresh, you can reset the store to its default state with a single click.</p>
+                                    <p>The <strong>Analytics</strong> page gives you a clear and comprehensive overview of your business's performance. All financial data is converted to its real-time USD value for accuracy. You can view sales by payment method (including "USD" for card payments), and because we track costs for each product variant, your profitability metrics are always precise.</p>
                                 </div>
                             </div>
                         </div>
