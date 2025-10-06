@@ -8,7 +8,6 @@
         mint: inv.paymentCurrency,
         txid: `Invoice #${inv.number}`
     }));
-
     $: allSales = [...$successArray, ...paidInvoicesAsSales];
 
     $: recentSales = allSales.sort((a, b) => b.timestamp - a.timestamp).slice(0, 3);
@@ -32,6 +31,10 @@
                         <td>
                             {#if item.txid.startsWith('Invoice')}
                                 <span>{item.txid}</span>
+                            {:else if item.txid.startsWith('pi_')}
+                                <a class="link link-primary" href={`https://dashboard.stripe.com/payments/${item.txid}`} target="_blank" rel="noopener noreferrer">
+                                    Stripe Payment...
+                                </a>
                             {:else}
                                 <a class="link link-primary" href={`https://solscan.io/tx/${item.txid}`} target="_blank" rel="noopener noreferrer">
                                     {item.txid.substring(0, 4)}...{item.txid.substring(item.txid.length - 4)}

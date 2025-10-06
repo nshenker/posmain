@@ -97,6 +97,10 @@
                                     <td>
                                         {#if tx.txid.startsWith('invoice-')}
                                             {tx.txid}
+                                        {:else if tx.txid.startsWith('pi_')}
+                                            <a class="link link-primary" href={`https://dashboard.stripe.com/payments/${tx.txid}`} target="_blank" rel="noopener noreferrer">
+                                                Stripe Payment...
+                                            </a>
                                         {:else}
                                             <a class="link link-primary" href={`https://solscan.io/tx/${tx.txid}`} target="_blank" rel="noopener noreferrer">
                                                 {tx.txid.substring(0, 4)}...{tx.txid.substring(tx.txid.length - 4)}

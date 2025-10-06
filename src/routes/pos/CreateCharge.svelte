@@ -1,7 +1,8 @@
 <script lang='ts'>
     import { onMount, onDestroy, tick } from "svelte";
     import { goto } from '$app/navigation';
-    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata } from '../stores.js';
+    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints } from '../stores.js';
+    import { tokenPrices } from '../priceStore.js';
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
     import { browser } from '$app/environment';
@@ -9,12 +10,20 @@
     import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
     import InventoryModal from "./InventoryModal.svelte";
-    import hntLogo from "../../lib/images/HNTLogo.png";
+    import { stripePublishableKey, stripeSecretKey } from '../stores.js';
+    import CardPaymentModal from './CardPaymentModal.svelte';
+    import { logHistory } from '../../utils/inventory.js';
+    import { get } from 'svelte/store';
+
 
     let showInventoryModal = false;
     let chargeItems = [];
     let barcodeInput = '';
     let applyTax = $defaultTaxable;
+
+    let showCardModal = false;
+    let paymentClientSecret = null;
+    let chargeForCardPayment = {};
 
     // --- Scanner State ---
     let scanner = null;
@@ -277,6 +286,124 @@
         }
 	}
 
+    async function payWithCard() {
+        if (!$stripePublishableKey || !$stripeSecretKey) {
+            showToast("Stripe is not configured. Please add your API keys in the settings.", "error");
+            return;
+        }
+
+        const totalInCrypto = parseFloat($pmtAmt.replace(/,/g, ''));
+        if (totalInCrypto <= 0) {
+            showToast("Please enter an amount greater than zero.", "error");
+            return;
+        }
+        
+        let totalInUSD = totalInCrypto;
+        const prices = get(tokenPrices);
+        const mintInfo = get(mints).find(m => m.name === $selectedMint);
+
+        if ($selectedMint !== 'USDC') {
+             if (!mintInfo || !prices[mintInfo.coingeckoId]?.usd) {
+                showToast(`Could not get live price for ${$selectedMint}. Please try again in a moment.`, 'error');
+                return;
+            }
+            totalInUSD = totalInCrypto * prices[mintInfo.coingeckoId].usd;
+        }
+
+        let subtotal = 0;
+        if(chargeItems.length > 0) {
+            subtotal = chargeItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        } else {
+            subtotal = totalInCrypto / (applyTax ? (1 + ($taxRate / 100)) : 1);
+        }
+        const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
+
+
+        chargeForCardPayment = {
+            total: totalInUSD,
+            subtotal: subtotal * ($selectedMint === 'USDC' ? 1 : prices[mintInfo.coingeckoId]?.usd || 0),
+            taxAmount: taxAmount * ($selectedMint === 'USDC' ? 1 : prices[mintInfo.coingeckoId]?.usd || 0),
+            taxable: applyTax,
+            taxRate: $taxRate,
+            originalAmount: totalInCrypto,
+            originalMint: $selectedMint,
+            items: chargeItems.map(item => ({...item})) // Create a clean copy
+        };
+
+        try {
+            const response = await fetch('/api/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: totalInUSD,
+                    stripeSecretKey: $stripeSecretKey,
+                    currency: 'usd' // Stripe always uses standard currency codes
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            paymentClientSecret = data.clientSecret;
+            showCardModal = true;
+
+        } catch (error) {
+            console.error("Failed to create Payment Intent:", error);
+            showToast("Could not initiate card payment. Please check the console.", "error");
+        }
+    }
+
+    function handleCardPaymentSuccess(paymentIntentId) {
+        const new_entry = {
+            timestamp: Math.floor(Date.now() / 1000),
+            txid: paymentIntentId,
+            uiAmount: chargeForCardPayment.total,
+            mint: 'USD',
+            originalAmount: chargeForCardPayment.originalAmount,
+            originalMint: chargeForCardPayment.originalMint,
+            items: chargeForCardPayment.items,
+            subtotal: chargeForCardPayment.subtotal,
+            taxAmount: chargeForCardPayment.taxAmount,
+            taxRate: chargeForCardPayment.taxRate,
+            taxable: chargeForCardPayment.taxable,
+        };
+        successArray.update(items => [...items, new_entry]);
+        
+        // --- INVENTORY DEPLETION LOGIC ---
+        if (chargeForCardPayment.items && chargeForCardPayment.items.length > 0) {
+            inventory.update(inv => {
+                const newInv = [...inv];
+                for (const soldItem of chargeForCardPayment.items) {
+                    const itemIndex = newInv.findIndex(i => i.id === soldItem.id);
+                    if (itemIndex > -1) {
+                        if (newInv[itemIndex].type === 'simple') {
+                            const newQty = newInv[itemIndex].quantity - soldItem.quantity;
+                            newInv[itemIndex].quantity = newQty;
+                            logHistory(soldItem.id, `Sale (Card: ${paymentIntentId.slice(-6)})`, `-${soldItem.quantity}`, newQty);
+                        } else if (newInv[itemIndex].type === 'variable' && soldItem.variantId) {
+                            const variantIndex = newInv[itemIndex].variants.findIndex(v => v.id === soldItem.variantId);
+                            if (variantIndex > -1) {
+                                const variant = newInv[itemIndex].variants[variantIndex];
+                                const newVariantQty = variant.quantity - soldItem.quantity;
+                                newInv[itemIndex].variants[variantIndex].quantity = newVariantQty;
+                                newInv[itemIndex].quantity = newInv[itemIndex].variants.reduce((total, v) => total + v.quantity, 0);
+                                logHistory(variant.id, `Sale (Card: ${paymentIntentId.slice(-6)})`, `-${soldItem.quantity}`, newVariantQty);
+                            }
+                        }
+                    }
+                }
+                return newInv;
+            });
+        }
+        
+        showToast("Card payment successful!", "success");
+        clearCharge();
+    }
+
+
     const onKeydown = (event) => {
         const detail = event.detail;
         if ($pmtAmt === "0.00" && detail !== ".") left = "";
@@ -298,6 +425,18 @@
         }
     }
 </script>
+
+{#if showCardModal}
+    <CardPaymentModal 
+        clientSecret={paymentClientSecret} 
+        publishableKey={$stripePublishableKey}
+        on:close={() => showCardModal = false}
+        on:success={(e) => {
+            showCardModal = false;
+            handleCardPaymentSuccess(e.detail.paymentIntentId);
+        }}
+    />
+{/if}
 
 {#if showInventoryModal}
     <InventoryModal 
@@ -350,7 +489,10 @@
                         <button on:click={clearCharge} class="btn btn-warning normal-case">Clear</button>
                     {/if}
                 </div>
-                <button on:click={createQRCode} class="btn btn-primary text-white font-greycliffbold normal-case w-full">Create QR Code</button>
+                <div class="flex space-x-2">
+                    <button on:click={createQRCode} class="btn btn-primary text-white font-greycliffbold normal-case flex-1">Pay with Crypto</button>
+                    <button on:click={payWithCard} class="btn btn-accent text-white font-greycliffbold normal-case flex-1">Pay with Card</button>
+                </div>
             </div>
         </div>
 
@@ -365,8 +507,6 @@
                    <img src="{solLogo}" class="w-9" alt="SOL" />
                 {:else if $selectedMint === "BONK"}
                     <img src="{bonkLogo}" class="w-9 rounded-full" alt="BONK" />
-                {:else if $selectedMint === "HNT"}
-                    <img src="{hntLogo}" class="w-9" alt="HNT" />
                 {/if}
                 <input bind:value={$pmtAmt} class="input input-ghost w-full text-right text-2xl md:text-3xl font-mono" placeholder="0.00" readonly />
             </div>

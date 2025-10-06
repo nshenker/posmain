@@ -6,7 +6,7 @@
         merchantLogo, businessAddress, successArray, mostRecentTxn, fullScreen, theme, 
         invoices, inventory, categories, inventoryHistory, currentChargeItems,
         dashboardLayout, customers, customerGroups, lastBackupDate,
-        taxRate, defaultTaxable
+        taxRate, defaultTaxable, stripePublishableKey, stripeSecretKey
     } from '../stores.js';
     import { get } from 'svelte/store';
     import { showToast } from '../toastStore.js';
@@ -29,6 +29,8 @@
         businessAddress.set("");
         taxRate.set(8.875);
         defaultTaxable.set(true);
+        stripePublishableKey.set("");
+        stripeSecretKey.set("");
         theme.set("light");
         invoices.set([]);
         inventory.set([]);
@@ -73,6 +75,8 @@
             businessAddress: get(businessAddress),
             taxRate: get(taxRate),
             defaultTaxable: get(defaultTaxable),
+            stripePublishableKey: get(stripePublishableKey),
+            stripeSecretKey: get(stripeSecretKey),
             theme: get(theme),
             invoices: get(invoices),
             inventory: get(inventory),
@@ -112,6 +116,8 @@
                     businessAddress.set(importedData.businessAddress || "");
                     taxRate.set(importedData.taxRate || 8.875);
                     defaultTaxable.set(importedData.defaultTaxable !== undefined ? importedData.defaultTaxable : true);
+                    stripePublishableKey.set(importedData.stripePublishableKey || "");
+                    stripeSecretKey.set(importedData.stripeSecretKey || "");
                     theme.set(importedData.theme || "light");
                     invoices.set(importedData.invoices || []);
                     inventory.set(importedData.inventory || []);
@@ -142,7 +148,7 @@
 
 <div class="card w-full max-w-md bg-base-100 shadow-xl border border-gray-200">
     <div class="card-body p-8">
-        <h2 class="card-title text-xl font-greycliffmed mb-4">Settings</h2>
+        <h2 class="card-title text-xl font-greycliffmed mb-4">Store Settings</h2>
 
         <div class="form-control">
             <label class="label cursor-pointer">
@@ -153,7 +159,7 @@
 
         <div class="form-control w-full mt-4">
             <label for="currency-select" class="label">
-                <span class="label-text font-greycliffmed">Default Currency</span>
+                <span class="label-text font-greycliffmed">Default Crypto Currency</span>
             </label>
             <select id="currency-select" bind:value={$selectedMint} class="select select-bordered">
 			     {#each $mints as mint}
@@ -194,6 +200,22 @@
                 <span class="label-text font-greycliffmed">Apply Tax by Default</span>
                 <input type="checkbox" bind:checked={$defaultTaxable} class="toggle toggle-primary" />
 	        </label>
+        </div>
+        
+        <div class="divider"></div>
+
+        <h2 class="card-title text-xl font-greycliffmed mb-4">Stripe Payments</h2>
+        <div class="form-control w-full">
+            <label for="stripe-pk" class="label">
+                <span class="label-text font-greycliffmed">Stripe Publishable Key</span>
+            </label>
+            <input id="stripe-pk" type="text" placeholder="pk_test_..." bind:value={$stripePublishableKey} class="input input-bordered" />
+        </div>
+        <div class="form-control w-full mt-2">
+            <label for="stripe-sk" class="label">
+                <span class="label-text font-greycliffmed">Stripe Secret Key</span>
+            </label>
+            <input id="stripe-sk" type="password" placeholder="sk_test_..." bind:value={$stripeSecretKey} class="input input-bordered" />
         </div>
 
         <div class="divider" id="data-management-section"></div>

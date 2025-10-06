@@ -21,7 +21,7 @@
                         <th class="text-left">Date</th>
                         <th class="text-left">Transaction ID</th>
                         <th class="text-right">Amount</th>
-                        <th class="text-right">Coin</th>
+                        <th class="text-right">Currency</th>
                         <th class="text-center">Actions</th>
                     </tr>
                 </thead>
@@ -37,11 +37,17 @@
                             </td>
                             <td>{dayjs.unix(item.timestamp).format("YYYY-MM-DD HH:mm:ss")}</td>
                             <td>
-                                <a class="link link-primary" href={`https://solscan.io/tx/${item.txid}`} target="_blank" rel="noopener noreferrer">
-                                    {item.txid.substring(0, 4)}...{item.txid.substring(item.txid.length - 4)}
-                                </a>
+                                {#if item.txid.startsWith('pi_')}
+                                     <a class="link link-primary" href={`https://dashboard.stripe.com/payments/${item.txid}`} target="_blank" rel="noopener noreferrer">
+                                        {item.txid.substring(0, 10)}...
+                                    </a>
+                                {:else}
+                                    <a class="link link-primary" href={`https://solscan.io/tx/${item.txid}`} target="_blank" rel="noopener noreferrer">
+                                        {item.txid.substring(0, 4)}...{item.txid.substring(item.txid.length - 4)}
+                                    </a>
+                                {/if}
                             </td>
-                            <td class="text-right font-mono">{item.uiAmount}</td>
+                            <td class="text-right font-mono">{item.uiAmount.toFixed(2)}</td>
                             <td class="text-right font-mono">{item.mint}</td>
                             <td class="text-center">
                                 <button class="btn btn-xs btn-outline" on:click={() => triggerPrint(item)}>Print</button>

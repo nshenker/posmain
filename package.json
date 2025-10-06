@@ -27,9 +27,10 @@
 	"dependencies": {
 		"@solana/pay": "^0.2.4",
 		"@solana/web3.js": "^1.78.0",
+		"@stripe/stripe-js": "^1.54.2",
 		"bignumber.js": "^9.1.1",
 		"chart.js": "3.9.1",
-        "chartjs-adapter-date-fns": "^2.0.0",
+		"chartjs-adapter-date-fns": "^2.0.0",
 		"daisyui": "^3.5.0",
 		"date-fns": "^2.30.0",
 		"dayjs": "^1.11.7",
@@ -38,6 +39,7 @@
 		"jsbarcode": "^3.11.5",
 		"jspdf": "^2.5.1",
 		"shepherd.js": "^10.0.1",
+		"stripe": "^12.17.0",
 		"svelte-chartjs": "^3.1.2",
 		"svelte-french-toast": "^1.2.0",
 		"svelte-keyboard": "^0.5.5"

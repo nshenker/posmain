@@ -70,7 +70,7 @@ export const tourSteps = (tour) => [
     {
         id: 'pos-create-charge',
         title: "Creating a Charge",
-        text: "You can build a customer's cart using the 'Add Item' button, scan a barcode, or use the keypad. Notice the new 'Apply Tax' toggle, which lets you control sales tax on a per-transaction basis.",
+        text: "You can build a customer's cart, scan barcodes, or use the keypad. Notice the new 'Apply Tax' toggle for on-the-fly tax adjustments, and the new 'Pay with Card' button for Stripe payments.",
         attachTo: { element: '#pos-input-section', on: 'left' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -99,8 +99,8 @@ export const tourSteps = (tour) => [
     // --- Point of Sale (POS): Settings (Tab 3) ---
     {
         id: 'pos-settings-wallet',
-        title: "Store & Tax Settings",
-        text: "Here you can set your wallet, logo, and business address. We've also added a new section to define your sales tax rate and set whether tax should be applied by default.",
+        title: "Store & Payment Settings",
+        text: "Here you can set your Solana wallet, logo, and business address. We've also added new sections to define your sales tax rate and to add your Stripe API keys for credit card payments.",
         attachTo: { element: '.card-body > div:nth-child(3)', on: 'left' }, // Targeting the first control (warning toggle)
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -110,7 +110,7 @@ export const tourSteps = (tour) => [
     {
         id: 'pos-settings-data',
         title: "Data Management & Backup",
-        text: "Since all your data is stored locally in the browser, regular backups are critical. The export function now includes all your new settings and product variant data.",
+        text: "Since all your data is stored locally, regular backups are critical. The export function now includes all your new settings, product variant data, and Stripe keys.",
         attachTo: { element: '#data-management-section', on: 'top' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },

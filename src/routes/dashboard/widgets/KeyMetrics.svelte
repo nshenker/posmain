@@ -1,6 +1,7 @@
 <script lang='ts'>
-    import { successArray, mints, invoices } from '../../stores.js';
+    import { successArray, mints, invoices, customers } from '../../stores.js';
     import { tokenPrices } from '../../priceStore.js';
+    import { get } from 'svelte/store';
     import dayjs from 'dayjs';
 
     let totalRevenue = 0;
@@ -16,15 +17,18 @@
     }));
     $: allSales = [...$successArray, ...paidInvoicesAsSales];
 
-    // This block is now reactive to both `allSales` and `tokenPrices`
     $: {
-        const prices = $tokenPrices; // Use the reactive '$' syntax
-        
+        const prices = get(tokenPrices);
         if (prices && Object.keys(prices).length > 0) {
             const getTxnUsdValue = (txn) => {
-                const mintInfo = $mints.find(m => m.name === txn.mint);
-                if (!mintInfo || !mintInfo.coingeckoId) return 0;
+                // If the transaction was a direct USD card payment, the value is simply the amount.
+                if (txn.mint === 'USD') {
+                    return txn.uiAmount;
+                }
                 
+                // Otherwise, find the crypto price and calculate the USD value.
+                const mintInfo = $mints.find(m => m.name === txn.mint);
+                if (!mintInfo) return 0;
                 const price = prices[mintInfo.coingeckoId]?.usd || 0;
                 return txn.uiAmount * price;
             };
@@ -37,11 +41,6 @@
                 totalRevenue = 0;
                 averageSale = 0;
             }
-        } else {
-            // Set default values if prices are not yet available
-            totalRevenue = 0;
-            totalTransactions = allSales.length;
-            averageSale = 0;
         }
     }
 </script>

@@ -81,7 +81,6 @@ export const mints = writable([
     {name:"USDC", mint:"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", coingeckoId: "usd-coin", decimals: 6},
     {name:"SOL", mint:"So11111111111111111111111111111111111111112", coingeckoId: "solana", decimals: 9},
     {name:"BONK", mint:"DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", coingeckoId: "bonk", decimals: 5},
-    {name:"HNT", mint:"hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux", coingeckoId: "helium", decimals: 8}
 ]);
 
 export const selectedMint = createPersistentStore("selectedMint", "USDC");
@@ -90,7 +89,8 @@ export const businessAddress = createPersistentStore("businessAddress", "");
 export const theme = createPersistentStore("theme", "light");
 export const taxRate = createPersistentStore("taxRate", 8.875);
 export const defaultTaxable = createPersistentStore("defaultTaxable", true);
-
+export const stripePublishableKey = createPersistentStore("stripePublishableKey", "");
+export const stripeSecretKey = createPersistentStore("stripeSecretKey", "");
 
 // --- Inventory & Invoicing Stores ---
 export const inventory = createPersistentStore("inventory", []);

@@ -1,7 +1,22 @@
 <script lang="ts">
     // To add future updates, simply add a new object to the top of this array.
     const updateNotes = [
-         {
+        {
+            version: 'v1.14',
+            date: 'October 2025',
+            title: 'Credit Card Payments & Advanced Inventory',
+            notes: [
+                'New Feature: Integrated Stripe to allow merchants to accept credit card payments directly through the POS.',
+                'New Feature: Added a comprehensive Product Variant system to the Inventory page for items with multiple options like size or color.',
+                'New Feature: Implemented a dynamic sales tax system, allowing merchants to set a tax rate and apply it on a per-transaction basis.',
+                'Enhancement: The printed receipt has been completely redesigned for a more professional look and now dynamically shows the payment method (Card or Solana) and tax information.',
+                'Enhancement: Added a Business Address field in settings, which now appears on receipts.',
+                'Enhancement: The data export and import system has been upgraded to include all new settings, such as Stripe keys, tax info, and product variant data.',
+                'Fix: Resolved critical bugs to ensure transaction compatibility with a wider range of wallets, including Solflare.',
+                'Fix: The interactive tour and all analytics have been updated to be fully compatible with all new features.'
+            ]
+        },
+        {
             version: 'v1.13',
             date: 'October 2025',
             title: 'Dynamic Sales Tax & Receipt Overhaul',

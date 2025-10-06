@@ -5,12 +5,10 @@
     export let merchantLogo;
     export let businessAddress;
 
-    // Calculate tax and subtotal for display. NOTE: This is a display approximation.
-    // In a real-world scenario, tax should be stored with the transaction.
-    const taxRate = 0.08875; // Assuming a fixed tax rate for display
+    // Use the stored tax info if it exists, otherwise approximate for older transactions
+    const subtotal = transaction.subtotal ?? transaction.uiAmount / (1 + 0.08875);
+    const taxAmount = transaction.taxAmount ?? transaction.uiAmount - subtotal;
     const total = transaction.uiAmount;
-    const subtotal = total / (1 + taxRate);
-    const taxAmount = total - subtotal;
 </script>
 
 <style>
@@ -118,14 +116,16 @@
     <div class="hr"></div>
 
     <div class="text-xs">
-        <div class="flex-between">
-            <span>Subtotal:</span>
-            <span>{subtotal.toFixed(2)}</span>
-        </div>
-        <div class="flex-between">
-            <span>Sales Tax ({ (taxRate * 100).toFixed(3) }%):</span>
-            <span>{taxAmount.toFixed(2)}</span>
-        </div>
+        {#if transaction.taxable}
+            <div class="flex-between">
+                <span>Subtotal:</span>
+                <span>{subtotal.toFixed(2)}</span>
+            </div>
+            <div class="flex-between">
+                <span>Sales Tax ({ (transaction.taxRate || 0).toFixed(3) }%):</span>
+                <span>{taxAmount.toFixed(2)}</span>
+            </div>
+        {/if}
         <div class="flex-between total-row" style="margin-top: 8px;">
             <span>Total:</span>
             <span>{total.toFixed(2)} {transaction.mint}</span>
@@ -135,9 +135,14 @@
     <div class="hr"></div>
 
     <div class="text-xs">
-        <p>Payment Method: Solana Wallet</p>
-        <p style="word-break: break-all;">Transaction Hash: {transaction.txid}</p>
-        <p>Network Fee: ~0.00001 SOL</p>
+        {#if transaction.txid.startsWith('pi_')}
+            <p>Payment Method: Credit Card</p>
+            <p style="word-break: break-all;">Payment ID: {transaction.txid}</p>
+        {:else}
+            <p>Payment Method: Solana Wallet</p>
+            <p style="word-break: break-all;">Transaction Hash: {transaction.txid}</p>
+            <p>Network Fee: ~0.00001 SOL</p>
+        {/if}
     </div>
 
     <div class="success-banner text-center">
