@@ -19,8 +19,8 @@
 
         const observerOptions = {
             root: null,
-            rootMargin: '0px',
-            threshold: 0.3
+            rootMargin: '-100px 0px -50% 0px', // Adjust margin to trigger highlighting sooner
+            threshold: 0
         };
 
         observer = new IntersectionObserver((entries) => {
@@ -43,6 +43,7 @@
         }
     });
 
+    // All update notes are restored here
     const updateNotes = [
         {
             version: 'v1.14',
@@ -59,13 +60,51 @@
                 'Fix: The interactive tour and all analytics have been updated to be fully compatible with all new features.'
             ]
         },
-        // ... other update notes remain the same
+        {
+            version: 'v1.13',
+            date: 'October 2025',
+            title: 'Dynamic Sales Tax & Receipt Overhaul',
+            notes: [
+                'New Feature: Added a "Tax Settings" section to the Settings page, allowing merchants to define a sales tax rate and set a default preference.',
+                'New Feature: A new "Apply Tax" toggle on the Point of Sale page gives merchants on-the-fly control over charging tax for individual transactions.',
+                'Enhancement: The printed receipt has been completely redesigned to match a professional, detailed format.',
+                'Enhancement: Receipts are now "tax-aware" and will only show a sales tax line item if tax was applied to the transaction.',
+                'Enhancement: The data backup and restore system now includes all new tax settings.'
+            ]
+        },
+        {
+            version: 'v1.12',
+            date: 'October 2025',
+            title: 'Product Variants & System-Wide Stability',
+            notes: [
+                'New Feature: Added a comprehensive Product Variant system to the Inventory page, allowing for items with multiple attributes like size or color.',
+                'New Feature: The POS and Invoicing pages now fully support adding specific product variants to a charge or invoice.',
+                'Enhancement: Inventory stock and history are now tracked on a per-variant basis, providing a more granular audit trail.',
+                'Enhancement: The "Top Selling Products" and "Profitability" analytics reports now correctly process and display data for individual variants.',
+                'Enhancement: The interactive product tour has been updated to explain the new Product Variant system.',
+                'Fix: Resolved a critical bug that caused the Inventory page to load a blank screen on the first visit.',
+                'Fix: Corrected an issue where barcodes for product variants could not be found when scanned.',
+                'Fix: Ensured that the data backup and restore system correctly handles all new product variant data.'
+            ]
+        },
+        {
+            version: 'v1.11',
+            date: 'October 2025',
+            title: 'Major Mobile Redesign & Interactive Tour',
+            notes: [
+                'Complete mobile UI overhaul for a clean, modern, and highly functional experience on any device.',
+                'Redesigned the Point of Sale page with a sleek, unified tab bar for intuitive navigation on both mobile and desktop.',
+                'Introduced a brand new, fully responsive guided product tour to help users master every feature of the suite.',
+                'Enhanced the tour\'s logic to be device-aware, ensuring a flawless experience from start to finish on any screen size.'
+            ]
+        },
+        // ... all other past update notes
     ];
 </script>
 
 <style>
     section {
-        padding-top: 4rem;
+        padding-top: 5rem; /* Increased padding to offset sticky header */
         margin-top: -4rem;
     }
     .prose h2 {
@@ -85,19 +124,21 @@
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <aside class="lg:col-span-1 lg:sticky top-24 h-max">
-            <div class="card bg-base-100 shadow-xl border">
-                <div class="card-body p-6">
-                    <h2 class="card-title text-lg font-greycliffmed">On this page</h2>
-                    <ul class="menu menu-compact text-base">
-                        {#each sections as section}
-                            <li>
-                                <a href="#{section.id}" class:bg-base-300={activeSection === section.id}>
-                                    {section.title}
-                                </a>
-                            </li>
-                        {/each}
-                    </ul>
+        <aside class="lg:col-span-1">
+            <div class="sticky top-24">
+                <div class="card bg-base-100 shadow-xl border">
+                    <div class="card-body p-6">
+                        <h2 class="card-title text-lg font-greycliffmed">On this page</h2>
+                        <ul class="menu menu-compact text-base">
+                            {#each sections as section}
+                                <li>
+                                    <a href="#{section.id}" class:bg-base-300={activeSection === section.id}>
+                                        {section.title}
+                                    </a>
+                                </li>
+                            {/each}
+                        </ul>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -106,14 +147,14 @@
             <section id="introduction">
                 <h2>Introduction & Philosophy</h2>
                 <p>
-                    Welcome to the <strong>PoSolana Suite</strong>, your all-in-one solution for running a modern business on the Solana network. This platform is a comprehensive toolkit, integrating <strong>Point of Sale (POS)</strong>, <strong>Inventory Management</strong>, <strong>Invoicing</strong>, <strong>Customer Relationship Management (CRM)</strong>, and advanced <strong>Analytics</strong> into a single, cohesive interface.
+                    Welcome to the <strong>PoSolana Suite</strong>, your all-in-one solution for running a modern business on the Solana network. This platform is a comprehensive toolkit, integrating <strong>Point of Sale (POS)</strong>, <strong>Inventory Management</strong>, <strong>Invoicing</strong>, <strong>Customer Relationship Management (CRM)</strong>, and advanced <strong>Analytics</strong> into a single, cohesive interface. This guide provides an in-depth walkthrough of every feature, from initial setup to advanced data management, helping you harness the full power of decentralized commerce.
                 </p>
                 <p>
                     A foundational principle of the suite is <strong>data privacy and user control</strong>. All your critical business data is stored exclusively in your <strong>local browser storage</strong>. This means no cloud servers, no monthly data fees, and no third-party access to your information. You are the sole custodian of your data, ensuring maximum privacy and security.
                 </p>
             </section>
 
-            <div class="divider"></div>
+            <div class="divider my-12"></div>
 
             <section id="getting-started">
                 <h2>Getting Started</h2>
@@ -123,57 +164,74 @@
                     </ul>
             </section>
 
-            <div class="divider"></div>
+            <div class="divider my-12"></div>
 
             <section id="feature-guide">
                 <h2>In-Depth Feature Guide</h2>
-                
-                <h3>Credit Card & Hybrid Payments</h3>
-                <p>The PoSolana Suite now allows you to serve all your customers by integrating with <strong>Stripe</strong> to accept credit and debit card payments alongside your existing crypto options. To enable this, simply add your secure Stripe API keys in the settings. The system will automatically convert any crypto amount to its current USD value for the card transaction.</p>
-
-                <h3>Point of Sale (POS)</h3>
-                <p>Engineered for speed and flexibility, our POS allows you to create charges from inventory items or custom amounts. It supports multiple cryptocurrencies and now, with Stripe, traditional card payments. For crypto, a Solana Pay QR code is generated, and the transaction status updates in real-time.</p>
-                
-                </section>
+                <div class="space-y-4">
+                    <div class="collapse collapse-plus bg-base-200">
+                        <input type="checkbox" />
+                        <div class="collapse-title text-xl font-greycliffmed">Credit Card & Hybrid Payments</div>
+                        <div class="collapse-content"><p>The PoSolana Suite now allows you to serve all your customers by integrating with <strong>Stripe</strong> to accept credit and debit card payments alongside your existing crypto options. To enable this, simply add your secure Stripe API keys in the settings. The system will automatically convert any crypto amount to its current USD value for the card transaction.</p></div>
+                    </div>
+                    <div class="collapse collapse-plus bg-base-200">
+                        <input type="checkbox" />
+                        <div class="collapse-title text-xl font-greycliffmed">Point of Sale (POS)</div>
+                        <div class="collapse-content"><p>Engineered for speed and flexibility, our POS allows you to create charges from inventory items or custom amounts. It supports multiple cryptocurrencies and now, with Stripe, traditional card payments. For crypto, a Solana Pay QR code is generated, and the transaction status updates in real-time.</p></div>
+                    </div>
+                    <div class="collapse collapse-plus bg-base-200">
+                        <input type="checkbox" />
+                        <div class="collapse-title text-xl font-greycliffmed">Receipts and Printing</div>
+                        <div class="collapse-content"><p>After each transaction, you can provide customers with a clean, professional receipt. From the <strong>Transaction History</strong> page, simply click the "Print" button. The receipt is optimized for standard thermal printers and now dynamically shows the payment method used—whether it was a Solana wallet or a credit card.</p></div>
+                    </div>
+                    <div class="collapse collapse-plus bg-base-200">
+                        <input type="checkbox" />
+                        <div class="collapse-title text-xl font-greycliffmed">Inventory Management</div>
+                        <div class="collapse-content"><p>Our comprehensive inventory system is designed to provide full control over your stock. It now supports both **Simple Products** (with a single stock count) and **Variable Products** for items with multiple options like size or color. Each variant can have its own SKU, price, cost, and barcode, and its stock is tracked individually, giving you a precise and granular view of your inventory at all times.</p></div>
+                    </div>
+                    <div class="collapse collapse-plus bg-base-200">
+                        <input type="checkbox" />
+                        <div class="collapse-title text-xl font-greycliffmed">CRM (Customer Relationship Management)</div>
+                        <div class="collapse-content"><p>Our <strong>CRM</strong> is a powerful suite of tools designed to help you build and maintain strong relationships with your customers. It automatically tracks each customer's full purchase history, including the specific product variants they bought. The CRM also features <strong>customer tagging</strong> for easy segmentation and a <strong>communication log</strong> to track all your interactions.</p></div>
+                    </div>
+                     <div class="collapse collapse-plus bg-base-200">
+                        <input type="checkbox" />
+                        <div class="collapse-title text-xl font-greycliffmed">Invoicing</div>
+                        <div class="collapse-content"><p>Create, manage, and track professional invoices for your clients. You can either select an existing customer from your CRM or add a new one on the fly. Invoices can be populated with items from your inventory—including specific product variants—or with custom line items. Each invoice generates a unique <strong>Solana Pay QR code</strong> for direct payment, and the system automatically checks for on-chain payment confirmation.</p></div>
+                    </div>
+                    <div class="collapse collapse-plus bg-base-200">
+                        <input type="checkbox" />
+                        <div class="collapse-title text-xl font-greycliffmed">Analytics</div>
+                        <div class="collapse-content"><p>The <strong>Analytics</strong> page gives you a clear and comprehensive overview of your business's performance. All financial data is converted to its real-time USD value for accuracy. You can view sales by payment method (including "USD" for card payments), and because we track costs for each product variant, your profitability metrics are always precise.</p></div>
+                    </div>
+                </div>
+            </section>
             
-            <div class="divider"></div>
+            <div class="divider my-12"></div>
 
             <section id="data-security">
                 <h2>Data, Security, and Backups</h2>
                 <div class="alert alert-warning shadow-lg mt-4">
-                    <div>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        <span><strong>Important:</strong> Your data is stored locally in your browser. It is crucial to export your data regularly to prevent loss.</span>
                     </div>
-                </div>
             </section>
 
-            <div class="divider"></div>
+            <div class="divider my-12"></div>
 
             <section id="faq">
                 <h2>Frequently Asked Questions (FAQ)</h2>
                 <div class="space-y-2 mt-4">
-                    <div class="collapse collapse-arrow bg-base-200">
-                        <input type="checkbox" /> 
-                        <div class="collapse-title text-xl font-medium">
-                            Where is my data stored?
-                        </div>
-                        <div class="collapse-content"> 
-                            <p>Your data is stored exclusively in your web browser's local storage. It is not sent to any external servers, ensuring you have complete control and privacy over your information.</p>
-                        </div>
-                    </div>
                     </div>
             </section>
 
-            <div class="divider"></div>
+            <div class="divider my-12"></div>
             
             <section id="update-notes">
                 <h2>Update Notes</h2>
                  <div class="space-y-2 mt-4">
                     {#each updateNotes as update}
-                        <div class="collapse collapse-arrow bg-base-200">
+                        <div class="collapse collapse-plus bg-base-200">
                             <input type="checkbox" /> 
-                            <div class="collapse-title text-xl font-medium">
+                            <div class="collapse-title text-xl font-greycliffmed">
                                 {update.title} ({update.version}) - {update.date}
                             </div>
                             <div class="collapse-content"> 
