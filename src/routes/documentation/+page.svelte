@@ -2,6 +2,18 @@
     // To add future updates, simply add a new object to the top of this array.
     const updateNotes = [
         {
+            version: 'v1.15',
+            date: 'October 2025',
+            title: 'Inventory Overhaul & Financial Flexibility',
+            notes: [
+                'New Feature: Added a complete Inventory Location Management system. Merchants can now create custom locations (e.g., shelves, bins, rooms) and assign items to them for precise physical tracking.',
+                'New Feature: A "Charge 3% Credit Card Fee" toggle was added to the settings, allowing merchants to choose whether to pass Stripe processing fees on to the customer or absorb the cost themselves.',
+                'Enhancement: The Inventory page has been completely redesigned for a cleaner, more intuitive user experience.',
+                'Enhancement: Adding and editing inventory items now takes place in a dedicated, streamlined modal for a more focused workflow.',
+                'Enhancement: The data export/import functionality has been updated to include the new inventory locations data, ensuring a complete and seamless backup solution.'
+            ]
+        },
+        {
             version: 'v1.14',
             date: 'October 2025',
             title: 'Credit Card Payments & System-Wide Integration',
@@ -283,7 +295,7 @@
                                     <p>Our <strong>POS</strong> is engineered for speed, flexibility, and ease of use in any retail environment. You can create charges by adding pre-defined products from your inventory, or by entering a custom amount on the built-in keypad. The system supports multiple cryptocurrencies and now, with Stripe, traditional card payments. For crypto, a Solana Pay QR code is generated for the customer to scan, and the transaction status updates in real-time as soon as the payment is confirmed on the Solana network.</p>
                                 </div>
                             </div>
-                         
+                            
                             <div class="collapse collapse-arrow bg-base-200">
                                 <input type="checkbox" /> 
                                 <div class="collapse-title text-xl font-medium">
