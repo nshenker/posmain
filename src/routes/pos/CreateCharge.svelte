@@ -1,7 +1,7 @@
 <script lang='ts'>
     import { onMount, onDestroy, tick } from "svelte";
     import { goto } from '$app/navigation';
-    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints } from '../stores.js';
+    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee } from '../stores.js';
     import { tokenPrices } from '../priceStore.js';
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
@@ -20,11 +20,11 @@
     let chargeItems = [];
     let barcodeInput = '';
     let applyTax = $defaultTaxable;
+    let applyCardFee = $defaultChargeCardFee;
 
     let showCardModal = false;
     let paymentClientSecret = null;
     let chargeForCardPayment = {};
-
     // --- Scanner State ---
     let scanner = null;
     let isScannerVisible = false;
@@ -63,7 +63,6 @@
         // Use variantId for uniqueness if it exists, otherwise use the parent item id
         const uniqueId = itemToAdd.variantId || itemToAdd.id;
         const existingItemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === uniqueId);
-        
         if (existingItemIndex > -1) {
             chargeItems[existingItemIndex].quantity += 1;
         } else {
@@ -92,8 +91,10 @@
             } else if (item.type === 'variable' && item.variants) {
                 foundVariant = item.variants.find(v => v.barcode === barcode.trim());
                 if (foundVariant) {
-                    foundItem = item; // We found the parent item
-                    break; // Exit loop once found
+                    foundItem = item;
+                    // We found the parent item
+                    break;
+                    // Exit loop once found
                 }
             }
         }
@@ -167,6 +168,7 @@
                 { 
                     fps: 10, 
                     qrbox: 
+                    
                     
                     qrboxFunction,
                     useBarCodeDetectorIfSupported: true // Improves performance
@@ -252,7 +254,6 @@
         
         const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
         const total = subtotal + taxAmount;
-
         $pmtAmt = total.toLocaleString("en", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 4 
@@ -269,7 +270,6 @@
         
         const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
         const total = subtotal + taxAmount;
-        
         if (total > 0) {
             const itemsForTx = chargeItems.map(item => ({
                 id: item.id, variantId: item.variantId, name: item.name,
@@ -301,13 +301,16 @@
         let totalInUSD = totalInCrypto;
         const prices = get(tokenPrices);
         const mintInfo = get(mints).find(m => m.name === $selectedMint);
-
         if ($selectedMint !== 'USDC') {
              if (!mintInfo || !prices[mintInfo.coingeckoId]?.usd) {
                 showToast(`Could not get live price for ${$selectedMint}. Please try again in a moment.`, 'error');
                 return;
             }
             totalInUSD = totalInCrypto * prices[mintInfo.coingeckoId].usd;
+        }
+
+        if (applyCardFee) {
+            totalInUSD *= 1.03;
         }
 
         let subtotal = 0;
@@ -317,8 +320,6 @@
             subtotal = totalInCrypto / (applyTax ? (1 + ($taxRate / 100)) : 1);
         }
         const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
-
-
         chargeForCardPayment = {
             total: totalInUSD,
             subtotal: subtotal * ($selectedMint === 'USDC' ? 1 : prices[mintInfo.coingeckoId]?.usd || 0),
@@ -329,7 +330,6 @@
             originalMint: $selectedMint,
             items: chargeItems.map(item => ({...item})) // Create a clean copy
         };
-
         try {
             const response = await fetch('/api/create-payment-intent', {
                 method: 'POST',
@@ -340,7 +340,6 @@
                     currency: 'usd' // Stripe always uses standard currency codes
                 })
             });
-
             const data = await response.json();
 
             if (data.error) {
@@ -349,7 +348,6 @@
 
             paymentClientSecret = data.clientSecret;
             showCardModal = true;
-
         } catch (error) {
             console.error("Failed to create Payment Intent:", error);
             showToast("Could not initiate card payment. Please check the console.", "error");
@@ -481,6 +479,12 @@
                     <label class="label cursor-pointer">
                         <span class="label-text">Apply Tax ({$taxRate}%)</span> 
                         <input type="checkbox" class="toggle toggle-primary" bind:checked={applyTax} />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Apply 3% Credit Card Fee</span>
+                        <input type="checkbox" class="toggle toggle-secondary" bind:checked={applyCardFee} />
                     </label>
                 </div>
                 <div class="flex space-x-2">

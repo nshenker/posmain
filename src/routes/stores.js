@@ -91,10 +91,13 @@ export const taxRate = createPersistentStore("taxRate", 8.875);
 export const defaultTaxable = createPersistentStore("defaultTaxable", true);
 export const stripePublishableKey = createPersistentStore("stripePublishableKey", "");
 export const stripeSecretKey = createPersistentStore("stripeSecretKey", "");
+export const chargeCardFee = createPersistentStore("chargeCardFee", false);
+
 
 // --- Inventory & Invoicing Stores ---
 export const inventory = createPersistentStore("inventory", []);
 export const categories = createPersistentStore("categories", ["Default"]);
+export const locations = createPersistentStore("locations", []);
 export const inventoryHistory = createPersistentStore("inventoryHistory", {}); // { itemId: [ { date, reason, change, newQty } ] }
 export const invoices = createPersistentStore("invoices", []);
 export const customers = createPersistentStore("customers", []);

@@ -1,5 +1,5 @@
 <script lang='ts'>
-    import { inventory, mints, publicKey, categories, inventoryHistory } from '../stores.js';
+    import { inventory, mints, publicKey, categories, inventoryHistory, locations } from '../stores.js';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
@@ -9,28 +9,20 @@
     import { saveBarcode, saveMultipleBarcodes } from '../../utils/barcode.js';
     import { logHistory } from '../../utils/inventory.js';
     import VariantEditor from './VariantEditor.svelte';
+    import ItemDetailsModal from './ItemDetailsModal.svelte';
+    import LocationsModal from './LocationsModal.svelte';
 
     let activeTab = 'inventory';
     let showHistoryModal = false;
+    let showItemModal = false;
+    let showLocationsModal = false;
     let selectedItemForHistory = null;
+    let selectedItemForEdit = null;
     let newCategory = '';
     let selectedItems = [];
     let loading = true;
     let expandedItems = {}; // Tracks which variable products are expanded
 
-    function getInitialNewItem() {
-        return {
-            id: null, type: 'simple', name: '', sku: '', barcode: '',
-            quantity: null, price: null, cost: null, currency: 'USDC',
-            category: 'Default', variants: [], bundledItems: []
-        };
-    }
-    let newItem = getInitialNewItem();
-
-    function resetNewItem() {
-        newItem = getInitialNewItem();
-    }
-    
     onMount(() => {
         if (browser && !$publicKey) {
             showToast("Please set your merchant wallet address first.", "error");
@@ -49,26 +41,38 @@
         }
     }
 
-    function addItem() {
-        const { name, type } = newItem;
-        if (!name.trim()) {
-            showToast("Please enter an item name.", "error"); return;
+    function handleSaveItem(event) {
+        const itemToSave = event.detail;
+        if (itemToSave.id) {
+            // Update existing item
+            $inventory = $inventory.map(item => item.id === itemToSave.id ? itemToSave : item);
+        } else {
+            // Add new item
+            const newId = Date.now().toString();
+            let itemToAdd = { ...itemToSave, id: newId };
+            if (itemToAdd.type === 'simple') {
+                logHistory(newId, 'Item Created', `+${itemToAdd.quantity}`, itemToAdd.quantity);
+            } else if (itemToAdd.type === 'variable') {
+                itemToAdd.quantity = itemToAdd.variants.reduce((total, v) => total + (v.quantity || 0), 0);
+                itemToAdd.variants.forEach(v => {
+                    if (v.quantity > 0) {
+                        logHistory(v.id, 'Variant Created', `+${v.quantity}`, v.quantity);
+                    }
+                });
+            }
+            $inventory = [...$inventory, itemToAdd];
         }
-        const newId = Date.now().toString();
-        let itemToAdd = { ...newItem, id: newId };
-        
-        if (type === 'simple') {
-            logHistory(newId, 'Item Created', `+${itemToAdd.quantity}`, itemToAdd.quantity);
-        } else if (type === 'variable') {
-            itemToAdd.quantity = itemToAdd.variants.reduce((total, v) => total + (v.quantity || 0), 0);
-            itemToAdd.variants.forEach(v => {
-                if (v.quantity > 0) {
-                    logHistory(v.id, 'Variant Created', `+${v.quantity}`, v.quantity);
-                }
-            });
-        }
-        $inventory = [...$inventory, itemToAdd];
-        resetNewItem();
+        showItemModal = false;
+    }
+
+    function openNewItemModal() {
+        selectedItemForEdit = null;
+        showItemModal = true;
+    }
+
+    function openEditItemModal(item) {
+        selectedItemForEdit = item;
+        showItemModal = true;
     }
 
     function removeItem(itemId) {
@@ -77,7 +81,6 @@
             selectedItems = selectedItems.filter(id => id !== itemId);
             inventoryHistory.update(history => {
                 delete history[itemId];
-                // Also remove variant histories
                 const item = $inventory.find(i => i.id === itemId);
                 if (item && item.type === 'variable') {
                     item.variants.forEach(v => delete history[v.id]);
@@ -86,7 +89,7 @@
             });
         }
     }
-    
+
     function updateQuantity(itemId, amount, variantId = null) {
         $inventory = $inventory.map(item => {
             if (item.id === itemId) {
@@ -97,9 +100,9 @@
                 } else if (item.type === 'variable' && variantId) {
                     item.variants = item.variants.map(v => {
                         if (v.id === variantId) {
-                             const newVariantQty = Math.max(0, v.quantity + amount);
-                             logHistory(v.id, 'Manual Adjustment', `${amount > 0 ? '+' : ''}${amount}`, newVariantQty);
-                             return { ...v, quantity: newVariantQty };
+                            const newVariantQty = Math.max(0, v.quantity + amount);
+                            logHistory(v.id, 'Manual Adjustment', `${amount > 0 ? '+' : ''}${amount}`, newVariantQty);
+                            return { ...v, quantity: newVariantQty };
                         }
                         return v;
                     });
@@ -114,9 +117,8 @@
         selectedItemForHistory = item;
         showHistoryModal = true;
     }
-    
+
     function handleSaveSelected() {
-        // This logic needs to be enhanced to handle selected variants
         const itemsToSave = $inventory.filter(item => selectedItems.includes(item.id));
         if (itemsToSave.length > 0) {
             saveMultipleBarcodes(itemsToSave);
@@ -134,13 +136,14 @@
 
     function removeCategory(category) {
         if (category === 'Default') {
-            showToast("The 'Default' category cannot be removed.", "error"); return;
+            showToast("The 'Default' category cannot be removed.", "error");
+            return;
         }
         if (browser && confirm(`Are you sure you want to remove the "${category}" category? Items in this category will be moved to 'Default'.`)) {
             $inventory = $inventory.map(item => {
                 if (item.category === category) {
                     return { ...item, category: 'Default' };
-				}
+                }
                 return item;
             });
             $categories = $categories.filter(c => c !== category);
@@ -162,6 +165,14 @@
     <HistoryModal item={selectedItemForHistory} on:close={() => showHistoryModal = false} />
 {/if}
 
+{#if showItemModal}
+    <ItemDetailsModal item={selectedItemForEdit} on:close={() => showItemModal = false} on:save={handleSaveItem} />
+{/if}
+
+{#if showLocationsModal}
+    <LocationsModal on:close={() => showLocationsModal = false} />
+{/if}
+
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <header class="text-center py-6">
         <h1 class="text-4xl font-greycliffbold">Inventory Management</h1>
@@ -170,72 +181,31 @@
     <div id="inventory-tabs" role="tablist" class="tabs tabs-bordered justify-center">
         <button role="tab" class="tab" class:tab-active={activeTab === 'inventory'} on:click={() => activeTab = 'inventory'}>Inventory</button>
         <button role="tab" class="tab" class:tab-active={activeTab === 'categories'} on:click={() => activeTab = 'categories'}>Categories</button>
+        <button role="tab" class="tab" class:tab-active={activeTab === 'locations'} on:click={() => activeTab = 'locations'}>Locations</button>
         <button role="tab" class="tab" class:tab-active={activeTab === 'reports'} on:click={() => activeTab = 'reports'}>Reports</button>
     </div>
 
     {#if !loading}
     <div class="mt-6">
         {#if activeTab === 'inventory'}
-            <div id="add-item-card" class="card w-full bg-base-100 shadow-xl border mx-auto">
-                 <div class="card-body p-4 sm:p-8">
-                    <h2 class="card-title text-xl font-greycliffmed mb-4">Add New Item</h2>
-                    <form on:submit|preventDefault={addItem} class="space-y-4">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <select class="select select-bordered lg:col-span-1" bind:value={newItem.type}>
-                                <option value="simple">Simple Product</option>
-                                <option value="variable">Variable Product</option>
-                                <option value="bundle" disabled>Bundle (Coming Soon)</option>
-                            </select>
-                            <input type="text" placeholder="Item Name*" class="input input-bordered lg:col-span-3" bind:value={newItem.name} />
-                        </div>
-
-                        {#if newItem.type === 'simple'}
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <input type="number" placeholder="Quantity*" class="input input-bordered" bind:value={newItem.quantity} min="0" step="1" />
-                                <select class="select select-bordered" bind:value={newItem.category}>
-                                    {#each $categories as category}<option value={category}>{category}</option>{/each}
-                                </select>
-                                <div class="input-group">
-                                    <span>Cost*</span>
-                                    <input type="number" placeholder="0.00" class="input input-bordered w-full" bind:value={newItem.cost} min="0" step="0.01" />
-                                </div>
-                                <div class="input-group">
-                                    <span>Price*</span>
-                                    <input type="number" placeholder="0.00" class="input input-bordered w-full" bind:value={newItem.price} min="0" step="0.01" />
-                                    <select class="select select-bordered" bind:value={newItem.currency}>
-                                        {#each $mints as mint}<option value={mint.name}>{mint.name}</option>{/each}
-                                    </select>
-                                </div>
-                                <input type="text" placeholder="SKU (Optional)" class="input input-bordered" bind:value={newItem.sku} />
-						        <input type="text" placeholder="Barcode (Optional)" class="input input-bordered" bind:value={newItem.barcode} />
-                            </div>
-                        {/if}
-
-                        {#if newItem.type === 'variable'}
-                           <VariantEditor bind:variants={newItem.variants} basePrice={newItem.price} baseCost={newItem.cost} />
-                        {/if}
-
-                        <div class="card-actions justify-end">
-                            <button type="submit" class="btn btn-primary">Add Item to Inventory</button>
-                        </div>
-					</form>
-                </div>
-            </div>
-
-            <div class="card w-full bg-base-100 shadow-xl border mx-auto mt-6">
+            <div class="card w-full bg-base-100 shadow-xl border mx-auto">
                 <div class="card-body p-4 sm:p-8">
                     <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
 						<h2 class="card-title text-xl font-greycliffmed">Current Inventory</h2>
-                        {#if selectedItems.length > 0}
-                             <button class="btn btn-secondary" on:click={handleSaveSelected}>Save {selectedItems.length} Barcode(s)</button>
-						{/if}
+                        <div class="flex gap-2">
+                            {#if selectedItems.length > 0}
+                                <button class="btn btn-secondary" on:click={handleSaveSelected}>Save {selectedItems.length} Barcode(s)</button>
+                            {/if}
+                            <button class="btn btn-primary" on:click={openNewItemModal}>Add New Item</button>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="table w-full">
                             <thead>
 								<tr>
-                                    <th></th>
+                                    <th><input type="checkbox" on:change={toggleSelectAll} checked={allSelected} /></th>
 									<th>Item Name</th>
+                                    <th>Location</th>
                                     <th>Type</th>
 									<th class="text-center">Total Qty</th>
                                     <th class="text-right">Price</th>
@@ -245,14 +215,9 @@
                             <tbody>
 								{#each $inventory as item (item.id)}
                                     <tr class="hover">
-                                        <td>
-                                            {#if item.type === 'variable'}
-                                                <button class="btn btn-xs btn-ghost" on:click={() => expandedItems[item.id] = !expandedItems[item.id]}>
-                                                    {expandedItems[item.id] ? '▼' : '►'}
-                                                </button>
-                                            {/if}
-                                        </td>
+                                        <td><input type="checkbox" bind:group={selectedItems} value={item.id} /></td>
 										<td class="font-greycliffmed">{item.name}</td>
+                                        <td>{ $locations.find(loc => loc.id === item.locationId)?.name || 'N/A' }</td>
                                         <td><span class="badge badge-ghost badge-sm">{item.type}</span></td>
 										<td class="text-center font-mono">{item.quantity}</td>
                                         <td class="text-right font-mono">
@@ -260,6 +225,7 @@
                                         </td>
                                         <td class="text-center">
                                             <div class="flex flex-wrap justify-center gap-1">
+                                                <button class="btn btn-xs btn-outline" on:click={() => openEditItemModal(item)}>Edit</button>
                                                 {#if item.type === 'simple' && item.barcode}
                                                     <button class="btn btn-xs btn-outline" on:click={() => saveBarcode(item)}>Barcode</button>
                                                 {/if}
@@ -273,9 +239,10 @@
                                             <tr class="hover variant-row">
                                                 <td></td>
                                                 <td class="pl-8">{variant.name}</td>
+                                                <td></td>
                                                 <td><span class="badge badge-sm">Variant</span></td>
                                                 <td class="text-center font-mono">
-                                                     <div class="flex items-center justify-center space-x-2">
+                                                    <div class="flex items-center justify-center space-x-2">
                                                         <button on:click={() => updateQuantity(item.id, -1, variant.id)} class="btn btn-xs btn-ghost">-</button>
                                                         <span>{variant.quantity}</span>
                                                         <button on:click={() => updateQuantity(item.id, 1, variant.id)} class="btn btn-xs btn-ghost">+</button>
@@ -283,19 +250,19 @@
                                                 </td>
                                                 <td class="text-right font-mono">{(variant.price || 0).toFixed(2)}</td>
                                                 <td class="text-center">
-                                                     <div class="flex flex-wrap justify-center gap-1">
+                                                    <div class="flex flex-wrap justify-center gap-1">
                                                         {#if variant.barcode}
                                                             <button class="btn btn-xs btn-outline" on:click={() => saveBarcode({ name: `${item.name} - ${variant.name}`, price: variant.price, barcode: variant.barcode })}>Barcode</button>
                                                         {/if}
                                                         <button class="btn btn-xs btn-outline" on:click={() => viewHistory({ id: variant.id, name: `${item.name} - ${variant.name}` })}>History</button>
-                                                     </div>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         {/each}
                                     {/if}
                                 {/each}
                                 {#if $inventory.length === 0}
-									<tr><td colspan="6" class="text-center py-4">No items in inventory.</td></tr>
+									<tr><td colspan="7" class="text-center py-4">No items in inventory.</td></tr>
                                 {/if}
                             </tbody>
 						</table>
@@ -336,6 +303,8 @@
                     </div>
                 </div>
             </div>
+        {:else if activeTab === 'locations'}
+            <button class="btn btn-primary" on:click={() => showLocationsModal = true}>Manage Locations</button>
         {:else if activeTab === 'reports'}
             <Reports/>
         {/if}

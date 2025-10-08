@@ -6,16 +6,19 @@
         merchantLogo, businessAddress, successArray, mostRecentTxn, fullScreen, theme, 
         invoices, inventory, categories, inventoryHistory, currentChargeItems,
         dashboardLayout, customers, customerGroups, lastBackupDate,
-        taxRate, defaultTaxable, stripePublishableKey, stripeSecretKey
+        taxRate, defaultTaxable, stripePublishableKey, stripeSecretKey, chargeCardFee,
+        locations
     } from '../stores.js';
     import { get } from 'svelte/store';
     import { showToast } from '../toastStore.js';
     import ConfirmationModal from '../ConfirmationModal.svelte';
 
     let showResetConfirmation = false;
+
     async function reset() {
         showResetConfirmation = false;
         localStorage.clear();
+
         // Reset all stores to their default values
         storeName.set("");
         publicKey.set("");
@@ -31,10 +34,12 @@
         defaultTaxable.set(true);
         stripePublishableKey.set("");
         stripeSecretKey.set("");
+        chargeCardFee.set(false);
         theme.set("light");
         invoices.set([]);
         inventory.set([]);
         categories.set(["Default"]);
+        locations.set([]);
         inventoryHistory.set({});
         currentChargeItems.set([]);
         customers.set([]);
@@ -42,6 +47,7 @@
         lastBackupDate.set(null);
         // A default layout structure is needed here to avoid errors on reset
         dashboardLayout.set({ widgets: [ { id: 'keyMetrics', name: 'Key Metrics', visible: true } ] });
+
         goto('/', { replace: true });
     }
 
@@ -77,10 +83,12 @@
             defaultTaxable: get(defaultTaxable),
             stripePublishableKey: get(stripePublishableKey),
             stripeSecretKey: get(stripeSecretKey),
+            chargeCardFee: get(chargeCardFee),
             theme: get(theme),
             invoices: get(invoices),
             inventory: get(inventory),
 		    categories: get(categories),
+            locations: get(locations),
             inventoryHistory: get(inventoryHistory),
             dashboardLayout: get(dashboardLayout),
             customers: get(customers),
@@ -104,6 +112,7 @@
             reader.onload = (e) => {
                 try {
                     const importedData = JSON.parse(e.target.result as string);
+
                     storeName.set(importedData.storeName || "");
                     publicKey.set(importedData.publicKey || "");
                     pmtAmt.set(importedData.pmtAmt || "");
@@ -118,14 +127,17 @@
                     defaultTaxable.set(importedData.defaultTaxable !== undefined ? importedData.defaultTaxable : true);
                     stripePublishableKey.set(importedData.stripePublishableKey || "");
                     stripeSecretKey.set(importedData.stripeSecretKey || "");
+                    chargeCardFee.set(importedData.chargeCardFee || false);
                     theme.set(importedData.theme || "light");
                     invoices.set(importedData.invoices || []);
                     inventory.set(importedData.inventory || []);
                     categories.set(importedData.categories || ["Default"]);
+                    locations.set(importedData.locations || []);
                     inventoryHistory.set(importedData.inventoryHistory || {});
                     dashboardLayout.set(importedData.dashboardLayout || { widgets: [] });
                     customers.set(importedData.customers || []);
                     customerGroups.set(importedData.customerGroups || []);
+
 					showToast('Data imported successfully! The page will now reload.', 'success');
                     setTimeout(() => window.location.reload(), 2000);
                 } catch (error) {
@@ -205,6 +217,7 @@
                 </label>
             </div>
         </div>
+    
         
         <div class="divider"></div>
 
@@ -222,6 +235,12 @@
                 </label>
                 <input id="stripe-sk" type="password" placeholder="sk_test_..." bind:value={$stripeSecretKey} class="input input-bordered" />
             </div>
+            <div class="form-control mt-2">
+                <label class="label cursor-pointer">
+                    <span class="label-text font-greycliffmed">Charge 3% Credit Card Fee</span>
+                    <input type="checkbox" bind:checked={$chargeCardFee} class="toggle toggle-primary" />
+                </label>
+            </div>
         </div>
 
         <div class="divider"></div>
@@ -234,6 +253,7 @@
                     <span class="label-text 
                     font-greycliffmed">Export Data</span>
             </label>
+    
                 <button id="export-data" on:click={exportData} class="btn btn-outline normal-case">Download Backup</button>
                 {#if $lastBackupDate}
                     <p class="text-xs text-center mt-2">Last backup: {new Date($lastBackupDate).toLocaleString()}</p>
@@ -246,7 +266,7 @@
                 </label>
         
                 <input id="import-data" type="file" 
-                on:change={handleDataImport} accept=".json" class="file-input file-input-bordered w-full" />
+                    on:change={handleDataImport} accept=".json" class="file-input file-input-bordered w-full" />
             </div>
         </div>
 
