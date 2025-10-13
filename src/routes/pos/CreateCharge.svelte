@@ -11,12 +11,14 @@
     import solLogo from "../../lib/images/solanaLogoMark.png";
     import InventoryModal from "./InventoryModal.svelte"; 
     import CustomerSelectModal from "./CustomerSelectModal.svelte";
+    import CustomerDetailsModal from '../crm/CustomerDetailsModal.svelte';
     import { stripePublishableKey, stripeSecretKey } from '../stores.js';
     import CardPaymentModal from './CardPaymentModal.svelte';
     import { logHistory } from '../../utils/inventory.js';
     import { get } from 'svelte/store';
 
     let showCustomerModal = false;
+    let showNewCustomerModal = false;
 
     let showInventoryModal = false;
     let chargeItems = [];
@@ -462,7 +464,15 @@ $selectedMint : null}
 {#if showCustomerModal}
     <CustomerSelectModal 
         on:select={(e) => { $selectedCustomer = e.detail; showCustomerModal = false; }} 
-        on:close={() => showCustomerModal = false} 
+        on:close={() => showCustomerModal = false}
+        on:new={() => { showCustomerModal = false; showNewCustomerModal = true; }}
+    />
+{/if}
+
+{#if showNewCustomerModal}
+    <CustomerDetailsModal 
+        on:close={() => showNewCustomerModal = false}
+        on:save={(e) => { $selectedCustomer = e.detail; showNewCustomerModal = false; }}
     />
 {/if}
 

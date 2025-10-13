@@ -25,7 +25,8 @@
                 {/each}
             </ul>
         </div>
-        <div class="modal-action">
+        <div class="modal-action justify-between">
+            <button class="btn btn-primary" on:click={() => dispatch('new')}>New Customer</button>
             <button class="btn" on:click={() => dispatch('close')}>Close</button>
         </div>
     </div>

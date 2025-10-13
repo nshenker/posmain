@@ -6,7 +6,8 @@
     export let customer = null;
     const dispatch = createEventDispatcher();
 
-    let currentCustomer = customer ? { ...customer } : { id: null, name: '', email: '', phone: '', wallet: '', notes: '', tags: [], communicationLog: [] };
+    let currentCustomer = customer ?
+ { ...customer } : { id: null, name: '', email: '', phone: '', wallet: '', notes: '', tags: [], communicationLog: [] };
     let newTag = '';
     let newLogEntry = '';
 
@@ -36,8 +37,11 @@
 
         if (currentCustomer.id) {
             $customers = $customers.map(c => c.id === currentCustomer.id ? currentCustomer : c);
+            dispatch('save', currentCustomer); // Dispatch even on update
         } else {
-            $customers = [...$customers, { ...currentCustomer, id: Date.now().toString() }];
+            const newCustomer = { ...currentCustomer, id: Date.now().toString() };
+            $customers = [...$customers, newCustomer];
+            dispatch('save', newCustomer); // Dispatch the new customer
         }
         dispatch('close');
     }
@@ -45,7 +49,8 @@
 
 <div class="modal modal-open">
     <div class="modal-box">
-        <h3 class="font-bold text-lg">{currentCustomer.id ? 'Edit' : 'Add'} Customer</h3>
+        <h3 class="font-bold text-lg">{currentCustomer.id ?
+ 'Edit' : 'Add'} Customer</h3>
         <div class="py-4 space-y-4">
             <input type="text" placeholder="Name" class="input input-bordered w-full" bind:value={currentCustomer.name} />
             <input type="email" placeholder="Email" class="input input-bordered w-full" bind:value={currentCustomer.email} />
@@ -59,7 +64,8 @@
                     <button class="btn btn-secondary" on:click={addTag}>Add</button>
                 </div>
                 <div class="flex flex-wrap gap-2 mt-2">
-                    {#each (currentCustomer.tags || []) as tag}
+                    {#each (currentCustomer.tags ||
+ []) as tag}
                         <div class="badge badge-outline gap-2">
                             {tag}
                             <button on:click={() => removeTag(tag)}>✕</button>
