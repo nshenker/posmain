@@ -92,6 +92,7 @@ export const defaultTaxable = createPersistentStore("defaultTaxable", true);
 export const stripePublishableKey = createPersistentStore("stripePublishableKey", "");
 export const stripeSecretKey = createPersistentStore("stripeSecretKey", "");
 export const chargeCardFee = createPersistentStore("chargeCardFee", false);
+export const selectedCustomer = createPersistentStore("selectedCustomer", null);
 
 
 // --- Inventory & Invoicing Stores ---

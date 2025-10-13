@@ -1,7 +1,7 @@
 <script lang='ts'>
     import { onMount, onDestroy, tick } from "svelte";
     import { goto } from '$app/navigation';
-    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee } from '../stores.js';
+    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee, customers, selectedCustomer } from '../stores.js';
     import { tokenPrices } from '../priceStore.js';
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
@@ -9,12 +9,14 @@
     import { Html5QrcodeScanner } from 'html5-qrcode';
     import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
-    import InventoryModal from "./InventoryModal.svelte";
+    import InventoryModal from "./InventoryModal.svelte"; 
+    import CustomerSelectModal from "./CustomerSelectModal.svelte";
     import { stripePublishableKey, stripeSecretKey } from '../stores.js';
     import CardPaymentModal from './CardPaymentModal.svelte';
     import { logHistory } from '../../utils/inventory.js';
     import { get } from 'svelte/store';
 
+    let showCustomerModal = false;
 
     let showInventoryModal = false;
     let chargeItems = [];
@@ -30,7 +32,8 @@
     let isScannerVisible = false;
     let lastScanTime = 0;
     let lastScanResult = '';
-    const SCAN_COOLDOWN = 3000; // 3 seconds
+    const SCAN_COOLDOWN = 3000;
+    // 3 seconds
 
 
     const keys = [
@@ -61,7 +64,8 @@
         }
 
         // Use variantId for uniqueness if it exists, otherwise use the parent item id
-        const uniqueId = itemToAdd.variantId || itemToAdd.id;
+        const uniqueId = itemToAdd.variantId ||
+itemToAdd.id;
         const existingItemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === uniqueId);
         if (existingItemIndex > -1) {
             chargeItems[existingItemIndex].quantity += 1;
@@ -172,6 +176,7 @@
                     
                     qrboxFunction,
                     useBarCodeDetectorIfSupported: true // Improves performance
+                
                 },
                 false // verbose
             );
@@ -230,11 +235,13 @@
         decimalsActive = false;
         applyTax = $defaultTaxable;
         $currentChargeItems = [];
+        $selectedCustomer = null;
     }
 
     onMount(() => {
         clearCharge();
     });
+
     onDestroy(() => {
         stopScanner(); // Ensure camera is released when leaving the page
     });
@@ -248,11 +255,13 @@
                 $selectedMint = firstItem.currency;
             }
         } else {
-            const fullAmount = `${left || '0'}${right ? '.' + right : ''}`;
+            const fullAmount = `${left ||
+'0'}${right ? '.' + right : ''}`;
             subtotal = parseFloat(fullAmount) || 0;
         }
         
-        const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
+        const taxAmount = applyTax ?
+subtotal * ($taxRate / 100) : 0;
         const total = subtotal + taxAmount;
         $pmtAmt = total.toLocaleString("en", {
             minimumFractionDigits: 2,
@@ -268,7 +277,8 @@
             subtotal = parseFloat($pmtAmt.replace(/,/g, '')) / (applyTax ? (1 + ($taxRate / 100)) : 1);
         }
         
-        const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
+        const taxAmount = applyTax ?
+subtotal * ($taxRate / 100) : 0;
         const total = subtotal + taxAmount;
         if (total > 0) {
             const itemsForTx = chargeItems.map(item => ({
@@ -326,7 +336,8 @@
             taxAmount: taxAmount * ($selectedMint === 'USDC' ? 1 : prices[mintInfo.coingeckoId]?.usd || 0),
             taxable: applyTax,
             taxRate: $taxRate,
-            originalAmount: totalInCrypto,
+            originalAmount: 
+totalInCrypto,
             originalMint: $selectedMint,
             items: chargeItems.map(item => ({...item})) // Create a clean copy
         };
@@ -361,12 +372,14 @@
             uiAmount: chargeForCardPayment.total,
             mint: 'USD',
             originalAmount: chargeForCardPayment.originalAmount,
-            originalMint: chargeForCardPayment.originalMint,
+            
+originalMint: chargeForCardPayment.originalMint,
             items: chargeForCardPayment.items,
             subtotal: chargeForCardPayment.subtotal,
             taxAmount: chargeForCardPayment.taxAmount,
             taxRate: chargeForCardPayment.taxRate,
             taxable: chargeForCardPayment.taxable,
+            customerId: $selectedCustomer ? $selectedCustomer.id : null,
         };
         successArray.update(items => [...items, new_entry]);
         
@@ -375,7 +388,8 @@
             inventory.update(inv => {
                 const newInv = [...inv];
                 for (const soldItem of chargeForCardPayment.items) {
-                    const itemIndex = newInv.findIndex(i => i.id === soldItem.id);
+                    const itemIndex = 
+newInv.findIndex(i => i.id === soldItem.id);
                     if (itemIndex > -1) {
                         if (newInv[itemIndex].type === 'simple') {
                             const newQty = newInv[itemIndex].quantity - soldItem.quantity;
@@ -438,9 +452,17 @@
 
 {#if showInventoryModal}
     <InventoryModal 
-        currentCurrency={chargeItems.length > 0 ? $selectedMint : null}
+        currentCurrency={chargeItems.length > 0 ?
+$selectedMint : null}
         on:addItem={handleAddItemFromModal} 
         on:close={() => showInventoryModal = false} 
+    />
+{/if}
+
+{#if showCustomerModal}
+    <CustomerSelectModal 
+        on:select={(e) => { $selectedCustomer = e.detail; showCustomerModal = false; }} 
+        on:close={() => showCustomerModal = false} 
     />
 {/if}
 
@@ -451,14 +473,20 @@
             <h2 class="card-title text-xl font-greycliffmed mb-2">Current Charge</h2>
             
             <div class="flex-grow overflow-y-auto pr-2 -mr-2">
-                {#if chargeItems.length > 0}
+                {#if $selectedCustomer}
+                    <div class="alert alert-info shadow-lg mb-2">
+                        <div>Customer: {$selectedCustomer.name}</div>
+                    </div>
+                {/if}
+                {#if chargeItems.length > 0} 
                     <div class="space-y-2 text-left">
                         {#each chargeItems as item (item.variantId || item.id)}
                             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
                                 <span class="flex-grow truncate font-greycliffmed">{item.name}</span>
                                 <div class="flex items-center justify-end gap-2">
                                     <div class="flex items-center justify-center space-x-2">
-                                        <button on:click={() => decrementQuantity(item.variantId || item.id)} class="btn btn-xs btn-ghost">-</button>
+                                        <button on:click={() => decrementQuantity(item.variantId ||
+item.id)} class="btn btn-xs btn-ghost">-</button>
                                         <span>{item.quantity}</span>
                                         <button on:click={() => incrementQuantity(item.variantId || item.id)} class="btn btn-xs btn-ghost">+</button>
                                     </div>
@@ -487,8 +515,9 @@
                         <input type="checkbox" class="toggle toggle-secondary" bind:checked={applyCardFee} />
                     </label>
                 </div>
-                <div class="flex space-x-2">
-                    <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case flex-1">Add Item</button>
+                <button on:click={() => showCustomerModal = true} class="btn btn-info normal-case w-full">{$selectedCustomer ? 'Change' : 'Add'} Customer</button>
+                <div class="flex space-x-2 mt-2">
+                     <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case flex-1">Add Item</button>
                     {#if chargeItems.length > 0}
                         <button on:click={clearCharge} class="btn btn-warning normal-case">Clear</button>
                     {/if}
@@ -503,9 +532,11 @@
         <div id="pos-input-section" class="flex flex-col md:w-1/2 h-full">
             <div class="flex items-center justify-center space-x-2 p-2 bg-base-200 rounded-lg mb-2">
                 {#if $selectedMint === "USDC"}
-                    <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
+                    <svg class="h-8 
+w-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
                         <path d="M1000 2000c554.17 0 1000-445.83 1000-1000S1554.17 0 1000 0 0 445.83 0 1000s445.83 1000 1000 1000z" fill="#2775ca"/>
-                        <path d="M1275 1158.33c0-145.83-87.5-195.83-262.5-216.66-125-16.67-150-50-150-108.34s41.67-95.83 125-95.83c75 0 116.67 25 137.5 87.5 4.17 12.5 16.67 20.83 29.17 20.83h66.66c16.67 0 29.17-12.5 29.17-29.16v-4.17c-16.67-91.67-91.67-162.5-187.5-170.83v-100c0-16.67-12.5-29.17-33.33-33.34h-62.5c-16.67 0-29.17 12.5-33.34 33.34v95.83c-125 16.67-204.16 100-204.16 204.17 0 137.5 83.33 191.66 258.33 212.5 116.67 20.83 154.17 45.83 154.17 112.5s-58.34 112.5-137.5 112.5c-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 12.5-29.16 29.17v4.17c16.66 104.16 83.33 179.16 220.83 200v100c0 16.66 12.5 29.16 33.33 33.33h62.5c16.67 0 29.17-12.5 33.34-33.33v-100c125-20.84 208.33-108.34 208.33-220.84z" fill="#fff"/>
+                        <path d="M1275 1158.33c0-145.83-87.5-195.83-262.5-216.66-125-16.67-150-50-150-108.34s41.67-95.83 125-95.83c75 0 116.67 25 137.5 87.5 4.17 12.5 16.67 20.83 29.17 20.83h66.66c16.67 0 29.17-12.5 29.17-29.16v-4.17c-16.67-91.67-91.67-162.5-187.5-170.83v-100c0-16.67-12.5-29.17-33.33-33.34h-62.5c-16.67 0-29.17 12.5-33.34 33.34v95.83c-125 16.67-204.16 100-204.16 204.17 0 137.5 83.33 191.66 258.33 212.5 116.67 
+20.83 154.17 45.83 154.17 112.5s-58.34 112.5-137.5 112.5c-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 12.5-29.16 29.17v4.17c16.66 104.16 83.33 179.16 220.83 200v100c0 16.66 12.5 29.16 33.33 33.33h62.5c16.67 0 29.17-12.5 33.34-33.33v-100c125-20.84 208.33-108.34 208.33-220.84z" fill="#fff"/>
                     </svg>
                 {:else if $selectedMint === "SOL"}
                    <img src="{solLogo}" class="w-9" alt="SOL" />
@@ -535,7 +566,8 @@
                 </div>
             </div>
 
-            <div class="flex-grow" class:hidden={chargeItems.length > 0}>
+            <div 
+class="flex-grow" class:hidden={chargeItems.length > 0}>
                 <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
             </div>
 

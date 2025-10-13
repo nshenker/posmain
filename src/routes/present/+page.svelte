@@ -1,8 +1,8 @@
 <script lang='ts'>
     import { onMount } from "svelte";
     import * as web3 from '@solana/web3.js';
-    import { createQR, encodeURL, findReference, FindReferenceError} from "@solana/pay"
-    import { storeName, publicKey, pmtAmt, mostRecentTxn, showWarning, successArray, mints, selectedMint, inventory, currentChargeItems, chargeMetadata} from '../stores.js';
+    import { createQR, encodeURL, findReference, FindReferenceError} from "@solana/pay";
+    import { storeName, publicKey, pmtAmt, mostRecentTxn, showWarning, successArray, mints, selectedMint, inventory, currentChargeItems, chargeMetadata, selectedCustomer} from '../stores.js';
     import { logHistory } from '../../utils/inventory.js';
     import { goto } from '$app/navigation';
     import BigNumber from 'bignumber.js';
@@ -72,13 +72,15 @@
                 txnConfirmed = true;
                 statusMessage = "Transaction Confirmed!";
 
-                let confirmedTxn = await connection.getParsedTransaction(signatureInfo.signature, "confirmed");
+                let confirmedTxn = 
+await connection.getParsedTransaction(signatureInfo.signature, "confirmed");
 
 				if (confirmedTxn) {
                     let uiAmount = 0;
                     const meta = confirmedTxn.meta;
                     const pubkey = get(publicKey);
                     const mintsArray = get(mints);
+    
                     const currentMintInfo = mintsArray.find(m => m.name === $selectedMint);
 
                     if (meta) {
@@ -87,10 +89,10 @@
                             const preBalance = meta.preTokenBalances?.find(
                                 b => b.owner === pubkey && b.mint === currentMintInfo.mint
                             )?.uiTokenAmount?.uiAmount ?? 0;
-                            
                             const postBalance = meta.postTokenBalances?.find(
                                 b => b.owner === pubkey && b.mint === currentMintInfo.mint
-                            )?.uiTokenAmount?.uiAmount ?? 0;
+                            )?.uiTokenAmount?.uiAmount ??
+0;
 
                             if (postBalance > preBalance) {
                                 uiAmount = postBalance - preBalance;
@@ -98,6 +100,7 @@
                         } else {
                             // Method 2: Check native SOL balance changes
                             const accountIndex = confirmedTxn.transaction.message.accountKeys.findIndex(
+        
                                 key => key.pubkey.toBase58() === pubkey
                             );
                             if (accountIndex !== -1 && meta.preBalances && meta.postBalances) {
@@ -115,7 +118,8 @@
                          const instructions = confirmedTxn.transaction.message.instructions;
                          const transferInstruction = instructions.find(
                             (instruction) => (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transfer' || (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transferChecked'
-                        ) as web3.PartiallyDecodedInstruction | undefined;
+                        ) as web3.PartiallyDecodedInstruction |
+undefined;
 
                         if (transferInstruction?.parsed?.info?.tokenAmount) {
                             uiAmount = transferInstruction.parsed.info.tokenAmount.uiAmount;
@@ -137,7 +141,8 @@
                             subtotal: chargeMeta?.subtotal,
                             taxAmount: chargeMeta?.taxAmount,
                             taxRate: chargeMeta?.taxRate,
-                            taxable: chargeMeta?.applyTax
+                            taxable: chargeMeta?.applyTax,
+                            customerId: $selectedCustomer ? $selectedCustomer.id : null,
                         };
                         successArray.update(items => {
                             if (!items.some(item => item.txid === new_entry.txid)) {
@@ -161,7 +166,8 @@
                                     newInv[itemIndex].quantity = newQty;
                                     logHistory(soldItem.id, `Sale (Tx: ${signatureInfo.signature.substring(0, 4)}...)`, `-${soldItem.quantity}`, newQty);
                                 } else if (newInv[itemIndex].type === 'variable' && soldItem.variantId) {
-                                    const variantIndex = newInv[itemIndex].variants.findIndex(v => v.id === soldItem.variantId);
+                                    const variantIndex = newInv[itemIndex].variants.findIndex(v => v.id === 
+soldItem.variantId);
                                     if (variantIndex > -1) {
                                         const variant = newInv[itemIndex].variants[variantIndex];
                                         const newVariantQty = variant.quantity - soldItem.quantity;
@@ -173,7 +179,7 @@
 							}
                         }
                         return newInv;
-					});
+                    });
                 }
                 // --- END INVENTORY UPDATE LOGIC ---
 
@@ -184,13 +190,12 @@
             } catch (e) {
                 if (e instanceof FindReferenceError) {
 					return;
-                }
+				}
                 console.error('An unexpected error occurred:', e);
                 statusMessage = "An error occurred. Please check the console.";
                 clearInterval(intervalId);
             }
         }, 2000);
-
         return () => {
             clearInterval(intervalId);
         };
@@ -211,7 +216,7 @@
             <div id="qr-code" class="rounded-lg overflow-hidden border border-gray-200 shadow-sm"></div>
 		   
 		   <div class="mt-4">
-                {#if !txnConfirmed && statusMessage !== 'An error occurred. Please check the console.' && statusMessage !== 'Transaction not found. Please try again.'}
+               {#if !txnConfirmed && statusMessage !== 'An error occurred. Please check the console.' && statusMessage !== 'Transaction not found. Please try again.'}
                     <div class="flex items-center">
                         <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -228,7 +233,8 @@
                     </div>
                 {:else}
                     <div class="flex items-center text-error">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round"  stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" 
+ stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <span>{statusMessage}</span>
                     </div>
                 {/if}
@@ -236,7 +242,8 @@
 
             <div class="card-actions justify-center mt-6">
                 <button on:click={goBack} class="btn btn-outline normal-case">
-				   {txnConfirmed ? "New Transaction" : "Cancel"}
+				   {txnConfirmed ?
+"New Transaction" : "Cancel"}
                 </button>
             </div>
 
