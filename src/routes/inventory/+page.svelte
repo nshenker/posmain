@@ -22,6 +22,7 @@
     let selectedItems = [];
     let loading = true;
     let expandedItems = {}; // Tracks which variable products are expanded
+    let adjustmentAmounts = {}; // For quick stock adjustments
 
     onMount(() => {
         if (browser && !$publicKey) {
@@ -91,6 +92,9 @@
     }
 
     function updateQuantity(itemId, amount, variantId = null) {
+        amount = parseInt(amount, 10);
+        if (isNaN(amount)) return;
+
         $inventory = $inventory.map(item => {
             if (item.id === itemId) {
                 if (item.type === 'simple') {
@@ -100,13 +104,13 @@
                 } else if (item.type === 'variable' && variantId) {
                     item.variants = item.variants.map(v => {
                         if (v.id === variantId) {
-                            const newVariantQty = Math.max(0, v.quantity + amount);
+                            const newVariantQty = Math.max(0, (v.quantity || 0) + amount);
                             logHistory(v.id, 'Manual Adjustment', `${amount > 0 ? '+' : ''}${amount}`, newVariantQty);
                             return { ...v, quantity: newVariantQty };
                         }
                         return v;
                     });
-                    item.quantity = item.variants.reduce((total, v) => total + v.quantity, 0);
+                    item.quantity = item.variants.reduce((total, v) => total + (v.quantity || 0), 0);
                 }
             }
             return item;
@@ -215,11 +219,28 @@
                             <tbody>
 								{#each $inventory as item (item.id)}
                                     <tr class="hover">
-                                        <td><input type="checkbox" bind:group={selectedItems} value={item.id} /></td>
+                                        <td>
+                                            {#if item.type === 'variable'}
+                                                <button class="btn btn-xs btn-ghost" on:click={() => expandedItems[item.id] = !expandedItems[item.id]}>
+                                                    {expandedItems[item.id] ? '▼' : '►'}
+                                                </button>
+                                            {/if}
+                                        </td>
 										<td class="font-greycliffmed">{item.name}</td>
                                         <td>{ $locations.find(loc => loc.id === item.locationId)?.name || 'N/A' }</td>
                                         <td><span class="badge badge-ghost badge-sm">{item.type}</span></td>
-										<td class="text-center font-mono">{item.quantity}</td>
+										<td class="text-center font-mono">
+                                            {#if item.type === 'simple'}
+                                                <div class="flex items-center justify-center space-x-2">
+                                                    <button on:click={() => updateQuantity(item.id, -(adjustmentAmounts[item.id] || 1))} class="btn btn-xs btn-ghost">-</button>
+                                                    <input type="number" bind:value={adjustmentAmounts[item.id]} class="input input-xs w-16 text-center" placeholder="1" min="1" />
+                                                    <button on:click={() => updateQuantity(item.id, adjustmentAmounts[item.id] || 1)} class="btn btn-xs btn-ghost">+</button>
+                                                </div>
+                                                ({item.quantity} in stock)
+                                            {:else}
+                                                {item.quantity}
+                                            {/if}
+                                        </td>
                                         <td class="text-right font-mono">
                                             {#if item.type === 'simple'}{(item.price || 0).toFixed(2)} {item.currency}{:else}From ${(Math.min(...item.variants.map(v => v.price)) || 0).toFixed(2)}{/if}
                                         </td>
@@ -243,10 +264,11 @@
                                                 <td><span class="badge badge-sm">Variant</span></td>
                                                 <td class="text-center font-mono">
                                                     <div class="flex items-center justify-center space-x-2">
-                                                        <button on:click={() => updateQuantity(item.id, -1, variant.id)} class="btn btn-xs btn-ghost">-</button>
-                                                        <span>{variant.quantity}</span>
-                                                        <button on:click={() => updateQuantity(item.id, 1, variant.id)} class="btn btn-xs btn-ghost">+</button>
+                                                        <button on:click={() => updateQuantity(item.id, -(adjustmentAmounts[variant.id] || 1), variant.id)} class="btn btn-xs btn-ghost">-</button>
+                                                        <input type="number" bind:value={adjustmentAmounts[variant.id]} class="input input-xs w-16 text-center" placeholder="1" min="1" />
+                                                        <button on:click={() => updateQuantity(item.id, adjustmentAmounts[variant.id] || 1, variant.id)} class="btn btn-xs btn-ghost">+</button>
                                                     </div>
+                                                    ({variant.quantity} in stock)
                                                 </td>
                                                 <td class="text-right font-mono">{(variant.price || 0).toFixed(2)}</td>
                                                 <td class="text-center">
