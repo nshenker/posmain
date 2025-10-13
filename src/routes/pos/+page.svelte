@@ -3,21 +3,16 @@
     import { storeName, merchantLogo, publicKey } from '../stores.js';
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
-    // Removed static import: import CreateCharge from "./CreateCharge.svelte";
+    import CreateCharge from "./CreateCharge.svelte";
     import Settings from "./Settings.svelte";
     import Transactions from "./Transactions.svelte";
 	
     let activeTab = 'charge';
-    let CreateCharge = null; // Prepare for dynamic import
 
-    onMount(async () => {
-        if (browser) {
-            if (!$publicKey) {
-                alert("Please set your merchant wallet address first.");
-                goto('/');
-            }
-            // Dynamically import the component only on the client-side
-            CreateCharge = (await import('./CreateCharge.svelte')).default;
+    onMount(() => {
+        if (browser && !$publicKey) {
+            alert("Please set your merchant wallet address first.");
+            goto('/');
         }
     });
 </script>
@@ -40,13 +35,7 @@
 
     <div class="mt-4 flex-grow flex justify-center">
         <div class:hidden={activeTab !== 'charge'} class="w-full flex justify-center">
-            {#if CreateCharge}
-                <svelte:component this={CreateCharge} />
-            {:else}
-                <div class="flex items-center justify-center">
-                    <p>Loading...</p>
-                </div>
-            {/if}
+            <CreateCharge/>
         </div>
         <div class:hidden={activeTab !== 'transactions'} class="w-full flex justify-center">
             <Transactions/>
