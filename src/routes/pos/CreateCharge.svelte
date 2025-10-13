@@ -1,7 +1,7 @@
 <script lang='ts'>
     import { onMount, onDestroy, tick } from "svelte";
     import { goto } from '$app/navigation';
-    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee } from '../stores.js';
+    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee, customers } from '../stores.js';
     import { tokenPrices } from '../priceStore.js';
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
@@ -10,17 +10,19 @@
     import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
     import InventoryModal from "./InventoryModal.svelte";
-    import { stripePublishableKey, stripeSecretKey } from '../stores.js';
     import CardPaymentModal from './CardPaymentModal.svelte';
+    import CustomerModal from './CustomerModal.svelte';
     import { logHistory } from '../../utils/inventory.js';
     import { get } from 'svelte/store';
 
 
     let showInventoryModal = false;
+    let showCustomerModal = false;
     let chargeItems = [];
     let barcodeInput = '';
     let applyTax = $defaultTaxable;
     let applyCardFee = $defaultChargeCardFee;
+    let selectedCustomer = null;
 
     let showCardModal = false;
     let paymentClientSecret = null;
@@ -38,13 +40,14 @@
         { row: 1, value: "4"}, { row: 1, value: "5"}, { row: 1, value: "6"},
         { row: 2, value: "7"}, { row: 2, value: "8"}, { row: 2, value: "9"},
         { row: 3, value: "<" }, { row: 3, value: "0"}, { 
-            
             row: 3, value: "."}
     ];
+
     // Numpad state
     let left = "";
     let right = "";
     let decimalsActive = false;
+
     // --- Functions for adding items ---
     function addItemToCart(itemToAdd) {
         if (!itemToAdd) {
@@ -60,7 +63,6 @@
             return;
         }
 
-        // Use variantId for uniqueness if it exists, otherwise use the parent item id
         const uniqueId = itemToAdd.variantId || itemToAdd.id;
         const existingItemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === uniqueId);
         if (existingItemIndex > -1) {
@@ -69,8 +71,7 @@
             chargeItems.push({ ...itemToAdd, quantity: 1 });
         }
         
-        chargeItems = chargeItems;
-        // Trigger reactivity
+        chargeItems = chargeItems; // Trigger reactivity
     }
 
 
@@ -79,44 +80,44 @@
         showInventoryModal = false;
     }
 
+    function handleSelectCustomer(event) {
+        selectedCustomer = event.detail;
+        showCustomerModal = false;
+    }
+
     function addItemByBarcode(barcode) {
         let foundItem = null;
         let foundVariant = null;
 
-        // Iterate through the inventory to find the item/variant
         for (const item of $inventory) {
             if (item.type === 'simple' && item.barcode === barcode.trim()) {
                 foundItem = item;
-                break; // Exit loop once found
+                break; 
             } else if (item.type === 'variable' && item.variants) {
                 foundVariant = item.variants.find(v => v.barcode === barcode.trim());
                 if (foundVariant) {
                     foundItem = item;
-                    // We found the parent item
                     break;
-                    // Exit loop once found
                 }
             }
         }
 
         if (foundItem) {
             if (foundVariant) {
-                // It's a variant, construct the specific object for the cart
                 const itemToAdd = {
-                    id: foundItem.id, // Parent ID is still the main reference
-                    variantId: foundVariant.id, // Variant ID is crucial for stock depletion
+                    id: foundItem.id,
+                    variantId: foundVariant.id,
                     name: `${foundItem.name} - ${foundVariant.name}`,
                     price: foundVariant.price,
                     cost: foundVariant.cost,
                     sku: foundVariant.sku,
                     barcode: foundVariant.barcode,
-                    currency: foundItem.currency, // Inherit from parent
-                    category: foundItem.category, // Inherit from parent
+                    currency: foundItem.currency, 
+                    category: foundItem.category,
                 };
                 addItemToCart(itemToAdd);
                 showToast(`Added: ${itemToAdd.name}`, 'success');
             } else {
-                // It's a simple product
                 addItemToCart(foundItem);
                 showToast(`Added: ${foundItem.name}`, 'success');
             }
@@ -135,7 +136,6 @@
     // --- Camera Scanner Logic ---
     function onScanSuccess(decodedText) {
         const now = Date.now();
-        // Cooldown logic: if the same code is scanned within the cooldown period, ignore it.
         if (decodedText === lastScanResult && (now - lastScanTime < SCAN_COOLDOWN)) {
             return;
         }
@@ -150,9 +150,7 @@
 
     async function startScanner() {
         isScannerVisible = true;
-        // Wait for the DOM to update so the "reader" div is visible
         await tick();
-        // This function makes the scanning box responsive
         const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
             let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
             let qrboxSize = Math.floor(minEdge * 0.8);
@@ -167,11 +165,8 @@
                 "reader",
                 { 
                     fps: 10, 
-                    qrbox: 
-                    
-                    
-                    qrboxFunction,
-                    useBarCodeDetectorIfSupported: true // Improves performance
+                    qrbox: qrboxFunction,
+                    useBarCodeDetectorIfSupported: true 
                 },
                 false // verbose
             );
@@ -229,15 +224,18 @@
         right = "";
         decimalsActive = false;
         applyTax = $defaultTaxable;
+        selectedCustomer = null;
         $currentChargeItems = [];
     }
 
     onMount(() => {
         clearCharge();
     });
+
     onDestroy(() => {
         stopScanner(); // Ensure camera is released when leaving the page
     });
+
     // --- Reactive total calculation ---
     $: {
         let subtotal = 0;
@@ -254,6 +252,7 @@
         
         const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
         const total = subtotal + taxAmount;
+
         $pmtAmt = total.toLocaleString("en", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 4 
@@ -270,6 +269,7 @@
         
         const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
         const total = subtotal + taxAmount;
+        
         if (total > 0) {
             const itemsForTx = chargeItems.map(item => ({
                 id: item.id, variantId: item.variantId, name: item.name,
@@ -278,7 +278,13 @@
             }));
             $currentChargeItems = itemsForTx;
 
-            chargeMetadata.set({ subtotal, taxAmount, taxRate: $taxRate, applyTax });
+            chargeMetadata.set({ 
+                subtotal, 
+                taxAmount, 
+                taxRate: $taxRate, 
+                applyTax, 
+                customerId: selectedCustomer?.id 
+            });
 
             goto('/present');
         } else {
@@ -301,6 +307,7 @@
         let totalInUSD = totalInCrypto;
         const prices = get(tokenPrices);
         const mintInfo = get(mints).find(m => m.name === $selectedMint);
+        
         if ($selectedMint !== 'USDC') {
              if (!mintInfo || !prices[mintInfo.coingeckoId]?.usd) {
                 showToast(`Could not get live price for ${$selectedMint}. Please try again in a moment.`, 'error');
@@ -319,7 +326,9 @@
         } else {
             subtotal = totalInCrypto / (applyTax ? (1 + ($taxRate / 100)) : 1);
         }
+        
         const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
+
         chargeForCardPayment = {
             total: totalInUSD,
             subtotal: subtotal * ($selectedMint === 'USDC' ? 1 : prices[mintInfo.coingeckoId]?.usd || 0),
@@ -328,8 +337,10 @@
             taxRate: $taxRate,
             originalAmount: totalInCrypto,
             originalMint: $selectedMint,
-            items: chargeItems.map(item => ({...item})) // Create a clean copy
+            items: chargeItems.map(item => ({...item})), // Create a clean copy
+            customerId: selectedCustomer?.id
         };
+
         try {
             const response = await fetch('/api/create-payment-intent', {
                 method: 'POST',
@@ -340,6 +351,7 @@
                     currency: 'usd' // Stripe always uses standard currency codes
                 })
             });
+
             const data = await response.json();
 
             if (data.error) {
@@ -367,10 +379,10 @@
             taxAmount: chargeForCardPayment.taxAmount,
             taxRate: chargeForCardPayment.taxRate,
             taxable: chargeForCardPayment.taxable,
+            customerId: chargeForCardPayment.customerId
         };
         successArray.update(items => [...items, new_entry]);
         
-        // --- INVENTORY DEPLETION LOGIC ---
         if (chargeForCardPayment.items && chargeForCardPayment.items.length > 0) {
             inventory.update(inv => {
                 const newInv = [...inv];
@@ -405,6 +417,7 @@
     const onKeydown = (event) => {
         const detail = event.detail;
         if ($pmtAmt === "0.00" && detail !== ".") left = "";
+
         if (detail === "<") {
             if (decimalsActive) {
                 right = right.slice(0, -1);
@@ -444,6 +457,13 @@
     />
 {/if}
 
+{#if showCustomerModal}
+    <CustomerModal
+        on:close={() => showCustomerModal = false}
+        on:select={handleSelectCustomer}
+    />
+{/if}
+
 <div id="pos-card" class="card w-full max-w-5xl h-full bg-base-100 shadow-xl border flex-grow">
     <div class="card-body p-4 sm:p-6 flex flex-col md:flex-row gap-4 h-full">
         
@@ -476,6 +496,12 @@
 
             <div class="mt-auto pt-2 space-y-2">
                  <div class="form-control">
+                    {#if selectedCustomer}
+                        <div class="flex justify-between items-center text-sm">
+                            <span>Customer: <strong>{selectedCustomer.name}</strong></span>
+                            <button class="btn btn-xs btn-ghost" on:click={() => selectedCustomer = null}>Clear</button>
+                        </div>
+                    {/if}
                     <label class="label cursor-pointer">
                         <span class="label-text">Apply Tax ({$taxRate}%)</span> 
                         <input type="checkbox" class="toggle toggle-primary" bind:checked={applyTax} />
@@ -488,8 +514,9 @@
                     </label>
                 </div>
                 <div class="flex space-x-2">
+                    <button on:click={() => showCustomerModal = true} class="btn btn-accent normal-case flex-1">Add Customer</button>
                     <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case flex-1">Add Item</button>
-                    {#if chargeItems.length > 0}
+                    {#if chargeItems.length > 0 || selectedCustomer}
                         <button on:click={clearCharge} class="btn btn-warning normal-case">Clear</button>
                     {/if}
                 </div>
