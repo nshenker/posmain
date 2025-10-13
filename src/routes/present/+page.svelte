@@ -12,19 +12,16 @@
     let statusMessage = "Awaiting Payment...";
     const POLLING_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
-    // Reverted to a more stable public RPC endpoint
     let sol_rpc = "https://solana-mainnet.g.alchemy.com/v2/5Bo-yRwJYXcscWQkkah0KJ-9jPmm5cSi";
     let connection;
     let intervalId;
 
     onMount(async () => {
-        // --- MOVED BROWSER-SPECIFIC CODE HERE ---
         connection = new web3.Connection(sol_rpc);
         const reference = web3.Keypair.generate().publicKey;
         const label = 'Payment to ' + ($storeName || 'store');
         const message = 'Thank you for your payment!';
         const memo = 'Transaction by PoSolana';
-        // --- END OF MOVED CODE ---
 
         const pmtAmtString = $pmtAmt ? $pmtAmt.toString() : '0';
         const recipient = new web3.PublicKey($publicKey);
@@ -54,7 +51,6 @@
                 qrCode.append(element);
             }
         } catch (e) {
-      
             console.error("Error creating QR code", e);
         }
         
@@ -83,11 +79,9 @@
 
                     if (meta) {
                         if ($selectedMint !== 'SOL' && currentMintInfo) {
-                            // Method 1: Check SPL token balance changes (most reliable for SPL tokens)
                             const preBalance = meta.preTokenBalances?.find(
                                 b => b.owner === pubkey && b.mint === currentMintInfo.mint
                             )?.uiTokenAmount?.uiAmount ?? 0;
-                            
                             const postBalance = meta.postTokenBalances?.find(
                                 b => b.owner === pubkey && b.mint === currentMintInfo.mint
                             )?.uiTokenAmount?.uiAmount ?? 0;
@@ -96,7 +90,6 @@
                                 uiAmount = postBalance - preBalance;
                             }
                         } else {
-                            // Method 2: Check native SOL balance changes
                             const accountIndex = confirmedTxn.transaction.message.accountKeys.findIndex(
                                 key => key.pubkey.toBase58() === pubkey
                             );
@@ -110,10 +103,9 @@
                         }
                     }
 
-                    // Method 3: Fallback to instruction parsing if balance checks fail
                     if ((uiAmount === 0 || isNaN(uiAmount)) && confirmedTxn.transaction?.message?.instructions) {
                          const instructions = confirmedTxn.transaction.message.instructions;
-                         const transferInstruction = instructions.find(
+                        const transferInstruction = instructions.find(
                             (instruction) => (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transfer' || (instruction as web3.PartiallyDecodedInstruction).parsed?.type === 'transferChecked'
                         ) as web3.PartiallyDecodedInstruction | undefined;
 
@@ -132,12 +124,12 @@
                             txid: confirmedTxn.transaction.signatures[0],
                             uiAmount: uiAmount,
                             mint: $selectedMint,
-                            // Ensure items are clean, serializable objects
                             items: JSON.parse(JSON.stringify($currentChargeItems)),
                             subtotal: chargeMeta?.subtotal,
                             taxAmount: chargeMeta?.taxAmount,
                             taxRate: chargeMeta?.taxRate,
-                            taxable: chargeMeta?.applyTax
+                            taxable: chargeMeta?.applyTax,
+                            customerId: chargeMeta?.customerId
                         };
                         successArray.update(items => {
                             if (!items.some(item => item.txid === new_entry.txid)) {
@@ -148,7 +140,6 @@
                     }
                 }
 
-                // --- BEGIN INVENTORY UPDATE LOGIC ---
                 if ($currentChargeItems && $currentChargeItems.length > 0) {
                     inventory.update(inv => {
                         const newInv = [...inv];
@@ -173,18 +164,16 @@
 							}
                         }
                         return newInv;
-					});
+                    });
                 }
-                // --- END INVENTORY UPDATE LOGIC ---
 
                 mostRecentTxn.set(signatureInfo.signature);
-                // Clear the cart only after all processing is complete
                 currentChargeItems.set([]);
                 chargeMetadata.set(null);
             } catch (e) {
                 if (e instanceof FindReferenceError) {
 					return;
-                }
+				}
                 console.error('An unexpected error occurred:', e);
                 statusMessage = "An error occurred. Please check the console.";
                 clearInterval(intervalId);
@@ -211,7 +200,7 @@
             <div id="qr-code" class="rounded-lg overflow-hidden border border-gray-200 shadow-sm"></div>
 		   
 		   <div class="mt-4">
-                {#if !txnConfirmed && statusMessage !== 'An error occurred. Please check the console.' && statusMessage !== 'Transaction not found. Please try again.'}
+               {#if !txnConfirmed && statusMessage !== 'An error occurred. Please check the console.' && statusMessage !== 'Transaction not found. Please try again.'}
                     <div class="flex items-center">
                         <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -228,7 +217,7 @@
                     </div>
                 {:else}
                     <div class="flex items-center text-error">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round"  stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <span>{statusMessage}</span>
                     </div>
                 {/if}
