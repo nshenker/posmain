@@ -6,7 +6,6 @@
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
     import { browser } from '$app/environment';
-    // REMOVED: import { Html5QrcodeScanner } from 'html5-qrcode'; // This was causing the SSR error
     import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
     import InventoryModal from "./InventoryModal.svelte";
@@ -564,7 +563,9 @@
             </div>
 
             <div class="flex-grow" class:hidden={chargeItems.length > 0}>
-                <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
+                {#if browser}
+                    <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
+                {/if}
             </div>
 
         </div>
