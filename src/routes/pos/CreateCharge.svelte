@@ -6,7 +6,7 @@
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
     import { browser } from '$app/environment';
-    import { Html5QrcodeScanner } from 'html5-qrcode';
+    // REMOVED: import { Html5QrcodeScanner } from 'html5-qrcode'; // This was causing the SSR error
     import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
     import InventoryModal from "./InventoryModal.svelte";
@@ -149,6 +149,7 @@
     function onScanFailure(error) { /* Ignore failures to allow continuous scanning */ }
 
     async function startScanner() {
+        const { Html5QrcodeScanner } = await import('html5-qrcode');
         isScannerVisible = true;
         await tick();
         const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
