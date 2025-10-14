@@ -68,38 +68,6 @@ const createPersistentStore = (key, startValue) => {
     return store;
 };
 
-// Helper to create a writable store that syncs with sessionStorage
-const createSessionStore = (key, startValue) => {
-    const isBrowser = typeof window !== 'undefined';
-    let initialValue = startValue;
-
-    if (isBrowser) {
-        const storedValue = sessionStorage.getItem(key);
-        if (storedValue) {
-            try {
-                initialValue = JSON.parse(storedValue);
-            } catch(e) {
-                console.error("Failed to parse session value for key:", key, e);
-                initialValue = startValue;
-            }
-        }
-    }
-    
-    const store = writable(initialValue);
-
-    if (isBrowser) {
-        store.subscribe(value => {
-            if (value === null || value === undefined) {
-                sessionStorage.removeItem(key);
-            } else {
-                sessionStorage.setItem(key, JSON.stringify(value));
-            }
-        });
-    }
-
-    return store;
-};
-
 export const storeName = createPersistentStore("storeName", "");
 export const publicKey = createPersistentStore("publicKey", "");
 export const pmtAmt = createPersistentStore("pmtAmt", "");
@@ -140,7 +108,7 @@ export const lastBackupDate = createPersistentStore("lastBackupDate", null);
 
 // --- User Management ---
 export const employees = createPersistentStore("employees", []);
-export const currentUser = createSessionStore("currentUser", null);
+export const currentUser = writable(null);
 export const timeClockEvents = createPersistentStore("timeClockEvents", []); // { employeeId, employeeName, type, timestamp }
 
 // A temporary store to pass charge metadata to the payment page

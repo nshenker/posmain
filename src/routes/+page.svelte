@@ -70,7 +70,7 @@
         
         // Log the new admin user in immediately
         currentUser.set(adminUser);
-
+        
         // Only initialize the transaction array if it's the very first setup
         if (!$successArray) {
             successArray.set([]);

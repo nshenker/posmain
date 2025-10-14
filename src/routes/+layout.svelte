@@ -184,12 +184,13 @@
     }
 </style>
 
-{#if showLogin}
+{#if showLogin && $page.url.pathname !== '/'}
     <LoginModal on:login={() => showLogin = false} />
 {:else}
     <div class="bg-base-200 min-h-screen overflow-y-auto no-print">
         <Toaster />
         <Toast />
+        {#if $page.url.pathname !== '/'}
         <div class="fixed top-0 left-0 right-0 z-50 bg-base-100 shadow-md">
             <div class="navbar px-4">
                 <div class="navbar-start">
@@ -254,7 +255,8 @@
                 </div>
             </div>
         </div>
-        <main class="pt-24 pb-16 md:pb-4">
+        {/if}
+        <main class:pt-24={$page.url.pathname !== '/'} class:pb-16={$page.url.pathname !== '/'} class:md:pb-4={$page.url.pathname !== '/'}>
           <slot />
         </main>
     </div>
