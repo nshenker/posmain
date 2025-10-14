@@ -228,9 +228,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                             2. Getting Started: A Detailed Tutorial
                         </h2>
-                        <p class="mt-4">Follow these simple steps to get your store up and running in minutes.</p>
-                        
-                        <p class="mt-2">For a hands-on walkthrough, we highly recommend using our new interactive product tour. You can start it from the Dashboard at any time to get a guided look at all the suite's features.</p>
+                        <p class="mt-4">Follow this detailed, step-by-step guide to take your store from zero to fully operational in just a few minutes. For a more interactive experience, you can also launch the guided product tour from the main Dashboard at any time.</p>
                         
                         <ul class="timeline timeline-vertical mt-6">
                             <li>
@@ -239,8 +237,13 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-primary"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.06 0l4.25-5.832z" clip-rule="evenodd" /></svg>
                                 </div>
                                 <div class="timeline-end timeline-box">
-                                    <div class="font-bold">Merchant Setup</div>
-                                    Upon your first visit, you will be greeted by a setup screen. This one-time process configures your store's identity, payment destination, and your secure Admin PIN.
+                                    <div class="font-bold">Initial Store Setup</div>
+                                    The first time you launch the application, you'll be guided through a brief, one-time setup process. This is where you'll establish the core identity and security of your store. You will be asked for three key pieces of information:
+                                    <ul class="list-disc pl-6 mt-2">
+                                        <li><strong>Store Name:</strong> This is the public name of your business (e.g., "Solana Coffee"). It will appear on receipts and invoices.</li>
+                                        <li><strong>Wallet Address:</strong> This is the public Solana wallet address where all customer payments will be sent. Double-check this for accuracy!</li>
+                                        <li><strong>Admin PIN:</strong> This is a 4-digit PIN that you will create. It grants access to all manager-level features, including settings, analytics, and employee management. Keep this PIN secure.</li>
+                                    </ul>
                                 </div>
                                 <hr/>
                             </li>
@@ -251,8 +254,8 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-primary"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.06 0l4.25-5.832z" clip-rule="evenodd" /></svg>
                                 </div>
                                 <div class="timeline-end timeline-box">
-                                    <div class="font-bold">Add a Product</div>
-                                    Before you can make a sale, you need to populate your inventory. Navigate to the <strong>Inventory Management</strong> page and use the "Add New Item" form to define your product.
+                                    <div class="font-bold">Add Your First Product</div>
+                                    You can't make a sale without something to sell! Navigate to the <strong>Inventory</strong> page using the main navigation bar. Here, you'll find the tools to manage your entire catalog. Click "Add New Item" to open the product creation modal. You can define its name, price, cost, and stock quantity. For items with options like size or color, you can use the "Variable Product" type to create different versions, each with its own price and stock level.
                                 </div>
                                 <hr/>
                             </li>
@@ -263,20 +266,36 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-primary"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.06 0l4.25-5.832z" clip-rule="evenodd" /></svg>
                                 </div>
                                 <div class="timeline-end timeline-box">
-                                    <div class="font-bold">First Transaction</div>
-                                    Navigate to the <strong>Point of Sale (POS)</strong> page. You can create a charge by adding items from your inventory or by entering a custom amount. Clicking "Create QR Code" generates a unique Solana Pay QR code for the customer to scan.
+                                    <div class="font-bold">Process Your First Transaction</div>
+                                    With a product in your inventory, it's time to make a sale. Go to the <strong>Point of Sale (POS)</strong> page. Use the "Add Item" button to select the product you just created, or use the keypad to enter a custom sale amount. Once the charge is ready, you have two options:
+                                    <ul class="list-disc pl-6 mt-2">
+                                        <li><strong>Pay with Crypto:</strong> This generates a unique Solana Pay QR code. Your customer scans this with their wallet app to complete the payment.</li>
+                                        <li><strong>Pay with Card:</strong> If you've configured Stripe in the settings, you can accept traditional credit and debit card payments.</li>
+                                    </ul>
                                 </div>
                                 <hr/>
                             </li>
-                            <li>
+                             <li>
                                 <hr/>
                                 <div class="timeline-start">Step 4</div>
                                 <div class="timeline-middle">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-primary"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.06 0l4.25-5.832z" clip-rule="evenodd" /></svg>
                                 </div>
                                 <div class="timeline-end timeline-box">
-                                    <div class="font-bold">Explore</div>
-                                    After your first sale, return to the <strong>Dashboard</strong>. You'll see your new transaction reflected in the "Key Metrics," "Recent Transactions," and other widgets. This central hub is where you can get a quick, at-a-glance overview of your business's performance.
+                                    <div class="font-bold">Review Your Dashboard</div>
+                                    After your first sale, navigate back to the <strong>Dashboard</strong>. This is your business's command center. You will see your new transaction instantly reflected in the "Key Metrics" and "Recent Transactions" widgets. All financial figures are converted to their current USD value in real-time, giving you an accurate, at-a-glance overview of your performance.
+                                </div>
+                                <hr/>
+                            </li>
+                            <li>
+                                <hr/>
+                                <div class="timeline-start">Step 5</div>
+                                <div class="timeline-middle">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-primary"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.06 0l4.25-5.832z" clip-rule="evenodd" /></svg>
+                                </div>
+                                <div class="timeline-end timeline-box">
+                                    <div class="font-bold">Explore and Configure</div>
+                                    Congratulations, your store is operational! Now is a great time to explore the other sections. Go to the <strong>Settings</strong> page to add your business logo and address for receipts. If you have a team, you can add them in the "Manage Employees" section. Finally, check out the new <strong>Time Clock</strong> page to see how your staff can manage their shifts.
                                 </div>
                             </li>
                         </ul>
