@@ -7,7 +7,7 @@
         invoices, inventory, categories, inventoryHistory, currentChargeItems,
         dashboardLayout, customers, customerGroups, lastBackupDate,
         taxRate, defaultTaxable, stripePublishableKey, stripeSecretKey, chargeCardFee,
-        locations
+        locations, employees, timeClockEvents
     } from '../stores.js';
     import { get } from 'svelte/store';
     import { showToast } from '../toastStore.js';
@@ -45,6 +45,8 @@
         customers.set([]);
         customerGroups.set([]);
         lastBackupDate.set(null);
+        employees.set([]);
+        timeClockEvents.set([]);
         // A default layout structure is needed here to avoid errors on reset
         dashboardLayout.set({ widgets: [ { id: 'keyMetrics', name: 'Key Metrics', visible: true } ] });
         goto('/', { replace: true });
@@ -91,7 +93,9 @@
             inventoryHistory: get(inventoryHistory),
             dashboardLayout: get(dashboardLayout),
             customers: get(customers),
-            customerGroups: get(customerGroups)
+            customerGroups: get(customerGroups),
+            employees: get(employees),
+            timeClockEvents: get(timeClockEvents)
         };
         const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -135,6 +139,8 @@
                     dashboardLayout.set(importedData.dashboardLayout || { widgets: [] });
                     customers.set(importedData.customers || []);
                     customerGroups.set(importedData.customerGroups || []);
+                    employees.set(importedData.employees || []);
+                    timeClockEvents.set(importedData.timeClockEvents || []);
                     showToast('Data imported successfully! The page will now reload.', 'success');
                     setTimeout(() => window.location.reload(), 2000);
                 } catch (error) {
