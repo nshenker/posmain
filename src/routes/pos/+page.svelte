@@ -1,6 +1,6 @@
 <script lang='ts'>
     import { onMount } from "svelte";
-    import { storeName, merchantLogo, publicKey } from '../stores.js';
+    import { storeName, merchantLogo, publicKey, currentUser } from '../stores.js';
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
     import CreateCharge from "./CreateCharge.svelte";
@@ -27,10 +27,13 @@
         {/if}
     </header>
     
-    <div role="tablist" class="tabs tabs-bordered justify-center flex-shrink-0">
+    <div role="tablist" 
+class="tabs tabs-bordered justify-center flex-shrink-0">
         <button role="tab" class="tab tab-lg" on:click={() => (activeTab = 'charge')} class:tab-active={activeTab === 'charge'}>Charge</button>
         <button role="tab" class="tab tab-lg" on:click={() => (activeTab = 'transactions')} class:tab-active={activeTab === 'transactions'}>Transactions</button>
-        <button role="tab" class="tab tab-lg" on:click={() => (activeTab = 'settings')} class:tab-active={activeTab === 'settings'}>Settings</button>
+        {#if $currentUser && $currentUser.role === 'manager'}
+            <button role="tab" class="tab tab-lg" on:click={() => (activeTab = 'settings')} class:tab-active={activeTab === 'settings'}>Settings</button>
+        {/if}
     </div>
 
     <div class="mt-4 flex-grow flex justify-center">
