@@ -27,8 +27,7 @@
         {/if}
     </header>
     
-    <div role="tablist" 
-class="tabs tabs-bordered justify-center flex-shrink-0">
+    <div id="pos-tabs" role="tablist" class="tabs tabs-bordered justify-center flex-shrink-0">
         <button role="tab" class="tab tab-lg" on:click={() => (activeTab = 'charge')} class:tab-active={activeTab === 'charge'}>Charge</button>
         <button role="tab" class="tab tab-lg" on:click={() => (activeTab = 'transactions')} class:tab-active={activeTab === 'transactions'}>Transactions</button>
         {#if $currentUser && $currentUser.role === 'manager'}
@@ -40,10 +39,10 @@ class="tabs tabs-bordered justify-center flex-shrink-0">
         <div class:hidden={activeTab !== 'charge'} class="w-full flex justify-center">
             <CreateCharge/>
         </div>
-        <div class:hidden={activeTab !== 'transactions'} class="w-full flex justify-center">
+        <div id="transactions-view" class:hidden={activeTab !== 'transactions'} class="w-full flex justify-center">
             <Transactions/>
         </div>
-        <div class:hidden={activeTab !== 'settings'} class="w-full flex justify-center">
+        <div id="settings-view" class:hidden={activeTab !== 'settings'} class="w-full flex justify-center">
             <Settings/>
         </div>
     </div>

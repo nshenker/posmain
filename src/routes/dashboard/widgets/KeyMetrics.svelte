@@ -47,12 +47,13 @@
 
 <div class="card-body items-center text-center">
     <h2 class="card-title text-xl font-greycliffmed">Key Metrics</h2>
-    <div class="stats stats-vertical lg:stats-horizontal shadow">
+    <div id="key-metrics-widget" class="stats stats-vertical lg:stats-horizontal shadow">
         <div class="stat">
             <div class="stat-title">Total Revenue</div>
             <div class="stat-value text-primary">${totalRevenue.toFixed(2)}</div>
         </div>
         <div class="stat">
+            
             <div class="stat-title">Total Transactions</div>
             <div class="stat-value text-secondary">{totalTransactions}</div>
         </div>

@@ -11,18 +11,21 @@
     import VariantEditor from './VariantEditor.svelte';
     import ItemDetailsModal from './ItemDetailsModal.svelte';
     import LocationsModal from './LocationsModal.svelte';
+    import ManageItemModal from './ManageItemModal.svelte';
 
     let activeTab = 'inventory';
     let showHistoryModal = false;
     let showItemModal = false;
     let showLocationsModal = false;
+    let showManageItemModal = false;
     let selectedItemForHistory = null;
     let selectedItemForEdit = null;
+    let selectedItemForManage = null;
+    let isManagingVariant = false;
     let newCategory = '';
     let selectedItems = [];
     let loading = true;
     let expandedItems = {}; // Tracks which variable products are expanded
-    let adjustmentAmounts = {}; // For quick stock adjustments
 
     onMount(() => {
         if (browser && !$publicKey) {
@@ -31,9 +34,7 @@
         }
         loading = false;
     });
-
     $: allSelected = $inventory.length > 0 && selectedItems.length === $inventory.length;
-
     function toggleSelectAll(e) {
         if (e.target.checked) {
             selectedItems = $inventory.map(i => i.id);
@@ -75,6 +76,12 @@
         selectedItemForEdit = item;
         showItemModal = true;
     }
+    
+    function openManageItemModal(item, isVariant = false) {
+        selectedItemForManage = item;
+        isManagingVariant = isVariant;
+        showManageItemModal = true;
+    }
 
     function removeItem(itemId) {
         if (browser && confirm("Are you sure you want to remove this item? This action is permanent.")) {
@@ -89,32 +96,6 @@
                 return history;
             });
         }
-    }
-
-    function updateQuantity(itemId, amount, variantId = null) {
-        amount = parseInt(amount, 10);
-        if (isNaN(amount)) return;
-
-        $inventory = $inventory.map(item => {
-            if (item.id === itemId) {
-                if (item.type === 'simple') {
-                    const newQuantity = Math.max(0, item.quantity + amount);
-                    logHistory(itemId, 'Manual Adjustment', `${amount > 0 ? '+' : ''}${amount}`, newQuantity);
-                    return { ...item, quantity: newQuantity };
-                } else if (item.type === 'variable' && variantId) {
-                    item.variants = item.variants.map(v => {
-                        if (v.id === variantId) {
-                            const newVariantQty = Math.max(0, (v.quantity || 0) + amount);
-                            logHistory(v.id, 'Manual Adjustment', `${amount > 0 ? '+' : ''}${amount}`, newVariantQty);
-                            return { ...v, quantity: newVariantQty };
-                        }
-                        return v;
-                    });
-                    item.quantity = item.variants.reduce((total, v) => total + (v.quantity || 0), 0);
-                }
-            }
-            return item;
-        });
     }
 
     function viewHistory(item) {
@@ -173,6 +154,26 @@
     <ItemDetailsModal item={selectedItemForEdit} on:close={() => showItemModal = false} on:save={handleSaveItem} />
 {/if}
 
+{#if showManageItemModal}
+    <ManageItemModal 
+        item={selectedItemForManage}
+        isVariant={isManagingVariant}
+        on:close={() => showManageItemModal = false}
+        on:edit={(e) => {
+            showManageItemModal = false;
+            openEditItemModal(e.detail);
+        }}
+        on:history={(e) => {
+            showManageItemModal = false;
+            viewHistory(e.detail);
+        }}
+        on:remove={(e) => {
+            showManageItemModal = false;
+            removeItem(e.detail.id);
+        }}
+    />
+{/if}
+
 {#if showLocationsModal}
     <LocationsModal on:close={() => showLocationsModal = false} />
 {/if}
@@ -203,7 +204,7 @@
                             <button class="btn btn-primary" on:click={openNewItemModal}>Add New Item</button>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
+                    <div id="inventory-table-container" class="overflow-x-auto">
                         <table class="table w-full">
                             <thead>
 								<tr>
@@ -224,35 +225,19 @@
                                                 <button class="btn btn-xs btn-ghost" on:click={() => expandedItems[item.id] = !expandedItems[item.id]}>
                                                     {expandedItems[item.id] ? '▼' : '►'}
                                                 </button>
+                                            {:else}
+                                             <input type="checkbox" bind:group={selectedItems} value={item.id} />
                                             {/if}
                                         </td>
 										<td class="font-greycliffmed">{item.name}</td>
                                         <td>{ $locations.find(loc => loc.id === item.locationId)?.name || 'N/A' }</td>
                                         <td><span class="badge badge-ghost badge-sm">{item.type}</span></td>
-										<td class="text-center font-mono">
-                                            {#if item.type === 'simple'}
-                                                <div class="flex items-center justify-center space-x-2">
-                                                    <button on:click={() => updateQuantity(item.id, -(adjustmentAmounts[item.id] || 1))} class="btn btn-xs btn-ghost">-</button>
-                                                    <input type="number" bind:value={adjustmentAmounts[item.id]} class="input input-xs w-16 text-center" placeholder="1" min="1" />
-                                                    <button on:click={() => updateQuantity(item.id, adjustmentAmounts[item.id] || 1)} class="btn btn-xs btn-ghost">+</button>
-                                                </div>
-                                                ({item.quantity} in stock)
-                                            {:else}
-                                                {item.quantity}
-                                            {/if}
-                                        </td>
+										<td class="text-center font-mono">{item.quantity}</td>
                                         <td class="text-right font-mono">
                                             {#if item.type === 'simple'}{(item.price || 0).toFixed(2)} {item.currency}{:else}From ${(Math.min(...item.variants.map(v => v.price)) || 0).toFixed(2)}{/if}
                                         </td>
                                         <td class="text-center">
-                                            <div class="flex flex-wrap justify-center gap-1">
-                                                <button class="btn btn-xs btn-outline" on:click={() => openEditItemModal(item)}>Edit</button>
-                                                {#if item.type === 'simple' && item.barcode}
-                                                    <button class="btn btn-xs btn-outline" on:click={() => saveBarcode(item)}>Barcode</button>
-                                                {/if}
-                                                <button class="btn btn-xs btn-outline" on:click={() => viewHistory(item)}>History</button>
-                                                <button class="btn btn-xs btn-outline btn-error" on:click={() => removeItem(item.id)}>Remove</button>
-                                            </div>
+                                            <button class="btn btn-xs btn-outline" on:click={() => openManageItemModal(item)}>Manage</button>
                                         </td>
 									</tr>
                                     {#if expandedItems[item.id] && item.type === 'variable'}
@@ -263,21 +248,11 @@
                                                 <td></td>
                                                 <td><span class="badge badge-sm">Variant</span></td>
                                                 <td class="text-center font-mono">
-                                                    <div class="flex items-center justify-center space-x-2">
-                                                        <button on:click={() => updateQuantity(item.id, -(adjustmentAmounts[variant.id] || 1), variant.id)} class="btn btn-xs btn-ghost">-</button>
-                                                        <input type="number" bind:value={adjustmentAmounts[variant.id]} class="input input-xs w-16 text-center" placeholder="1" min="1" />
-                                                        <button on:click={() => updateQuantity(item.id, adjustmentAmounts[variant.id] || 1, variant.id)} class="btn btn-xs btn-ghost">+</button>
-                                                    </div>
                                                     ({variant.quantity} in stock)
                                                 </td>
                                                 <td class="text-right font-mono">{(variant.price || 0).toFixed(2)}</td>
                                                 <td class="text-center">
-                                                    <div class="flex flex-wrap justify-center gap-1">
-                                                        {#if variant.barcode}
-                                                            <button class="btn btn-xs btn-outline" on:click={() => saveBarcode({ name: `${item.name} - ${variant.name}`, price: variant.price, barcode: variant.barcode })}>Barcode</button>
-                                                        {/if}
-                                                        <button class="btn btn-xs btn-outline" on:click={() => viewHistory({ id: variant.id, name: `${item.name} - ${variant.name}` })}>History</button>
-                                                    </div>
+                                                    <button class="btn btn-xs btn-outline" on:click={() => openManageItemModal({ ...variant, name: `${item.name} - ${variant.name}`, parentId: item.id, currency: item.currency }, true)}>Manage</button>
                                                 </td>
                                             </tr>
                                         {/each}
@@ -297,7 +272,7 @@
 				<div class="card bg-base-100 shadow-xl border">
                     <div class="card-body p-8">
                         <h2 class="card-title text-xl font-greycliffmed mb-4">Add New Category</h2>
-                         <form on:submit|preventDefault={addCategory} class="input-group">
+                        <form on:submit|preventDefault={addCategory} class="input-group">
 							<input type="text" placeholder="Category Name" class="input input-bordered w-full" bind:value={newCategory} />
                             <button type="submit" class="btn btn-primary">Add</button>
                          </form>

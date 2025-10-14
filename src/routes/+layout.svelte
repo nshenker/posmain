@@ -16,14 +16,13 @@
     import LoginModal from './LoginModal.svelte';
 
     let showLogin = !$currentUser;
-
     currentUser.subscribe(value => {
         showLogin = !value;
     });
-
     function logout() {
         currentUser.set(null);
-        goto('/pos'); // Redirect to a neutral page after logout
+        goto('/pos');
+        // Redirect to a neutral page after logout
     }
 
     theme.subscribe(value => {
@@ -148,6 +147,7 @@
             const pageToStepsMap = {
                 '/dashboard': ['welcome', 'dashboard-metrics', 'dashboard-widgets', 'dashboard-nav'],
                 '/pos': ['pos-intro', 'pos-create-charge', 'pos-transactions-list', 'pos-settings-wallet', 'pos-settings-data'],
+                '/timeclock': ['timeclock-intro', 'timeclock-select'],
                 '/invoicing': ['invoicing-intro', 'invoicing-items', 'invoicing-actions', 'invoicing-table'],
                 '/inventory': ['inventory-intro', 'inventory-add', 'inventory-variants', 'inventory-management', 'inventory-reports-view'],
                 '/crm': ['crm-intro', 'crm-actions'],

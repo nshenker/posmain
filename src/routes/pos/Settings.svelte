@@ -16,6 +16,7 @@
 
     let activeTab = 'store';
     let showResetConfirmation = false;
+
     async function reset() {
         showResetConfirmation = false;
         localStorage.clear();
@@ -163,7 +164,7 @@
 
 <div class="card w-full max-w-lg bg-base-100 shadow-xl border border-gray-200">
     <div class="card-body p-4 sm:p-8">
-        <div role="tablist" class="tabs tabs-bordered justify-center flex-shrink-0 mb-4">
+        <div id="settings-tabs" role="tablist" class="tabs tabs-bordered justify-center flex-shrink-0 mb-4">
             <button role="tab" class="tab" on:click={() => (activeTab = 'store')} class:tab-active={activeTab === 'store'}>Store</button>
             <button role="tab" class="tab" on:click={() => (activeTab = 'employees')} class:tab-active={activeTab === 'employees'}>Employees</button>
         </div>
@@ -192,10 +193,8 @@
 
                 <div class="form-control w-full mt-4">
                     <label for="logo-upload" class="label">
-                    <span class="label-text font-greycliffmed">Brand 
-Logo</span>
+                    <span class="label-text font-greycliffmed">Brand Logo</span>
                     </label>
-            
                     <input id="logo-upload" type="file" on:change={handleLogoUpload} class="file-input file-input-bordered w-full" />
                     {#if $merchantLogo}
                         <button on:click={removeLogo} class="btn btn-xs btn-error mt-2">Remove Logo</button>
@@ -206,7 +205,7 @@ Logo</span>
                     <label for="address-input" class="label">
                         <span class="label-text font-greycliffmed">Business Address</span>
                     </label>
-            
+                    
                     <textarea id="address-input" bind:value={$businessAddress} class="textarea textarea-bordered" placeholder="123 Main St&#10;Anytown, USA 12345"></textarea>
                 </div>
             </div>
@@ -223,7 +222,6 @@ Logo</span>
                     <input id="tax-rate-input" type="number" step="0.001" bind:value={$taxRate} class="input input-bordered" />
                 </div>
                 <div class="form-control mt-2">
-            
                     <label class="label cursor-pointer">
                         <span class="label-text font-greycliffmed">Apply Tax by Default</span>
                         <input type="checkbox" bind:checked={$defaultTaxable} class="toggle toggle-primary" />
@@ -280,7 +278,7 @@ Logo</span>
                     </label>
             
                     <input id="import-data" type="file" 
-                        on:change={handleDataImport} accept=".json" class="file-input file-input-bordered w-full" />
+                         on:change={handleDataImport} accept=".json" class="file-input file-input-bordered w-full" />
                 </div>
             </div>
 

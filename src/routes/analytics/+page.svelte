@@ -14,7 +14,6 @@
 
     let ready = false;
     let activeTimeframe = 'all';
-
     onMount(() => {
         const unsubscribe = tokenPrices.subscribe(prices => {
             if (Object.keys(prices).length > 0) {
@@ -24,7 +23,6 @@
 
         return unsubscribe;
     });
-
     $: paidInvoicesAsSales = $invoices.filter(inv => inv.status === 'Paid').map(inv => ({
         timestamp: dayjs(inv.issueDate).unix(),
         uiAmount: inv.total,
@@ -33,7 +31,6 @@
         txid: `invoice-${inv.id}`,
         customerId: inv.customerId
     }));
-
     $: allSales = [...$successArray, ...paidInvoicesAsSales];
 
     $: filteredSales = (() => {
@@ -46,11 +43,9 @@
             return allSales;
         }
     })();
-
     function exportToCsv() {
         let csvContent = "data:text/csv;charset=utf-8,";
         csvContent += "Date,Transaction ID,Amount,Currency,Profit,CustomerID\n";
-        
         filteredSales.forEach(sale => {
             const saleProfit = (sale.items || []).reduce((itemAcc, item) => {
                 const inventoryItem = $inventory.find(i => i.id === item.id);
@@ -99,7 +94,7 @@
             <KeyMetrics sales={filteredSales} />
             <Profitability sales={filteredSales} />
             <CustomerInsights sales={filteredSales} customers={$customers} />
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div id="analytics-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <SalesByToken sales={filteredSales} />
                 <SalesOverTime sales={filteredSales} />
                 <SalesByCategory sales={filteredSales} />

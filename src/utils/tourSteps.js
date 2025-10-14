@@ -3,11 +3,12 @@ import { goto } from '$app/navigation';
 const switchTab = (page, tabIndex) => {
     let selector;
     if (page === 'pos') {
-        // New unified tab structure for POS
-        selector = `.tabs-bordered button:nth-child(${tabIndex + 1})`;
+        // POS tabs are 1-indexed for nth-child
+        selector = `#pos-tabs button:nth-child(${tabIndex})`;
     } else if (page === 'inventory') {
-        // Inventory tabs
-        selector = `#inventory-tabs button:nth-child(${tabIndex + 1})`;
+        selector = `#inventory-tabs button:nth-child(${tabIndex})`;
+    } else if (page === 'settings') {
+        selector = `#settings-tabs button:nth-child(${tabIndex})`;
     }
 
     const tabButton = document.querySelector(selector);
@@ -28,8 +29,8 @@ export const tourSteps = (tour) => [
     {
         id: 'dashboard-metrics',
         title: "Your Business At a Glance",
-        text: "This is your command center. The Key Metrics widget gives you a real-time summary of your store's performance. All revenue figures are automatically converted to their current USD value using live price feeds, so you always know exactly how you're doing.",
-        attachTo: { element: '.stats', on: 'bottom' },
+        text: "This is your command center. The Key Metrics widget gives you a real-time summary of your store's performance. All revenue figures are automatically converted to their current USD value using live price feeds.",
+        attachTo: { element: '#key-metrics-widget', on: 'bottom' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next', action: tour.next }
@@ -38,7 +39,7 @@ export const tourSteps = (tour) => [
     {
         id: 'dashboard-widgets',
         title: "A Personalized Command Center",
-        text: "The dashboard is made of modular widgets like sales charts and low stock alerts. You can use the 'Edit Widgets' button to customize your layout and prioritize the data that's most important to your business.",
+        text: "The dashboard is made of modular widgets like sales charts and low stock alerts. You can use the 'Edit Widgets' button to customize your layout and prioritize the data that's most important to you.",
         attachTo: { element: '#dashboard-grid', on: 'top' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -60,8 +61,8 @@ export const tourSteps = (tour) => [
     {
         id: 'pos-intro',
         title: "The Point of Sale (POS)",
-        text: "This is the heart of your daily operations. We've organized it into three simple tabs: 'Charge' for new sales, 'Transactions' for your history, and 'Settings' for configuration.",
-        attachTo: { element: '.tabs-bordered', on: 'bottom' },
+        text: "This is the heart of your daily operations. We've organized it into tabs for 'Charge', 'Transactions', and manager-only 'Settings'.",
+        attachTo: { element: '#pos-tabs', on: 'bottom' },
         buttons: [
             { text: 'Back', action: () => goto('/dashboard'), secondary: true },
             { text: 'Next', action: tour.next }
@@ -70,86 +71,90 @@ export const tourSteps = (tour) => [
     {
         id: 'pos-create-charge',
         title: "Accepting Payments",
-        text: "Here, you can build a customer's cart by adding items, scanning barcodes, or using the keypad for custom amounts. You can apply sales tax on the fly and, most importantly, you can accept both Crypto and Credit Card payments, giving your customers maximum flexibility.",
+        text: "Here, you can build a customer's cart by adding items, scanning barcodes, or using the keypad. You can also attach a customer to the sale, which links the transaction to their CRM profile.",
         attachTo: { element: '#pos-input-section', on: 'left' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next: Transactions', action: () => { 
-                switchTab('pos', 1);
-                tour.next(); 
-            } }
+            { text: 'Next: Transactions', action: tour.next }
         ]
     },
     {
         id: 'pos-transactions-list',
         title: "Your Complete Sales History",
-        text: "This is your digital ledger. Every sale, whether crypto or card, is recorded here. You can now expand each transaction to see a breakdown of the specific items and variants purchased.",
-        attachTo: { element: '.table.w-full', on: 'top' },
-        buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next: Settings', action: () => { 
-                switchTab('pos', 2);
-                tour.next(); 
-            } }
-        ]
-    },
-    {
-        id: 'pos-settings-general',
-        title: "General Store Settings",
-        text: "This first section lets you customize your store's identity. You can set your default crypto currency for charges, upload your brand logo, and add your business address, which will appear on printed receipts.",
-        attachTo: { element: '#tour-settings-general', on: 'right' },
+        text: "This is your digital ledger. Every sale, whether crypto or card, is recorded here. You can expand each transaction to see the specific items purchased.",
+        attachTo: { element: '#transactions-card', on: 'top' },
+        when: {
+            show: () => switchTab('pos', 2)
+        },
         buttons: [
             { text: 'Back', action: () => { switchTab('pos', 1); tour.back(); }, secondary: true },
+            { text: 'Next: Settings', action: tour.next }
+        ]
+    },
+    {
+        id: 'pos-settings-intro',
+        title: "Store & Employee Management",
+        text: "The settings area is restricted to managers. Here you can configure everything from your store's appearance and payment options to your employee roster.",
+        attachTo: { element: '#settings-view', on: 'top' },
+        when: {
+            show: () => switchTab('pos', 3)
+        },
+        buttons: [
+            { text: 'Back', action: () => { switchTab('pos', 2); tour.back(); }, secondary: true },
             { text: 'Next', action: tour.next }
         ]
     },
     {
-        id: 'pos-settings-tax',
-        title: "Tax Configuration",
-        text: "Here you can define your local sales tax rate and choose whether tax should be applied by default on the checkout page. This gives you full control over how you handle taxes for your business.",
-        attachTo: { element: '#tour-settings-tax', on: 'right' },
+        id: 'pos-settings-employees',
+        title: "Managing Your Team",
+        text: "In the 'Employees' tab, you can create new user accounts, assign roles (Manager or Employee), and manage their secure PINs. This ensures your team has the access they need, and nothing more.",
+        attachTo: { element: '#settings-view', on: 'top' },
+        when: {
+            show: () => switchTab('settings', 2)
+        },
         buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next', action: tour.next }
-        ]
-    },
-    {
-        id: 'pos-settings-stripe',
-        title: "Credit Card Payments",
-        text: "To accept credit card payments, simply enter your Stripe API keys here. This integration is secure and allows you to serve customers who prefer traditional payment methods.",
-        attachTo: { element: '#tour-settings-stripe', on: 'right' },
-        buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next', action: tour.next }
-        ]
-    },
-    {
-        id: 'pos-settings-data',
-        title: "Data Management & Backups",
-        text: "Since all your data is stored locally in your browser, regular backups are critical. Use the 'Export Data' button to download a complete backup of your store, including all settings, products, and transaction history.",
-        attachTo: { element: '#tour-settings-data', on: 'right' },
-        buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
-            { text: 'Next: Invoicing', action: () => goto('/invoicing') }
+            { text: 'Back', action: () => { switchTab('settings', 1); tour.back(); }, secondary: true },
+            { text: 'Next: Time Clock', action: () => goto('/timeclock') }
         ]
     },
 
-
-    // --- Invoicing ---
+    // --- Time Clock ---
     {
-        id: 'invoicing-intro',
-        title: "Professional Invoicing",
-        text: "Create, manage, and track professional invoices for your clients. You can pull customers directly from your CRM, add items from your inventory, and see a live preview of the invoice as you build it.",
-        attachTo: { element: '#invoice-details-card', on: 'right' },
+        id: 'timeclock-intro',
+        title: "Employee Time Clock",
+        text: "This is the central hub for your team to manage their shifts. It's designed to be quick, easy, and accessible from any device.",
+        attachTo: { element: '#timeclock-header', on: 'bottom' },
         buttons: [
             { text: 'Back', action: () => goto('/pos'), secondary: true },
             { text: 'Next', action: tour.next }
         ]
     },
     {
+        id: 'timeclock-select',
+        title: "Simple & Secure Access",
+        text: "Employees simply select their name from the grid to get started. This brings them to a secure PIN entry screen.",
+        attachTo: { element: '#employee-selection-grid', on: 'bottom' },
+        buttons: [
+            { text: 'Back', action: tour.back, secondary: true },
+            { text: 'Next: Invoicing', action: () => goto('/invoicing') }
+        ]
+    },
+
+    // --- Invoicing ---
+    {
+        id: 'invoicing-intro',
+        title: "Professional Invoicing",
+        text: "Create, manage, and track professional invoices for your clients. You can pull customers directly from your CRM, add items from your inventory, and see a live preview as you build it.",
+        attachTo: { element: '#invoice-details-card', on: 'right' },
+        buttons: [
+            { text: 'Back', action: () => goto('/timeclock'), secondary: true },
+            { text: 'Next', action: tour.next }
+        ]
+    },
+    {
         id: 'invoicing-table',
         title: "Automated Payment Tracking",
-        text: "Your saved invoices are listed here. The system automatically monitors the Solana network for payments and updates an invoice's status from 'Unpaid' to 'Paid' the moment a client pays, so you don't have to.",
+        text: "Your saved invoices are listed here. The system automatically monitors the Solana network for payments and updates an invoice's status from 'Unpaid' to 'Paid' the moment a client pays.",
         attachTo: { element: '#saved-invoices-card', on: 'top' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -168,23 +173,52 @@ export const tourSteps = (tour) => [
             { text: 'Next', action: tour.next }
         ]
     },
-    {
-        id: 'inventory-add',
-        title: "Simple vs. Variable Products",
-        text: "When adding an item, you can choose its type. 'Simple' is for standard products with one price and stock count. 'Variable' is for items with different options, like a t-shirt that comes in multiple sizes and colors.",
-        attachTo: { element: '#add-item-card', on: 'bottom' },
+     {
+        id: 'inventory-management',
+        title: "Detailed Stock Control",
+        text: "The main inventory list gives you a clear overview of all your products. For variable items, you can expand the entry to see and manage the stock for each individual variant. Every stock change is automatically logged.",
+        attachTo: { element: '#inventory-table-container', on: 'top' }, 
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Next', action: tour.next }
         ]
     },
-     {
-        id: 'inventory-management',
-        title: "Detailed Stock Control",
-        text: "The main inventory list gives you a clear overview of all your products. For variable items, you can expand the entry to see and manage the stock for each individual variant. Every stock change is automatically logged, giving you a complete audit trail.",
-        attachTo: { element: '.table.w-full', on: 'top' }, 
+    {
+        id: 'inventory-categories',
+        title: "Organize with Categories",
+        text: "Use categories to keep your inventory organized. You can create new categories and assign items to them, which also helps in filtering and reporting.",
+        attachTo: { element: '#inventory-tabs', on: 'bottom' },
+        when: {
+            show: () => switchTab('inventory', 2)
+        },
         buttons: [
-            { text: 'Back', action: tour.back, secondary: true },
+            { text: 'Back', action: () => { switchTab('inventory', 1); tour.back(); }, secondary: true },
+            { text: 'Next', action: tour.next }
+        ]
+    },
+    {
+        id: 'inventory-locations',
+        title: "Track Physical Locations",
+        text: "Manage the physical locations of your items, like shelves, bins, or different rooms. This helps you and your staff find products quickly.",
+        attachTo: { element: '#inventory-tabs', on: 'bottom' },
+        when: {
+            show: () => switchTab('inventory', 3)
+        },
+        buttons: [
+            { text: 'Back', action: () => { switchTab('inventory', 2); tour.back(); }, secondary: true },
+            { text: 'Next', action: tour.next }
+        ]
+    },
+    {
+        id: 'inventory-reports',
+        title: "Inventory Reports",
+        text: "Get valuable insights into your stock with reports like Inventory Valuation, Sales Velocity, and Dead Stock.",
+        attachTo: { element: '#inventory-tabs', on: 'bottom' },
+        when: {
+            show: () => switchTab('inventory', 4)
+        },
+        buttons: [
+            { text: 'Back', action: () => { switchTab('inventory', 3); tour.back(); }, secondary: true },
             { text: 'Next: CRM', action: () => goto('/crm') }
         ]
     },
@@ -193,7 +227,7 @@ export const tourSteps = (tour) => [
     {
         id: 'crm-intro',
         title: "Customer Relationship Management (CRM)",
-        text: "The CRM is your central hub for building strong customer relationships. It automatically tracks each customer's total spending and full purchase history, including the specific product variants they bought.",
+        text: "The CRM is your central hub for building strong customer relationships. It automatically tracks each customer's total spending and full purchase history, including items bought at the POS.",
         attachTo: { element: '#crm-table', on: 'top' },
         buttons: [
             { text: 'Back', action: () => goto('/inventory'), secondary: true },
@@ -203,7 +237,7 @@ export const tourSteps = (tour) => [
     {
         id: 'crm-actions',
         title: "Segmentation and Data Tools",
-        text: "Use this panel to filter your customer list by tags or custom groups for targeted marketing. You can also manage your entire database by importing or exporting your customer data via CSV at any time.",
+        text: "Use this panel to filter your customer list by tags or custom groups. You can also manage your entire database by importing or exporting your customer data via CSV at any time.",
         attachTo: { element: '#crm-actions', on: 'bottom' },
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
@@ -225,8 +259,8 @@ export const tourSteps = (tour) => [
     {
         id: 'analytics-charts',
         title: "Deep Performance Insights",
-        text: "Review visual breakdowns for sales by token (including USD for card payments), sales over time, and your most profitable items. Because we track costs for each product variant, your profit margin calculations are always precise.",
-        attachTo: { element: '.space-y-6 > .grid', on: 'top' }, 
+        text: "Review visual breakdowns for sales by token, sales over time, and your most profitable items. Because we track costs for each product, your profit margin calculations are always precise.",
+        attachTo: { element: '#analytics-charts-grid', on: 'top' }, 
         buttons: [
             { text: 'Back', action: tour.back, secondary: true },
             { text: 'Finish Tour', action: tour.complete }

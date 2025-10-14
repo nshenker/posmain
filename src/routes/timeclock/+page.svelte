@@ -87,7 +87,7 @@
 <div class="container mx-auto px-4">
     <div class="card bg-base-100 shadow-xl max-w-4xl mx-auto">
         <div class="card-body">
-            <div class="text-center mb-6">
+            <div id="timeclock-header" class="text-center mb-6">
                 <h1 class="card-title text-3xl justify-center font-greycliffbold">Employee Time Clock</h1>
                 <p class="text-2xl font-mono mt-2">{currentTime.toLocaleTimeString()}</p>
             </div>
@@ -95,7 +95,7 @@
             {#if !selectedEmployee}
                 <div>
                     <h2 class="text-xl font-greycliffmed mb-4 text-center">Select Your Name</h2>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    <div id="employee-selection-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {#each $employees as employee}
                             <button 
                                 class="card bg-base-200 shadow-md hover:bg-base-300 active:bg-primary active:text-primary-content transform transition-transform duration-150 ease-in-out active:scale-95 h-32" 

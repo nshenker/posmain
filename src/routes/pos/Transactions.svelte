@@ -4,13 +4,12 @@
     import { triggerPrint } from '../printStore.js';
 
     let expandedTransactions = {};
-
     function toggleTransaction(txid) {
         expandedTransactions[txid] = !expandedTransactions[txid];
     }
 </script>
 
-<div class="card w-full max-w-4xl bg-base-100 shadow-xl border border-gray-200">
+<div id="transactions-card" class="card w-full max-w-4xl bg-base-100 shadow-xl border border-gray-200">
     <div class="card-body p-8">
         <h2 class="card-title text-xl font-greycliffmed text-charcoal mb-4">Transaction History</h2>
         <div class="overflow-x-auto">
@@ -38,7 +37,7 @@
                             <td>{dayjs.unix(item.timestamp).format("YYYY-MM-DD HH:mm:ss")}</td>
                             <td>
                                 {#if item.txid.startsWith('pi_')}
-                                     <a class="link link-primary" href={`https://dashboard.stripe.com/payments/${item.txid}`} target="_blank" rel="noopener noreferrer">
+                                    <a class="link link-primary" href={`https://dashboard.stripe.com/payments/${item.txid}`} target="_blank" rel="noopener noreferrer">
                                         {item.txid.substring(0, 10)}...
                                     </a>
                                 {:else}
@@ -66,7 +65,7 @@
                                     </div>
                                 </td>
                             </tr>
-                        {/if}
+                         {/if}
                     {/each}
                     {#if $successArray.length === 0}
                         <tr>
