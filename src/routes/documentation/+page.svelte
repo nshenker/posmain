@@ -2,6 +2,19 @@
     // To add future updates, simply add a new object to the top of this array.
     const updateNotes = [
         {
+            version: 'v1.16',
+            date: 'October 2025',
+            title: 'User Roles & Time Clock',
+            notes: [
+                'New Feature: Implemented a complete User and Role Management system. Store owners can now create accounts for employees and managers with different permission levels.',
+                'New Feature: Added a secure PIN-based login system for all users.',
+                'New Feature: Introduced an Employee Time Clock page where staff can clock in, clock out, and manage breaks using their PIN.',
+                'Enhancement: The initial store setup now includes creating a custom, secure Admin PIN.',
+                'Enhancement: The navigation bar and settings pages are now role-aware, restricting access to sensitive areas like Analytics and employee management to manager-level users.',
+                'Enhancement: The data backup and restore system has been updated to include all new employee and time clock event data, ensuring a complete backup solution.'
+            ]
+        },
+        {
             version: 'v1.15',
             date: 'October 2025',
             title: 'Inventory Overhaul & Financial Flexibility',
@@ -216,6 +229,7 @@
                             2. Getting Started: A Detailed Tutorial
                         </h2>
                         <p class="mt-4">Follow these simple steps to get your store up and running in minutes.</p>
+                        
                         <p class="mt-2">For a hands-on walkthrough, we highly recommend using our new interactive product tour. You can start it from the Dashboard at any time to get a guided look at all the suite's features.</p>
                         
                         <ul class="timeline timeline-vertical mt-6">
@@ -226,7 +240,7 @@
                                 </div>
                                 <div class="timeline-end timeline-box">
                                     <div class="font-bold">Merchant Setup</div>
-                                    Upon your first visit, you will be greeted by a setup screen. This one-time process configures your store's identity and payment destination.
+                                    Upon your first visit, you will be greeted by a setup screen. This one-time process configures your store's identity, payment destination, and your secure Admin PIN.
                                 </div>
                                 <hr/>
                             </li>
@@ -277,6 +291,27 @@
                         </h2>
                         <p class="mt-4">Dive deep into the core components of the PoSolana Suite.</p>
                         <div class="space-y-2 mt-4">
+
+                            <div class="collapse collapse-arrow bg-base-200">
+                                <input type="checkbox" /> 
+                                <div class="collapse-title text-xl font-medium">
+                                    <strong>User & Role Management:</strong> Secure Your Operations
+                                </div>
+                                <div class="collapse-content"> 
+                                    <p>The PoSolana Suite now includes a robust user management system. As an administrator, you can create accounts for your staff with two distinct roles: <strong>Manager</strong> and <strong>Employee</strong>. Each user has a unique, secure PIN for logging in. Managers have full access to all features, including settings and analytics, while Employees have a focused view, limited to the Point of Sale and the new Time Clock, ensuring your sensitive business data remains protected.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="collapse collapse-arrow bg-base-200">
+                                <input type="checkbox" /> 
+                                <div class="collapse-title text-xl font-medium">
+                                    <strong>Employee Time Clock:</strong> Track Hours with Ease
+                                </div>
+                                <div class="collapse-content"> 
+                                    <p>Our new <strong>Time Clock</strong> is a simple yet powerful tool for managing your team's hours. Accessible to all logged-in users, it provides a clean, mobile-friendly interface where employees can use their PIN to <strong>Clock In</strong>, <strong>Start/End Breaks</strong>, <strong>Start/End Lunch</strong>, and <strong>Clock Out</strong>. Every action is timestamped and recorded, providing an accurate log for payroll and performance tracking.</p>
+                                </div>
+                            </div>
+                            
                             <div class="collapse collapse-arrow bg-base-200">
                                 <input type="checkbox" /> 
                                 <div class="collapse-title text-xl font-medium">
@@ -286,6 +321,7 @@
                                     <p>The PoSolana Suite now allows you to serve all your customers, regardless of how they prefer to pay. By integrating with <strong>Stripe</strong>, you can now accept credit and debit card payments alongside your existing crypto options. To enable this, simply add your secure Stripe API keys in the settings. When you create a charge, you'll see a "Pay with Card" button. The system will automatically convert any crypto amount to its current USD value for the card transaction, providing a seamless experience for you and your customer.</p>
                                 </div>
                             </div>
+                            
                             <div class="collapse collapse-arrow bg-base-200">
                                 <input type="checkbox" /> 
                                 <div class="collapse-title text-xl font-medium">
