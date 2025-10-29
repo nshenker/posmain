@@ -1,0 +1,56 @@
+/* Import Shepherd.js theme */
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Greycliff", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+@font-face {
+  font-family: 'Greycliff';
+  src: url('/fonts/GreycliffCF-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'GreycliffMed';
+  src: url('/fonts/GreycliffCF-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'GreycliffBold';
+  src: url('/fonts/GreycliffCF-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Shepherd.js button styles */
+
+
+/* === NEW CODE START === */
+/* Custom overrides for Shepherd.js tour to ensure theme compatibility */
+
+
+/* Ensure the close icon in the header is also visible */
+
+
+/* === NEW CODE END === */
