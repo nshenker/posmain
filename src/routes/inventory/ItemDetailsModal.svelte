@@ -4,12 +4,14 @@
     import { showToast } from '../toastStore.js';
     import VariantEditor from './VariantEditor.svelte';
     import { logHistory } from '../../utils/inventory.js';
+    
     export let item = null;
     const dispatch = createEventDispatcher();
     let currentItem = item ? { ...item } : getInitialNewItem();
     let adjustmentAmount = 1;
     let adjustmentReason = 'Manual Adjustment';
     let variantAdjustmentAmounts = {};
+
     function getInitialNewItem() {
         return {
             id: null, type: 'simple', name: '', sku: '', barcode: '',
@@ -61,12 +63,41 @@
         currentItem.quantity = currentItem.variants.reduce((total, v) => total + (v.quantity || 0), 0);
         showToast(`Stock for ${variant.name} updated to ${newQuantity}`, 'success');
     }
+    
+    // NEW: Recursive function to build hierarchy (copied from LocationsModal for reactivity)
+    function buildHierarchy(allLocations, parentId = null, level = 0) {
+        return allLocations
+            .filter(loc => loc.parentId === parentId)
+            .map(parent => ({
+                ...parent,
+                level,
+                children: buildHierarchy(allLocations, parent.id, level + 1)
+            }));
+    }
+
+    // NEW: Function to flatten locations for the select list with visual hierarchy
+    $: formattedLocations = getFormattedLocations(buildHierarchy($locations));
+
+    function getFormattedLocations(hierarchy) {
+        let list = [];
+        for (const parent of hierarchy) {
+            // Create indentation string
+            const prefix = parent.level > 0 ? '— '.repeat(parent.level) : '';
+            list.push({ 
+                id: parent.id, 
+                name: `${prefix}${parent.name}`
+            });
+            
+            // Recursively add children
+            list.push(...getFormattedLocations(parent.children));
+        }
+        return list;
+    }
 </script>
 
 <div class="modal modal-open">
     <div class="modal-box w-11/12 max-w-2xl">
-        <h3 class="font-bold text-lg">{item ?
-        'Edit' : 'Add'} Item</h3>
+        <h3 class="font-bold text-lg">{item ? 'Edit' : 'Add'} Item</h3>
         <form on:submit|preventDefault={saveItem} class="space-y-4 py-4">
             
             <div class="form-control w-full">
@@ -84,8 +115,7 @@
                 <select class="select select-bordered md:col-span-1" bind:value={currentItem.type}>
                     <option value="simple">Simple Product</option>
                     <option value="variable">Variable Product</option>
-      
-                <option value="bundle" disabled>Bundle (Coming Soon)</option>
+                    <option value="bundle" disabled>Bundle (Coming Soon)</option>
                 </select>
                 <input type="text" placeholder="Item Name*" class="input input-bordered md:col-span-2" bind:value={currentItem.name} />
             </div>
@@ -96,12 +126,10 @@
                     {#if !item}
                         <div class="form-control">
                             <label class="label"><span class="label-text">Initial Quantity*</span></label>
-                  
                             <input type="number" placeholder="Quantity*" class="input input-bordered" bind:value={currentItem.quantity} min="0" step="1" />
                         </div>
                     {:else}
                          <div class="form-control">
-            
                             <label class="label"><span class="label-text">Current Quantity</span></label>
                             <div class="input input-bordered w-full flex items-center">{currentItem.quantity}</div>
                         </div>
@@ -110,27 +138,22 @@
                     <div class="form-control">
                         <label class="label"><span class="label-text">Category</span></label>
                         <select class="select select-bordered" bind:value={currentItem.category}>
-                            {#each $categories 
-                            as category}<option value={category}>{category}</option>{/each}
+                            {#each $categories as category}<option value={category}>{category}</option>{/each}
                         </select>
                     </div>
                      <div class="form-control">
                         <label class="label"><span class="label-text">Cost*</span></label>
-      
                         <div class="input-group">
                             <span>$</span>
                             <input type="number" placeholder="0.00" class="input input-bordered w-full" bind:value={currentItem.cost} min="0" step="0.01" />
-                
                         </div>
                     </div>
-                    <div class="form-control">
+                  <div class="form-control">
                         <label class="label"><span class="label-text">Price*</span></label>
-                        <div 
-                        class="input-group">
+                        <div class="input-group">
                             <span>$</span>
                             <input type="number" placeholder="0.00" class="input input-bordered w-full" bind:value={currentItem.price} min="0" step="0.01" />
                             <select class="select select-bordered" bind:value={currentItem.currency}>
-    
                                 {#each $mints as mint}<option value={mint.name}>{mint.name}</option>{/each}
                             </select>
                         </div>
@@ -148,20 +171,25 @@
                     </div>
                      <div class="form-control md:col-span-2">
                         <label class="label"><span class="label-text">Location</span></label>
+                 
                         <select class="select select-bordered" bind:value={currentItem.locationId}>
                     
                             <option value={null}>No Location</option>
-                            {#each $locations as location}<option value={location.id}>{location.name}</option>{/each}
+                            {#each formattedLocations as location}
+                                <option value={location.id}>{location.name}</option>
+                            {/each}
                         </select>
                     </div>
               
                 </div>
                 
                 {#if item}
+ 
                 <div class="divider">Stock Adjustment</div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                     <input type="number" placeholder="Amount" class="input input-bordered" bind:value={adjustmentAmount} 
                     min="1" />
+               
                     <input type="text" placeholder="Reason (e.g., Stock Count)" class="input input-bordered" bind:value={adjustmentReason} />
                     <div class="flex gap-2 sm:col-span-2">
                         <button type="button" class="btn btn-success flex-1" on:click={() => adjustQuantity(adjustmentAmount)}>Add</button>
@@ -183,11 +211,11 @@
                     {#each currentItem.variants as variant, i}
                         <div class="grid grid-cols-1 md:grid-cols-[1fr,80px,170px] gap-4 items-center p-2 rounded-lg bg-base-200">
                             <span class="font-bold">{variant.name} ({variant.quantity} in stock)</span>
-                
+      
                             <input type="number" placeholder="Amt" class="input input-sm input-bordered" bind:value={variantAdjustmentAmounts[variant.id]} min="1" />
                             <div class="flex gap-2">
-                                <button type="button" class="btn btn-success btn-sm flex-1" on:click={() => adjustVariantQuantity(currentItem.variants[i], variantAdjustmentAmounts[variant.id] ||
-                                1)}>Add</button>
+                        
+                                <button type="button" class="btn btn-success btn-sm flex-1" on:click={() => adjustVariantQuantity(currentItem.variants[i], variantAdjustmentAmounts[variant.id] || 1)}>Add</button>
                                 <button type="button" class="btn btn-error btn-sm flex-1" on:click={() => adjustVariantQuantity(currentItem.variants[i], -(variantAdjustmentAmounts[variant.id] || 1))}>Remove</button>
                             </div>
                         </div>
@@ -198,7 +226,7 @@
             {/if}
             
             <div class="modal-action">
-                
+           
                 <button type="button" class="btn" on:click={() => dispatch('close')}>Cancel</button>
                 <button type="submit" class="btn btn-primary">Save Item</button>
             </div>
