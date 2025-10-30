@@ -94,6 +94,132 @@ export function importCustomersFromCsv(file, onComplete) {
     reader.readAsText(file);
 }
 
+// --- NEW INVENTORY UTILITIES ---
+
+// Converts an array of inventory objects to a CSV string
+function convertInventoryToCSV(data) {
+    const headers = [
+        "id", "type", "name", "sku", "barcode", "quantity", "price", "cost", 
+        "currency", "category", "locationId", "variantsJson" // REMOVED: "imageURL"
+    ];
+
+    const rows = data.map(item => {
+        // Prepare variantsJson. Stringify and enclose in quotes to escape inner commas and newlines.
+        const variantsJson = item.type === 'variable' 
+            ? `"${JSON.stringify(item.variants || []).replace(/"/g, '""')}"`
+            : '';
+
+        // Safely stringify non-string fields and handle internal quotes/commas in strings
+        const escapeString = (value) => `"${(String(value || '')).replace(/"/g, '""')}"`;
+
+        return [
+            item.id || '',
+            item.type || 'simple',
+            escapeString(item.name || ''),
+            escapeString(item.sku || ''),
+            escapeString(item.barcode || ''),
+            item.quantity || 0,
+            item.price || 0,
+            item.cost || 0,
+            item.currency || 'USDC',
+            escapeString(item.category || 'Default'),
+            item.locationId || '',
+            variantsJson // REMOVED: escapeString(item.imageURL || '')
+        ].join(',');
+    });
+    
+    return [headers.join(','), ...rows].join('\n');
+}
+
+// Specific function to export the inventory list
+export function exportInventoryToCsv(inventory) {
+    const csvContent = convertInventoryToCSV(inventory);
+    downloadCSV(csvContent, 'inventory.csv');
+}
+
+// Specific function to import inventory from a CSV file
+export function importInventoryFromCsv(file, onComplete) {
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const text = reader.result;
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            if (lines.length < 1) {
+                onComplete(new Error("CSV file is empty or invalid."), null);
+                return;
+            }
+
+            // A basic CSV parser that relies on the exported structure.
+            const headerLine = lines.shift().trim();
+            const headers = headerLine.split(',').map(h => h.trim());
+            
+            if (!headers.includes('name') || !headers.includes('type')) {
+                 onComplete(new Error("CSV must contain 'name' and 'type' columns."), null);
+                return;
+            }
+
+            const importedItems = lines.map(line => {
+                // A simplified approach to parsing CSV with quoted fields.
+                // This is brittle but matches the complexity of existing CSV functions.
+                const itemData = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                
+                const parseString = (header, fallback = '') => {
+                    const index = headers.indexOf(header);
+                    if (index === -1 || !itemData[index]) return fallback;
+                    // Remove wrapping quotes and un-escape inner quotes
+                    let value = itemData[index];
+                    if (value.startsWith('"') && value.endsWith('"')) {
+                        value = value.substring(1, value.length - 1).replace(/""/g, '"');
+                    }
+                    return value;
+                };
+
+                const name = parseString('name', 'Unnamed Item');
+                const type = parseString('type', 'simple');
+                const quantity = parseInt(parseString('quantity', '0'), 10) || 0;
+                const price = parseFloat(parseString('price', '0')) || 0;
+                const cost = parseFloat(parseString('cost', '0')) || 0;
+                
+                let variants = [];
+                const variantsJson = parseString('variantsJson');
+                if (type === 'variable' && variantsJson) {
+                    try {
+                        variants = JSON.parse(variantsJson.replace(/""/g, '"'));
+                    } catch (e) {
+                        console.error(`Failed to parse variants for item ${name}:`, e);
+                        // Fallback to empty array
+                    }
+                }
+                
+                const id = parseString('id', `csv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
+                
+                return {
+                    id: id,
+                    type: type,
+                    name: name,
+                    sku: parseString('sku', ''),
+                    barcode: parseString('barcode', ''),
+                    quantity: quantity,
+                    price: price,
+                    cost: cost,
+                    currency: parseString('currency', 'USDC'),
+                    category: parseString('category', 'Default'),
+                    locationId: parseString('locationId', null),
+                    imageURL: '', // FORCED REMOVAL: Image URLs are excluded from CSV import/export
+                    variants: variants,
+                };
+            });
+            onComplete(null, importedItems);
+        } catch (error) {
+            onComplete(error, null);
+        }
+    };
+    reader.onerror = () => {
+        onComplete(new Error("Failed to read the file."), null);
+    };
+    reader.readAsText(file);
+}
+
 // --- JSON Utilities ---
 
 // Generic function to export any JS object to a JSON file
@@ -166,5 +292,3 @@ export function exportToCSV(data, filename) {
     const csvContent = [headers.join(','), ...rows].join('\n');
     downloadCSV(csvContent, filename);
 }
-
-
