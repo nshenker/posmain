@@ -1,7 +1,7 @@
 <script lang='ts'>
     import { onMount, onDestroy, tick } from "svelte";
     import { goto } from '$app/navigation';
-    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee, customers, selectedCustomer, savedCarts, loyaltyRedemptionRate } from '../stores.js';
+    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee, customers, selectedCustomer, savedCarts, loyaltyRedemptionRate, barcodeScanned, cartDiscount } from '../stores.js'; // MODIFIED: Added barcodeScanned, cartDiscount
     import { tokenPrices } from '../priceStore.js';
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
@@ -18,12 +18,15 @@
     import { logHistory } from '../../utils/inventory.js';
     import { get } from 'svelte/store';
     import dayjs from 'dayjs';
+    import { page } from '$app/stores';
+    import DiscountModal from './DiscountModal.svelte'; // MODIFIED: Added DiscountModal import
 
     let showCustomerModal = false;
     let showNewCustomerModal = false;
 
     let showInventoryModal = false;
     let showLoadCartModal = false;
+    let showDiscountModal = false; // MODIFIED: Added showDiscountModal state
     let chargeItems = [];
     let barcodeInput = '';
     let applyTax = $defaultTaxable;
@@ -33,18 +36,33 @@
     let paymentClientSecret = null;
     let chargeForCardPayment = {};
     // --- Loyalty State ---
-    let redemptionDiscount = 0; // The calculated USD discount amount available
-    let isRedeeming = false; // Flag to apply/remove discount
+    let redemptionDiscount = 0;
+    // The calculated USD discount amount available
+    let isRedeeming = false;
+    // Flag to apply/remove discount
     // --- NEW REACTIVE VARIABLES FOR DISCOUNT TRACKING ---
-    let appliedDiscountValue = 0; // The crypto/USD value of the discount applied to the total
-    let appliedPointsRedeemed = 0; // The number of points used
+    let appliedDiscountValue = 0;
+    // The crypto/USD value of the discount applied to the total
+    let appliedPointsRedeemed = 0;
+    // The number of points used
+    let appliedOrderDiscountValue = 0; // MODIFIED: Added for new cart discount
     // --- Scanner State ---
     let scanner = null;
     let isScannerVisible = false;
     let lastScanTime = 0;
     let lastScanResult = '';
-    const SCAN_COOLDOWN = 3000;
-    // 3 seconds
+    const SCAN_COOLDOWN = 3000; // 3 seconds
+
+
+	// --- NEW: Handle globally scanned barcode ---
+    barcodeScanned.subscribe(barcode => {
+		// Only process if we are on the POS page
+        if (barcode && $page.url.pathname.includes('/pos')) {
+            addItemByBarcode(barcode);
+            barcodeScanned.set(null); // Reset the store after processing
+        }
+    });
+	// --- END ---
 
 
     const keys = [
@@ -52,8 +70,6 @@
         { row: 1, value: "4"}, { row: 1, value: "5"}, { row: 1, value: "6"},
         { row: 2, value: "7"}, { row: 2, value: "8"}, { row: 2, value: "9"},
         { row: 3, value: "<" }, { row: 3, value: "0"}, {
-
-      
         row: 3, value: "."}
     ];
     // Numpad state
@@ -119,21 +135,17 @@
         if (foundItem) {
             if (foundVariant) {
                 // It's a variant, construct the specific object for the cart
-          
- 
                 const itemToAdd = {
                     id: foundItem.id, // Parent ID is still the main reference
                     variantId: foundVariant.id, // Variant ID is crucial for stock depletion
-                    name: `${foundItem.name} - 
+                    name: `${foundItem.name} 
+- 
  ${foundVariant.name}`,
-          
                     price: foundVariant.price,
                     cost: foundVariant.cost,
                     sku: foundVariant.sku,
                     barcode: foundVariant.barcode,
-      
                     currency: foundItem.currency, // Inherit from parent
- 
                     category: foundItem.category, // Inherit from parent
                 };
                 addItemToCart(itemToAdd);
@@ -191,7 +203,6 @@
                 {
                     fps: 10,
                     qrbox: qrboxFunction,
-  
  
                     useBarCodeDetectorIfSupported: true // Improves performance
                 },
@@ -254,6 +265,7 @@
         $currentChargeItems = [];
         $selectedCustomer = null;
         isRedeeming = false; // Reset new redemption state
+        $cartDiscount = null; // MODIFIED: Reset cart discount
     }
 
     // --- Save and Load Cart Logic ---
@@ -275,9 +287,6 @@
                 id: `custom-${Date.now()}`,
                 name: `Custom Amount (${$selectedMint})`,
                 price: customAmount, // Store the final amount directly
-  
- 
-                currency: $selectedMint,
                 // Add other properties if needed, e.g., taxable status
                 taxable: applyTax, // Store whether tax was applied to this amount
             });
@@ -335,7 +344,7 @@
                  // Set currency from first item
                  if(chargeItems.length > 0) {
                     $selectedMint = chargeItems[0].currency;
-                 }
+                }
             }
 
 
@@ -348,7 +357,8 @@
             }
 
             // Reset redemption state when loading a cart
-            isRedeeming = false; 
+            isRedeeming = false;
+            $cartDiscount = null; // MODIFIED: Reset cart discount
         }
         showLoadCartModal = false;
     }
@@ -361,10 +371,8 @@
     onDestroy(() => {
         stopScanner(); // Ensure camera is released when leaving the page
     });
-    
     // --- Reactive loyalty and total calculation ---
     $: redemptionRate = $loyaltyRedemptionRate;
-    
     // Calculate max available USD discount
     $: {
         if ($selectedCustomer && $selectedCustomer.loyaltyPoints > 0) {
@@ -377,18 +385,19 @@
     }
     
     // NEW REACTIVE VARIABLES FOR DISCOUNT TRACKING
-    $: appliedDiscountValue = 0; 
+    $: appliedDiscountValue = 0;
     $: appliedPointsRedeemed = 0; 
+    $: appliedOrderDiscountValue = 0; // MODIFIED: Added for new cart discount
 
     $: {
         let subtotal = 0;
-        
         // MODIFIED: Calculate subtotal using per-item adjustments
         if (chargeItems.length > 0) {
             subtotal = chargeItems.reduce((acc, item) => {
                 const adjustmentPercent = item.priceAdjustmentPercent || 0;
                 const adjustedPrice = item.price * (1 + adjustmentPercent / 100);
-                return acc + (adjustedPrice * item.quantity);
+                return acc + 
+                (adjustedPrice * item.quantity);
             }, 0);
             
             const firstItem = chargeItems[0];
@@ -403,32 +412,47 @@
         }
         // END MODIFIED SUBTOTAL CALCULATION
 
-        const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
-        let total = subtotal + taxAmount;
-        
-        // --- LOYALTY REDEMPTION APPLIED HERE ---
+        // --- MODIFIED: Apply Order Discount (before tax) ---
+        let preTaxSubtotal = subtotal;
+        let orderDiscountAmount = 0;
+        if ($cartDiscount) {
+            if ($cartDiscount.type === 'percentage') {
+                orderDiscountAmount = preTaxSubtotal * ($cartDiscount.value / 100);
+            } else { // 'fixed'
+                orderDiscountAmount = $cartDiscount.value;
+            }
+            // Ensure discount doesn't exceed subtotal
+            orderDiscountAmount = Math.min(preTaxSubtotal, orderDiscountAmount);
+            preTaxSubtotal -= orderDiscountAmount;
+        }
+        appliedOrderDiscountValue = orderDiscountAmount; // Store the calculated crypto/USD value
+        // --- END Order Discount ---
+
+        const taxAmount = applyTax ?
+        preTaxSubtotal * ($taxRate / 100) : 0; // Tax is calculated on the discounted subtotal
+        let total = preTaxSubtotal + taxAmount;
+        // --- LOYALTY REDEMPTION APPLIED HERE (after tax, on the remaining total) ---
         if (isRedeeming && redemptionDiscount > 0) {
             const prices = get(tokenPrices);
             const mintInfo = get(mints).find(m => m.name === $selectedMint);
-            let cryptoPrice = 1; // Default for USDC/USD
+            let cryptoPrice = 1;
+            // Default for USDC/USD
             if ($selectedMint !== 'USDC' && $selectedMint !== 'USD' && mintInfo && prices[mintInfo.coingeckoId]?.usd) {
                 cryptoPrice = prices[mintInfo.coingeckoId].usd;
             }
             
             // Calculate crypto discount amount
             const cryptoDiscount = redemptionDiscount / cryptoPrice;
-            
             // The discount cannot exceed the total amount due (total)
             // Store this for passing to metadata
-            appliedDiscountValue = Math.min(cryptoDiscount, total); 
-            
+            appliedDiscountValue = Math.min(cryptoDiscount, total);
             const pointsPerDiscount = (redemptionRate.discount / redemptionRate.points);
             appliedPointsRedeemed = Math.ceil(appliedDiscountValue / pointsPerDiscount) * redemptionRate.points;
-            appliedPointsRedeemed = Math.min(appliedPointsRedeemed, $selectedCustomer?.loyaltyPoints || 0); // Cap points used at actual balance
+            appliedPointsRedeemed = Math.min(appliedPointsRedeemed, $selectedCustomer?.loyaltyPoints || 0);
+            // Cap points used at actual balance
             
             // Recalculate appliedDiscountValue based on the capped appliedPointsRedeemed
             appliedDiscountValue = (appliedPointsRedeemed / redemptionRate.points) * redemptionRate.discount;
-
             total -= appliedDiscountValue;
         } else {
              appliedDiscountValue = 0;
@@ -450,7 +474,7 @@
         
         if (finalPmtAmt <= 0) {
              if(browser) showToast("Amount must be greater than zero.", "error");
-             return;
+            return;
         }
 
         if(chargeItems.length > 0) {
@@ -460,7 +484,6 @@
                 const adjustedPrice = item.price * (1 + adjustmentPercent / 100);
                 return acc + (adjustedPrice * item.quantity);
             }, 0);
-            
             // MODIFIED: Map items to include adjustment details
             itemsForTx = chargeItems.map(item => ({
                 id: item.id, variantId: item.variantId, name: item.name,
@@ -479,8 +502,6 @@
                     id: `custom-${Date.now()}`,
                     name: `Custom Amount (${$selectedMint})`,
                     price: finalPmtAmt, // Use the final total for the single item price
-  
- 
                     quantity: 1,
                     currency: $selectedMint,
                     taxable: applyTax, // Include taxable status
@@ -490,10 +511,19 @@
             }
         }
         
-        const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
-        const total = subtotal + taxAmount;
+        // MODIFIED: Calculate discounts based on the *original* subtotal
+        let orderDiscountAmount = 0;
+        if ($cartDiscount) {
+            if ($cartDiscount.type === 'percentage') {
+                orderDiscountAmount = subtotal * ($cartDiscount.value / 100);
+            } else { // 'fixed'
+                orderDiscountAmount = $cartDiscount.value;
+            }
+            orderDiscountAmount = Math.min(subtotal, orderDiscountAmount);
+        }
+        const subtotalAfterOrderDiscount = subtotal - orderDiscountAmount;
+        const taxAmount = applyTax ? subtotalAfterOrderDiscount * ($taxRate / 100) : 0;
         
-        // This is the metadata that needs to be passed to the payment confirmation logic
         let loyaltyDiscountAmount = 0;
         let pointsRedeemed = 0;
         if (isRedeeming) {
@@ -502,18 +532,23 @@
         }
 
 
-        if (total > 0) {
+        if (finalPmtAmt > 0) { // Check finalPmtAmt which already includes all discounts
             // Use itemsForTx which handles both item lists and custom amounts
             $currentChargeItems = itemsForTx;
-            $pmtAmt = finalPmtAmt.toString(); // Ensure store reflects final amount (minus discount)
+            $pmtAmt = finalPmtAmt.toString(); // Ensure store reflects final amount
             chargeMetadata.set({ 
-                subtotal, taxAmount, taxRate: $taxRate, applyTax,
+                subtotal, // Original subtotal
+                taxAmount, 
+                taxRate: $taxRate, 
+                applyTax,
                 // Pass new loyalty data
                 isRedeeming: isRedeeming, 
                 loyaltyDiscountAmount: loyaltyDiscountAmount,
-                pointsRedeemed: pointsRedeemed
+                pointsRedeemed: pointsRedeemed,
+                // MODIFIED: Pass order discount data
+                orderDiscountAmount: orderDiscountAmount,
+                orderDiscountCode: $cartDiscount ? $cartDiscount.code : null
             });
-
             goto('/present');
         } else {
             if(browser) showToast("Please enter an amount greater than zero.", "error");
@@ -535,7 +570,8 @@
         let totalInUSD = totalInCrypto;
         const prices = get(tokenPrices);
         const mintInfo = get(mints).find(m => m.name === $selectedMint);
-        let currentPrice = 1; // Default for USDC/USD
+        let currentPrice = 1;
+        // Default for USDC/USD
         
         if ($selectedMint !== 'USDC' && $selectedMint !== 'USD') {
              if (!mintInfo || !prices[mintInfo.coingeckoId]?.usd) {
@@ -546,21 +582,18 @@
             totalInUSD = totalInCrypto * currentPrice;
         }
 
-        if (applyCardFee) {
-            totalInUSD *= 1.03;
-        }
-
+        // NOTE: Card Fee is applied *after* discounts
+        
         let subtotal = 0;
         let itemsForTx = [];
-        
         if(chargeItems.length > 0) {
             // MODIFIED: Calculate subtotal using adjusted price
             subtotal = chargeItems.reduce((acc, item) => {
                 const adjustmentPercent = item.priceAdjustmentPercent || 0;
                 const adjustedPrice = item.price * (1 + adjustmentPercent / 100);
+                
                 return acc + (adjustedPrice * item.quantity);
             }, 0);
-            
             // MODIFIED: Map items to include adjustment details
             itemsForTx = chargeItems.map(item => ({
                 ...item,
@@ -577,42 +610,67 @@
                 price: totalInCrypto, // Store original crypto amount
                 quantity: 1,
                 currency: $selectedMint,
-        
- 
                 taxable: applyTax,
             });
         }
         
-        const taxAmount = applyTax ? subtotal * ($taxRate / 100) : 0;
+        // MODIFIED: Calculate discounts in USD
+        let orderDiscountAmountUSD = 0;
+        if ($cartDiscount) {
+            if ($cartDiscount.type === 'percentage') {
+                orderDiscountAmountUSD = (subtotal * currentPrice) * ($cartDiscount.value / 100);
+            } else { // 'fixed'
+                // Fixed discount is always in USD
+                orderDiscountAmountUSD = $cartDiscount.value;
+            }
+            orderDiscountAmountUSD = Math.min((subtotal * currentPrice), orderDiscountAmountUSD);
+        }
+
+        const subtotalAfterOrderDiscountUSD = (subtotal * currentPrice) - orderDiscountAmountUSD;
+        const taxAmountUSD = applyTax ? subtotalAfterOrderDiscountUSD * ($taxRate / 100) : 0;
         
-        let loyaltyDiscountAmount = 0;
+        let totalAfterOrderDiscountAndTax = subtotalAfterOrderDiscountUSD + taxAmountUSD;
+
+        let loyaltyDiscountAmountUSD = 0;
         let pointsRedeemed = 0;
         if (isRedeeming) {
-            loyaltyDiscountAmount = appliedDiscountValue * currentPrice; // Convert final applied value to USD
+            // Loyalty discount is always in USD, but convert crypto value if needed
+            // (appliedDiscountValue is already in crypto, convert it to USD)
+            loyaltyDiscountAmountUSD = appliedDiscountValue * currentPrice;
+            loyaltyDiscountAmountUSD = Math.min(totalAfterOrderDiscountAndTax, loyaltyDiscountAmountUSD);
+            // Convert final applied value to USD
             pointsRedeemed = appliedPointsRedeemed;
         }
 
+        // This is the final pre-fee total
+        let finalTotalUSD = totalAfterOrderDiscountAndTax - loyaltyDiscountAmountUSD;
+
+        if (applyCardFee) {
+            finalTotalUSD *= 1.03;
+        }
+
         chargeForCardPayment = {
-            total: totalInUSD, // Final USD amount charged (after fee and discount)
-            subtotal: subtotal * currentPrice, // Subtotal in USD (pre-discount, pre-fee)
-            taxAmount: taxAmount * currentPrice, // Tax amount in USD (pre-discount, pre-fee)
+            total: finalTotalUSD, // Final USD amount charged (after discounts and fee)
+            subtotal: subtotal * currentPrice, // Original subtotal in USD
+            taxAmount: taxAmountUSD, // Tax amount in USD (post-order-discount)
             taxable: applyTax,
             taxRate: $taxRate,
             originalAmount: totalInCrypto, 
             originalMint: $selectedMint,
             items: itemsForTx, // Use itemsForTx
-            // Loyalty Data to be stored on the transaction
-            loyaltyDiscountAmount: loyaltyDiscountAmount, // USD value of discount applied
-            pointsRedeemed: pointsRedeemed 
+            // Loyalty Data
+            loyaltyDiscountAmount: loyaltyDiscountAmountUSD, // USD value of discount applied
+            pointsRedeemed: pointsRedeemed,
+            // Order Discount Data
+            orderDiscountAmount: orderDiscountAmountUSD,
+            orderDiscountCode: $cartDiscount ? $cartDiscount.code : null
         };
         try {
             const response = await fetch('/api/create-payment-intent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    amount: totalInUSD,
-       
- 
+                    amount: finalTotalUSD, // MODIFIED: Pass the final calculated USD total
                     stripeSecretKey: $stripeSecretKey,
                     currency: 'usd' // Stripe always uses standard currency codes
                 })
@@ -637,31 +695,29 @@
             txnId: Date.now().toString(), // <--- ADDED: Unique internal transaction ID
             timestamp: Math.floor(Date.now() / 1000),
             txid: paymentIntentId, // <--- RETAIN: External Stripe Payment Intent ID
-         
             uiAmount: chargeForCardPayment.total, // Final USD amount
             mint: 'USD', // Record as USD transaction
-  
             originalAmount: chargeForCardPayment.originalAmount, // Store original crypto amount (or pre-fee USD total)
             originalMint: chargeForCardPayment.originalMint, // Store original mint
             items: chargeForCardPayment.items, // Use items from chargeForCardPayment
             subtotal: chargeForCardPayment.subtotal, // USD subtotal (pre-discount, pre-fee)
-  
-            taxAmount: chargeForCardPayment.taxAmount, // USD tax amount (pre-discount, pre-fee)
+            taxAmount: chargeForCardPayment.taxAmount, // USD tax amount (post-order-discount)
             taxRate: chargeForCardPayment.taxRate,
-  
             taxable: chargeForCardPayment.taxable,
             customerId: $selectedCustomer ?
             $selectedCustomer.id : null,
             // --- NEW: Loyalty redemption details ---
             loyaltyDiscountAmount: chargeForCardPayment.loyaltyDiscountAmount,
             pointsRedeemed: chargeForCardPayment.pointsRedeemed,
+            // MODIFIED: Add order discount details
+            orderDiscountAmount: chargeForCardPayment.orderDiscountAmount,
+            orderDiscountCode: chargeForCardPayment.orderDiscountCode,
         };
         successArray.update(items => [...items, new_entry]);
         
         // --- LOYALTY POINTS AWARDING AND DEDUCTION LOGIC ---
         if ($selectedCustomer) {
             let pointsChange = 0;
-            
             // 1. DEDUCTION
             if (new_entry.loyaltyDiscountAmount > 0 && new_entry.pointsRedeemed > 0) {
                 pointsChange -= new_entry.pointsRedeemed;
@@ -669,8 +725,9 @@
             }
             
             // 2. AWARDING: Award points based on the final total amount *after* deduction (but before fee)
-            let usdValueForAward = new_entry.subtotal + new_entry.taxAmount - new_entry.loyaltyDiscountAmount; // Subtotal + Tax - Discount
-            const pointsAwarded = Math.floor(usdValueForAward);
+            let usdValueForAward = new_entry.subtotal - new_entry.orderDiscountAmount + new_entry.taxAmount - new_entry.loyaltyDiscountAmount;
+            // Subtotal - Order Discount + Tax - Loyalty Discount
+            const pointsAwarded = Math.floor(Math.max(0, usdValueForAward)); // Ensure it's not negative
             pointsChange += pointsAwarded;
             
             if (pointsAwarded > 0) {
@@ -681,19 +738,15 @@
                 customers.update(allCustomers => {
                     return allCustomers.map(cust => {
                         if (cust.id === $selectedCustomer.id) {
-                           
-                             return {
+                            return {
                                 ...cust,
                                 loyaltyPoints: Math.max(0, (cust.loyaltyPoints || 0) + pointsChange)
- 
                             };
- 
                         }
                         return cust;
                     });
-   
                 });
-                 selectedCustomer.update(cust => ({
+                selectedCustomer.update(cust => ({
                     ...cust,
                     loyaltyPoints: Math.max(0, (cust.loyaltyPoints || 0) + pointsChange)
                  }));
@@ -705,19 +758,19 @@
             inventory.update(inv => {
                 const newInv = [...inv];
                
- 
-                 for (const soldItem of chargeForCardPayment.items) {
+                for (const soldItem of chargeForCardPayment.items) {
                     const itemIndex = newInv.findIndex(i => i.id === soldItem.id);
                     if (itemIndex > -1) {
                         if (newInv[itemIndex].type === 
                         'simple') {
-               
                              const newQty = newInv[itemIndex].quantity - soldItem.quantity;
-                            newInv[itemIndex].quantity = newQty;
+                            newInv[itemIndex].quantity = 
+                            newQty;
                     
                             logHistory(soldItem.id, `Sale (Card: ${paymentIntentId.slice(-6)})`, `-${soldItem.quantity}`, newQty);
                    
-                        } else if (newInv[itemIndex].type === 'variable' && soldItem.variantId) {
+                        } else if (newInv[itemIndex].type 
+                        === 'variable' && soldItem.variantId) {
                             const variantIndex = newInv[itemIndex].variants.findIndex(v => v.id === soldItem.variantId);
                             if (variantIndex > -1) {
                                 const variant = newInv[itemIndex].variants[variantIndex];
@@ -762,7 +815,8 @@
     }
     
     function calculateLineTotal(item) {
-        const adjustmentPercent = item.priceAdjustmentPercent || 0;
+        const adjustmentPercent = item.priceAdjustmentPercent ||
+        0;
         const adjustedPrice = item.price * (1 + adjustmentPercent / 100);
         return adjustedPrice * item.quantity;
     }
@@ -792,10 +846,10 @@
 {#if showCustomerModal}
     <CustomerSelectModal
         on:select={(e) => { $selectedCustomer = e.detail;
-            showCustomerModal = false; }}
+        showCustomerModal = false; }}
         on:close={() => showCustomerModal = false}
         on:new={() => { showCustomerModal = false;
-            showNewCustomerModal = true; }}
+        showNewCustomerModal = true; }}
     />
 {/if}
 
@@ -803,7 +857,7 @@
     <CustomerDetailsModal
         on:close={() => showNewCustomerModal = false}
         on:save={(e) => { $selectedCustomer = e.detail;
-            showNewCustomerModal = false; }}
+        showNewCustomerModal = false; }}
     />
 {/if}
 
@@ -812,6 +866,10 @@
         on:select={handleLoadCart}
         on:close={() => showLoadCartModal = false}
     />
+{/if}
+
+{#if showDiscountModal}
+    <DiscountModal on:close={() => showDiscountModal = false} />
 {/if}
 
 
@@ -828,15 +886,22 @@
                 {#if $selectedCustomer}
                     <div class="alert alert-info shadow-lg mb-2 py-1 px-3 text-sm">
                         <div class="flex justify-between items-center w-full">
-                     
                             <span>Cust: {$selectedCustomer.name} (Pts: {$selectedCustomer.loyaltyPoints || 0})</span>
                            <button class="btn btn-xs btn-ghost" on:click={() => $selectedCustomer = null}>✕</button>
                         </div>
                     </div>
                 {/if}
+
+                {#if $cartDiscount}
+                    <div class="alert alert-success shadow-lg mb-2 py-1 px-3 text-sm">
+                        <div class="flex justify-between items-center w-full">
+                            <span>Discount: {$cartDiscount.code} (-{$cartDiscount.type === 'percentage' ? `${$cartDiscount.value}%` : `$${$cartDiscount.value.toFixed(2)}`})</span>
+                           <button class="btn btn-xs btn-ghost" on:click={() => $cartDiscount = null}>✕</button>
+                        </div>
+                    </div>
+                {/if}
                 
-                {#if redemptionDiscount > 0}
-                    <div class="form-control mb-2">
+                {#if redemptionDiscount > 0 && !$cartDiscount} <div class="form-control mb-2">
                         <label class="label cursor-pointer py-1 bg-success/20 rounded-lg">
                             <span class="label-text font-bold text-success">
                                 Redeem {$loyaltyRedemptionRate.points} Pts = ${$loyaltyRedemptionRate.discount.toFixed(2)} Off (Max: ${redemptionDiscount.toFixed(2)})
@@ -844,17 +909,23 @@
                             <input type="checkbox" class="toggle toggle-success toggle-sm" bind:checked={isRedeeming} />
                         </label>
                     </div>
+                {:else if redemptionDiscount > 0 && $cartDiscount}
+                    <div class="alert alert-warning shadow-lg mb-2 py-1 px-3 text-xs">
+                        Loyalty redemption is disabled when an order discount is applied.
+                    </div>
                 {/if}
                 {#if chargeItems.length > 0}
                     <div class="space-y-2 text-left">
                         
-                        <div class="hidden sm:flex justify-end text-xs font-bold text-base-content/70 pb-1 border-b border-base-200">
+                        <div class="hidden sm:flex justify-end 
+                        text-xs font-bold text-base-content/70 pb-1 border-b border-base-200">
                              <span class="w-16 mr-2">Adj %</span>
                              <span class="w-16 mr-2">Qty</span>
                              <span class="w-20 text-right">Total</span>
                         </div>
                         
-                        {#each chargeItems as item (item.variantId || item.id)}
+                        {#each chargeItems as item (item.variantId ||
+                        item.id)}
                             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
                                 <span class="flex-grow truncate font-greycliffmed">{item.name}</span>
                              
@@ -862,31 +933,33 @@
                                     
                                     <div class="w-16 flex items-center">
                                          <input type="number" 
-                                               bind:value={item.priceAdjustmentPercent} 
+                                              
+                                             bind:value={item.priceAdjustmentPercent} 
                                                min="-99.9" max="999.9" step="0.1"
-                                               class="input input-bordered input-xs w-full text-center font-mono" />
+                                               class="input input-bordered 
+                                            input-xs w-full text-center font-mono" />
                                     </div>
                                     <div class="flex items-center justify-center space-x-2">
-                                        <button on:click={() => decrementQuantity(item.variantId || item.id)} class="btn btn-xs btn-ghost">-</button>
+                                        <button on:click={() => decrementQuantity(item.variantId ||
+                                        item.id)} class="btn btn-xs btn-ghost">-</button>
     
                                     <span>{item.quantity}</span>
                                         <button on:click={() => incrementQuantity(item.variantId || item.id)} class="btn btn-xs btn-ghost">+</button>
 
-               
+       
                     </div>
                                     <span class="w-20 text-right font-mono">{calculateLineTotal(item).toFixed(2)}</span>
 
                                 </div>
-     
+       
                             </div>
                         {/each}
                     </div>
                 {:else}
-         
                     {#if !parseFloat($pmtAmt.replace(/,/g, ''))}
                         <div class="h-full flex items-center justify-center text-center text-base-content/50">
                         <p>Add items, load a cart, or use the keypad.</p>
-                     
+     
                     </div>
                     {/if}
                 {/if}
@@ -894,26 +967,28 @@
 
 
             <div class="mt-auto pt-2 space-y-2">
-                 <div class="form-control">
+                <div class="form-control">
                     
                         <label class="label cursor-pointer py-1">
          
                             <span class="label-text">Apply Tax ({$taxRate}%)</span>
-                        <input type="checkbox" class="toggle toggle-primary toggle-sm" bind:checked={applyTax} />
+        
+                        <input type="checkbox" bind:checked={applyTax} class="toggle toggle-primary toggle-sm" />
                     </label>
                 </div>
                
  
                 <div class="form-control">
-                    <label class="label cursor-pointer py-1">
+                        <label class="label cursor-pointer py-1">
                         <span class="label-text">Apply 3% Credit Card Fee</span>
-                        <input type="checkbox" class="toggle toggle-secondary toggle-sm" bind:checked={applyCardFee} />
+                        <input type="checkbox" bind:checked={applyCardFee} class="toggle toggle-secondary toggle-sm" />
             
                 </label>
                 </div>
                  <div class="flex space-x-2">
                     <button on:click={() => showCustomerModal = true} class="btn btn-info normal-case flex-1 btn-sm">{$selectedCustomer ?
                     'Change' : 'Add'} Cust.</button>
+                    <button on:click={() => showDiscountModal = true} class="btn btn-accent normal-case flex-1 btn-sm">Discount</button>
                     <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case flex-1 btn-sm">Add Item</button>
                  </div>
                  <div class="flex space-x-2">
@@ -927,7 +1002,6 @@
                     {/if}
                  </div>
                  <div class="flex space-x-2 mt-2">
-             
  
                         <button on:click={createQRCode} class="btn btn-primary text-white font-greycliffbold normal-case flex-1">Pay with Crypto</button>
                      <button on:click={payWithCard} class="btn btn-accent text-white font-greycliffbold normal-case flex-1">Pay with Card</button>
@@ -938,25 +1012,25 @@
         <div id="pos-input-section" class="flex flex-col md:w-1/2 h-full">
     
  
-    <div class="flex items-center justify-center space-x-2 p-2 bg-base-200 rounded-lg mb-2">
+            <div class="flex items-center justify-center space-x-2 p-2 bg-base-200 rounded-lg mb-2">
 
                 {#if $selectedMint === "USDC"}
                     <svg class="h-8
 w-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
-                        <path d="M1000 2000c554.17 0 1000-445.83 1000-1000S1554.17 0 1000 0 0 445.83 0 1000s445.83 1000 1000 1000z" 
-  
+                        <path 
+d="M1000 2000c554.17 0 1000-445.83 1000-1000S1554.17 0 1000 0 0 445.83 0 1000s445.83 1000 1000 1000z" 
                     fill="#2775ca"/>
                         <path d="M1275 1158.33c0-145.83-87.5-195.83-262.5-216.66-125-16.67-150-50-150-108.34s41.67-95.83 125-95.83c75 0 116.67 25 137.5 87.5 4.17 12.5 16.67 20.83 29.17 20.83h66.66c16.67 0 29.17-12.5 29.17-29.16v-4.17c-16.67-91.67-91.67-162.5-187.5-170.83v-100c0-16.67-12.5-29.17-33.33-33.34h-62.5c-16.67 0-29.17 12.5-33.34 33.34v95.83c-125 16.67-204.16 100-204.16 204.17 0 137.5 83.33 191.66 258.33 212.5 116.67
-20.83 154.17 45.83 154.17 112.5s-58.34 112.5-137.5 112.5c-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 12.5-29.16 29.17v4.17c16.66 104.16 83.33 179.16 220.83 200v100c0 16.66 12.5 29.16 33.33 33.33h62.5c16.67 0 29.17-12.5 33.34-33.33v-100c125-20.84 208.33-108.34 208.33-220.84z" fill="#fff"/>
-                  
+20.83 154.17 45.83 154.17 112.5s-58.34 112.5-137.5 112.5c-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 
+12.5-29.16 29.17v4.17c16.66 104.16 83.33 179.16 220.83 200v100c0 16.66 12.5 29.16 33.33 33.33h62.5c16.67 0 29.17-12.5 33.34-33.33v-100c125-20.84 208.33-108.34 208.33-220.84z" fill="#fff"/>
                     </svg>
                 {:else if $selectedMint === "SOL"}
                     <img src="{solLogo}" class="w-9" alt="SOL" />
                 {:else if $selectedMint === "BONK"}
                     <img src="{bonkLogo}" class="w-9 rounded-full" alt="BONK" />
-     
                     {:else}
-                      <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold">?</div>
+                      <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 
+font-bold">?</div>
                 {/if}
                 <input bind:value={$pmtAmt}
                     class="input input-ghost w-full text-right text-2xl md:text-3xl 
@@ -964,23 +1038,27 @@ w-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
  
             </div>
 
+     
             <div class="space-y-2 mb-2">
                 <form on:submit|preventDefault={handleBarcodeSubmit} class="input-group">
                     <input type="text" placeholder="Scan Barcode..." class="input input-bordered w-full input-sm" bind:value={barcodeInput} />
                     <button type="submit" class="btn 
-                    btn-square btn-sm">
+                    btn-square 
+btn-sm">
     
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     </button>
                 </form>
 
            
+ 
                 {#if !isScannerVisible}
    
                   <button on:click={startScanner} class="btn btn-outline btn-xs w-full">
                         Camera Scan
                     </button>
-                 {/if}
+             
+                {/if}
 
       
  
@@ -988,6 +1066,7 @@ w-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
                     <div id="reader" class="w-full border-2 border-dashed rounded-lg overflow-hidden"></div>
                     <button on:click={stopScanner} class="btn btn-error btn-xs mt-1 w-full">End Scan</button>
                 </div>
+   
             </div>
 
     
@@ -998,6 +1077,6 @@ w-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
                 <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
             </div>
 
-        </div>
-    </div>
+        </div> 
+</div> 
 </div>

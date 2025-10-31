@@ -141,6 +141,11 @@ export const selectedCustomer = createPersistentStore("selectedCustomer", null);
 export const loyaltyRedemptionRate = createPersistentStore("loyaltyRedemptionRate", { points: 100, discount: 10 });
 // --- END NEW STORE ---
 
+// --- NEW DISCOUNT & COUPON STORES ---
+export const coupons = createPersistentStore("coupons", []); // { id, code, type, value, isActive }
+export const cartDiscount = writable(null); // { type, value, code }
+// --- END NEW STORES ---
+
 
 // --- Inventory & Invoicing Stores ---
 export const inventory = createPersistentStore("inventory", []);
@@ -160,6 +165,9 @@ export const lastBackupDate = createPersistentStore("lastBackupDate", null);
 export const employees = createPersistentStore("employees", []);
 export const currentUser = writable(null);
 export const timeClockEvents = createPersistentStore("timeClockEvents", []); // { employeeId, employeeName, type, timestamp }
+
+// NEW: Store for global barcode scanner
+export const barcodeScanned = writable(null);
 
 // A temporary store to pass charge metadata to the payment page
 export const chargeMetadata = writable(null);
