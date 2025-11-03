@@ -5,7 +5,7 @@
     const dispatch = createEventDispatcher();
 </script>
 
-<div class="modal modal-open">
+<div class="modal modal-open z-[9999]">
     <div class="modal-box">
         <h3 class="font-bold text-lg">Confirm Action</h3>
         <p class="py-4">{message}</p>

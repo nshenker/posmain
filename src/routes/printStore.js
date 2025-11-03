@@ -12,21 +12,16 @@ export function triggerPrint(transaction) {
     invoiceToPrint.set(null); 
     receiptToPrint.set(transaction);
     
-    // Use a brief timeout to allow Svelte to render the receipt component in the layout
-    setTimeout(() => {
-        window.print();
-        // Clearing the store is now handled in the layout after printing
-    }, 100);
+    // REMOVED window.print() CALL: The Receipt.svelte component handles the print call.
 }
 
 // NEW FUNCTION: Triggers browser print for the invoice
-export function triggerInvoicePrint(invoice, storeName, businessAddress) {
+// REMOVED window.print() CALL: InvoicePrintable.svelte handles the call after QR rendering.
+export function triggerInvoicePrint(invoice, storeName, businessAddress, publicKey, mints, solanaPayUrl) {
     // Clear any pending receipt print
     receiptToPrint.set(null); 
     // Pass the entire invoice object and store details needed for the printable component
-    invoiceToPrint.set({ invoice, storeName, businessAddress });
-
-    setTimeout(() => {
-        window.print();
-    }, 100);
+    invoiceToPrint.set({ invoice, storeName, businessAddress, publicKey, mints, solanaPayUrl }); // MODIFIED: Changed qrCodeBase64 to solanaPayUrl
+    
+    // REMOVED window.print() CALL: The printable component will call print() after rendering.
 }
