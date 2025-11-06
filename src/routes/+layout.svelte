@@ -265,7 +265,8 @@
                     </div>
                 </div>
             </div>
-        </div> {/if}
+        </div>
+    {/if}
 
 <div 
 class="print-area" style="display: none;">
