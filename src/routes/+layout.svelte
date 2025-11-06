@@ -177,63 +177,62 @@
                         </button>
                     {/if}
                 </div>
+
+                <main class="flex-1 p-4 sm:p-6 lg:p-8 mt-16 lg:mt-0">
+                    <slot />
+                </main>
             </div>
+            
+            <div class="drawer-side z-50">
+                <label for="my-drawer-2" class="drawer-overlay"></label>
+                <div class="menu w-64 h-full bg-base-100 text-base-content border-r shadow-xl flex flex-col">
+                    <div class="p-4 flex items-center justify-center h-16 border-b flex-shrink-0">
+                        {#if $merchantLogo}
+                            <img src={$merchantLogo} alt="Merchant Logo" class="h-10">
+                        {:else}
+                            <span class="text-xl font-greycliffbold text-primary">PoSolana</span>
+                        {/if}
+                    </div>
 
-            <main class="flex-1 p-4 sm:p-6 lg:p-8 mt-16 lg:mt-0">
-                <slot />
-            </main>
-        </div>
-        
-        <div class="drawer-side z-50">
-            <label for="my-drawer-2" class="drawer-overlay"></label>
-            <div class="menu w-64 h-full bg-base-100 text-base-content border-r shadow-xl flex flex-col">
-                <div class="p-4 flex items-center justify-center h-16 border-b flex-shrink-0">
-                    {#if $merchantLogo}
-                        <img src={$merchantLogo} alt="Merchant Logo" class="h-10">
-                    {:else}
-                        <span class="text-xl font-greycliffbold text-primary">PoSolana</span>
-                    {/if}
-                </div>
+                    <ul class="menu p-4 w-full flex-grow overflow-y-auto">
+                        <div class="divider my-2">Point of Sale</div>
+                        <li class={($page.url.pathname === '/pos' ? 'bordered' : '')}><a href="/pos">New Charge</a></li>
+                        <li class={($page.url.pathname === '/pos/transactions' ? 'bordered' : '')}><a href="/pos/transactions">Transactions</a></li>
+                        <li class={($page.url.pathname === '/timeclock' ? 'bordered' : '')}><a href="/timeclock">Time Clock</a></li>
 
-                <ul class="menu p-4 w-full flex-grow overflow-y-auto">
-                    <div class="divider my-2">Point of Sale</div>
-                    <li class={($page.url.pathname === '/pos' ? 'bordered' : '')}><a href="/pos">New Charge</a></li>
-                    <li class={($page.url.pathname === '/pos/transactions' ? 'bordered' : '')}><a href="/pos/transactions">Transactions</a></li>
-                    <li class={($page.url.pathname === '/timeclock' ? 'bordered' : '')}><a href="/timeclock">Time Clock</a></li>
-
-                    {#if $currentUser && $currentUser.role === 'manager'}
-                        <div class="divider my-2">Back Office</div>
-                        <li class={($page.url.pathname === '/dashboard' ? 'bordered' : '')}><a href="/dashboard">Dashboard</a></li>
-                        <li class={($page.url.pathname === '/invoicing' ? 'bordered' : '')}><a href="/invoicing">Invoicing</a></li>
-                        <li class={($page.url.pathname === '/inventory' ? 'bordered' : '')}><a href="/inventory">Inventory</a></li>
-                        <li class={($page.url.pathname === '/crm' ? 'bordered' : '')}><a href="/crm">CRM</a></li>
-                        <li class={($page.url.pathname === '/analytics' ? 'bordered' : '')}><a href="/analytics">Analytics</a></li>
-                        <li class={($page.url.pathname === '/pos/settings' ? 'bordered' : '')}><a href="/pos/settings">Settings</a></li>
-                    {/if}
+                        {#if $currentUser && $currentUser.role === 'manager'}
+                            <div class="divider my-2">Back Office</div>
+                            <li class={($page.url.pathname === '/dashboard' ? 'bordered' : '')}><a href="/dashboard">Dashboard</a></li>
+                            <li class={($page.url.pathname === '/invoicing' ? 'bordered' : '')}><a href="/invoicing">Invoicing</a></li>
+                            <li class={($page.url.pathname === '/inventory' ? 'bordered' : '')}><a href="/inventory">Inventory</a></li>
+                            <li class={($page.url.pathname === '/crm' ? 'bordered' : '')}><a href="/crm">CRM</a></li>
+                            <li class={($page.url.pathname === '/analytics' ? 'bordered' : '')}><a href="/analytics">Analytics</a></li>
+                            <li class={($page.url.pathname === '/pos/settings' ? 'bordered' : '')}><a href="/pos/settings">Settings</a></li>
+                        {/if}
+                        
+                        <div class="divider my-2">Other</div>
+                        <li class={($page.url.pathname === '/documentation' ? 'bordered' : '')}><a href="/documentation">Documentation</a></li>
+                    </ul>
                     
-                    <div class="divider my-2">Other</div>
-                    <li class={($page.url.pathname === '/documentation' ? 'bordered' : '')}><a href="/documentation">Documentation</a></li>
-                </ul>
-                
-                <div class="p-4 border-t flex-shrink-0">
-                    {#if $currentUser}
-                        <p class="text-sm font-bold truncate mb-1">{$currentUser.name} ({$currentUser.role})</p>
-                        <button class="btn btn-sm btn-outline btn-block" on:click={logout}>
-                            Logout
-                        </button>
-                    {/if}
-                    
-                    <div class="flex justify-between items-center mt-2">
-                        <button class="btn btn-ghost btn-sm" on:click={() => showThemeModal = true}>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
-                            <span>Change Theme</span>
-                        </button>
-                        {#if browser}
-                            <button class="btn btn-ghost btn-circle btn-sm" on:click={toggleFullscreen}>
-                                {#if !$fullScreen}
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 inline"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
-                                {:else}
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 inline"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
+                    <div class="p-4 border-t flex-shrink-0">
+                        {#if $currentUser}
+                            <p class="text-sm font-bold truncate mb-1">{$currentUser.name} ({$currentUser.role})</p>
+                            <button class="btn btn-sm btn-outline btn-block" on:click={logout}>
+                                Logout
+                            </button>
+                        {/if}
+                        
+                        <div class="flex justify-between items-center mt-2">
+                            <button class="btn btn-ghost btn-sm" on:click={() => showThemeModal = true}>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                                <span>Change Theme</span>
+                            </button>
+                            {#if browser}
+                                <button class="btn btn-ghost btn-circle btn-sm" on:click={toggleFullscreen}>
+                                    {#if !$fullScreen}
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 inline"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
+                                    {:else}
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 inline"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
                                     {/if}
                                 </button>
                             {/if}
