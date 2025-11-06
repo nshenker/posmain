@@ -30,12 +30,14 @@
     let expandedItems = {};
     
     let inventoryViewMode = 'list';
-    
-    // --- NEW IMPORT STATE ---
-    let inventoryImportFile; // Holds the selected file for import
-    let isImporting = false; // Flag for loading state
-    let importError = null; // Holds import error message
-    // --- END NEW IMPORT STATE ---
+// --- NEW IMPORT STATE ---
+    let inventoryImportFile;
+// Holds the selected file for import
+    let isImporting = false;
+// Flag for loading state
+    let importError = null;
+// Holds import error message
+// --- END NEW IMPORT STATE ---
 
     onMount(() => {
         if (browser && !$publicKey) {
@@ -44,9 +46,7 @@
         }
         loading = false;
     });
-    
     $: allSelected = $inventory.length > 0 && selectedItems.length === $inventory.length;
-    
     function toggleSelectAll(e) {
         if (e.target.checked) {
             selectedItems = $inventory.map(i => i.id);
@@ -103,12 +103,13 @@
              const itemToRemove = $inventory.find(item => item.id === itemId);
              $inventory = $inventory.filter(item => item.id !== itemId);
              selectedItems = selectedItems.filter(id => id !== itemId);
-            inventoryHistory.update(history => {
+             inventoryHistory.update(history => {
                 delete history[itemId];
                 // Remove history for variants if it was a variable product
                 if (itemToRemove && itemToRemove.type === 'variable' && itemToRemove.variants) {
                     itemToRemove.variants.forEach(v => delete history[v.id]);
  
+       
                 }
                 return history;
             });
@@ -154,7 +155,6 @@
 
         isImporting = true;
         importError = null;
-        
         importInventoryFromCsv(inventoryImportFile, (error, importedItems) => {
             isImporting = false;
             if (error) {
@@ -162,16 +162,19 @@
                 showToast(`Import Failed: ${error.message}`, "error");
                 return;
             }
-            
+   
+          
             // --- Merge Logic ---
             const newInventory = [...$inventory];
 
             importedItems.forEach(importedItem => {
                 const index = newInventory.findIndex(item => item.id === importedItem.id);
                 
+       
                 if (index > -1) {
                     // 1. Update existing item: Overwrite only the properties provided by the CSV
                     // This uses the spread operator to merge the new item data into the existing item, preserving old fields if not overwritten.
+              
                     newInventory[index] = { ...newInventory[index], ...importedItem };
                 } else {
                     // 2. Add new item
@@ -263,41 +266,48 @@
         <h1 class="text-4xl font-greycliffbold">Inventory Management</h1>
     </header>
 
-    <div id="inventory-tabs" role="tablist" class="tabs tabs-bordered justify-center">
+    <div id="inventory-tabs" role="tablist" class="tabs tabs-boxed justify-center mb-6">
         <button role="tab" class="tab" class:tab-active={activeTab === 'inventory'} on:click={() => activeTab = 'inventory'}>Inventory</button>
-        <button role="tab" class:tab-active={activeTab === 'categories'} on:click={() => activeTab = 'categories'}>Categories</button>
-        <button role="tab" class:tab-active={activeTab === 'locations'} on:click={() => activeTab = 'locations'}>Locations</button>
-        <button role="tab" class:tab-active={activeTab === 'reports'} on:click={() => activeTab = 'reports'}>Reports</button>
+        <button role="tab" class="tab" class:tab-active={activeTab === 'categories'} on:click={() => activeTab = 'categories'}>Categories</button>
+        <button role="tab" class="tab" class:tab-active={activeTab === 'locations'} on:click={() => activeTab = 'locations'}>Locations</button>
+        <button role="tab" class="tab" class:tab-active={activeTab === 'reports'} on:click={() => activeTab = 'reports'}>Reports</button>
     </div>
-
     {#if !loading}
     <div class="mt-6">
         {#if activeTab === 'inventory'}
             <div class="card w-full bg-base-100 shadow-xl border mx-auto">
                 <div class="card-body p-4 sm:p-8">
        
+           
                     <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
 						<h2 class="card-title text-xl font-greycliffmed">Current Inventory</h2>
                         <div class="flex gap-2 flex-wrap">
                              <button class="btn btn-secondary" on:click={handleExportAll}>Export CSV</button>
-                             <button class="btn btn-secondary" on:click={() => document.getElementById('inventory-import-form').classList.toggle('hidden')}>Import CSV</button>
+                    
+                            <button class="btn btn-secondary" on:click={() => document.getElementById('inventory-import-form').classList.toggle('hidden')}>Import CSV</button>
                              <div class="join">
                                  <button class="btn btn-sm join-item" class:btn-active={inventoryViewMode === 'list'} on:click={() => inventoryViewMode = 'list'}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+           
+                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+                              
                                 </button>
                                 <button class="btn btn-sm join-item" class:btn-active={inventoryViewMode === 'grid'} on:click={() => inventoryViewMode = 'grid'}>
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" clip-rule="evenodd" /></svg>
-                                     </button>
+   
+                                   </button>
                             </div>
                             {#if selectedItems.length > 0}
-                           
+       
+                    
                               <button class="btn btn-secondary" on:click={handleSaveSelected}>Save {selectedItems.length} Barcode(s)</button>
                             {/if}
+                 
                             <button class="btn btn-primary" on:click={openNewItemModal}>Add New Item</button>
                         </div>
      
                     </div>
                     
+               
                     <div id="inventory-import-form" class="bg-base-200 p-4 rounded-lg mb-4 hidden">
                         <h3 class="font-bold mb-2">Import Inventory from CSV</h3>
                         <div class="alert alert-warning text-sm mb-4">
@@ -306,12 +316,14 @@
                         
                         {#if importError}
                             <div class="alert alert-error mb-4">{importError}</div>
+                    
                         {/if}
 
                         <div class="grid grid-cols-1 md:grid-cols-[1fr,auto] gap-4">
                             <input type="file" id="inventory-csv-input" accept=".csv" class="file-input file-input-bordered w-full" on:change={handleFileSelect} disabled={isImporting} />
                             <button 
-                                class="btn btn-primary" 
+  
+                               class="btn btn-primary" 
                                 on:click={startInventoryImport} 
                                 disabled={!inventoryImportFile || isImporting}
                                 class:loading={isImporting}
@@ -321,45 +333,55 @@
                         </div>
                     </div>
                     
+    
                     
                     {#if inventoryViewMode === 'list'}
                     
                     <div id="inventory-table-container" class="overflow-x-auto">
-                            <table class="table w-full">
+                   
+                        <table class="table w-full">
                                 <thead>
 								    <tr>
          
-                                        <th><input type="checkbox" on:change={toggleSelectAll} checked={allSelected} /></th>
+                                        <th><input type="checkbox" on:change={toggleSelectAll} checked={allSelected} 
+/></th>
 									    <th>Item Name</th>
                                         <th>Location</th>
                              
-                                        <th>Type</th>
+                          
+                                <th>Type</th>
 									    <th class="text-center">Total Qty</th>
                                         <th class="text-right">Price</th>
           
-                                        <th class="text-center">Actions</th>
+                             
+                                <th class="text-center">Actions</th>
 								    </tr>
                     
                                 </thead>
              
-                                <tbody>
+                   
+                             <tbody>
 								    {#each $inventory as item (item.id)} <tr class="hover">
                
                                             <td>
             
-                                            {#if item.type === 'variable'}
+      
+                                        {#if item.type === 'variable'}
                             
-                                 
+                               
                                                 <button class="btn btn-xs btn-ghost" on:click={() => expandedItems[item.id] = !expandedItems[item.id]}>
-                                                    {expandedItems[item.id] ? '▼' : '►'}
+                                          
+                                            {expandedItems[item.id] ? '▼' : '►'}
                                                     </button>
                                               
                                             {:else}
       
-                                                    <input type="checkbox" bind:group={selectedItems} value={item.id} />
+                                                  
+                                            <input type="checkbox" bind:group={selectedItems} value={item.id} />
                                     
                                             {/if}
              
+ 
                                             </td>
 										    <td class="font-greycliffmed">{item.name || 'N/A'}</td>
                                             <td>{ $locations.find(loc => loc.id === item.locationId)?.name || 'N/A' }</td>
@@ -373,54 +395,66 @@
                                           
                                                     From ${(Math.min(...item.variants.map(v => v.price ?? 0)) || 0).toFixed(2)}
                                      
-                                           {:else}
+    
+                                        {:else}
                                                
+              
                                           
                                           0.00 {/if}
-                                            </td>
+                             
+                                </td>
     
                                          
-                                           <td class="text-center">
+                                        
+                                <td class="text-center">
                                                 <button class="btn btn-xs btn-outline" on:click={() => openManageItemModal(item)}>Manage</button>
              
                              
                                            </td>
 									    </tr>
                                         {#if expandedItems[item.id] && item.type === 'variable' && item.variants}
-                              
-    
+      
                                             {#each item.variants as variant (variant.id)}
-                                                <tr class="hover variant-row">
+                        
+                                        <tr class="hover variant-row">
       
                                                     <td></td>
               
+  
                                                     <td class="pl-8">{variant.name || 'N/A'}</td>
                                                     <td></td> <td><span class="badge badge-sm">Variant</span></td>
                                              
                                            <td class="text-center font-mono">
                                               
-                                             
+         
+                                     
                                            ({typeof variant.quantity === 'number' ? variant.quantity : 'N/A'} in stock)
-                                                    </td>
+            
+                                        </td>
                             
+                                
                                          
                                                     <td class="text-right font-mono">{(variant.price || 0).toFixed(2)}</td>
                                    
+ 
                                                  <td class="text-center">
                                     
-                                              
+              
+                                 
                                            <button class="btn btn-xs btn-outline" on:click={() => openManageItemModal({ ...variant, name: `${item.name || 'Item'} - ${variant.name || 'Variant'}`, parentId: item.id, currency: item.currency, imageURL: item.imageURL }, true)}>Manage</button>
  
                                                     </td>
               
-                                               </tr>
+                     
+                                          </tr>
          
                                             {/each}
              
-                                           {/if}
+        
+                                    {/if}
                                     {/each}
  
-                                    
+                            
                                     {#if !$inventory || $inventory.length === 0}
 									    <tr><td colspan="7" class="text-center py-4">No items in inventory. Add one to get started!</td></tr>
                                     {/if}
@@ -430,10 +464,12 @@
                         </div>
                     {:else}
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                          
                             {#each $inventory as item (item.id)}
                   
                                <InventoryItemCard item={item} on:manage={(e) => openManageItemModal(e.detail)} />
                             {/each}
+            
                             {#if $inventory.length === 0}
                       
                                <div class="col-span-full text-center py-4">No items in inventory. Add one to get started!</div>
@@ -455,35 +491,40 @@
                         <form on:submit|preventDefault={addCategory} class="input-group">
 							<input type="text" placeholder="Category Name" class="input input-bordered w-full" bind:value={newCategory} />
                             <button type="submit" class="btn btn-primary">Add</button>
-                
+   
                          </form>
 					</div>
      
                 </div>
                 <div class="card bg-base-100 shadow-xl border">
-                    <div class="card-body p-8">
+                    <div 
+                        class="card-body p-8">
                         <h2 class="card-title text-xl font-greycliffmed mb-4">Manage Categories</h2>
 						<div class="overflow-x-auto">
                  
                             <table class="table w-full">
+                      
                                 <tbody>
 									{#each $categories as category}
                 
                                         <tr class="hover">
 											<td>{category}</td>
            
+                   
                                             <td class="text-right">
                    
-                                             {#if category !== 'Default'}
-               
+                                                 {#if category !== 'Default'}
+       
                                                     <button class="btn btn-xs btn-error" on:click={() => removeCategory(category)}>Remove</button>
 												{/if}
+                                  
                                             </td>
              
                                       </tr>
 									{/each}
                                 </tbody>
-                            </table>
+       
+                      </table>
 						</div>
              
                     </div>
@@ -491,16 +532,19 @@
                </div>
             </div>
         {:else if activeTab === 'locations'}
-             <div class="card bg-base-100 shadow-xl border">
+  
+            <div class="card bg-base-100 shadow-xl border">
                  <div 
                         class="card-body">
       
                        <h2 class="card-title text-xl font-greycliffmed">Manage Locations</h2>
-                     <p>Define physical locations for your inventory items (e.g., Shelf A, Back Room).</p>
+          
+                       <p>Define physical locations for your inventory items (e.g., Shelf A, Back Room).</p>
                      <div class="card-actions justify-center mt-4">
                    
       
-                       <button class="btn btn-primary" on:click={() => showLocationsModal = true}>Open Location Manager</button>
+                       <button class="btn btn-primary" on:click={() => showLocationsModal 
+= true}>Open Location Manager</button>
                     </div>
                  </div>
             </div>
@@ -508,6 +552,7 @@
             
              <Reports/>
         {/if}
+   
     </div>
  
     {/if}
