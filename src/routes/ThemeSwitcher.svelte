@@ -5,17 +5,22 @@
     const dispatch = createEventDispatcher();
     const themes = [
         { name: "light", colors: { primary: '#570df8', secondary: '#f000b8', accent: '#37cdbe', base: '#ffffff' } },
-        { name: "dark", colors: { primary: '#793ef9', secondary: '#f000b8', accent: '#37cdbe', base: '#3d4451' } },
         { name: "cupcake", colors: { primary: '#65c3c8', secondary: '#ef9fbc', accent: '#eeaf3a', base: '#faf7f5' } },
         { name: "bumblebee", colors: { primary: '#f9d72f', secondary: '#e0a82e', accent: '#18182f', base: '#ffffff' } },
-        { 
-name: "emerald", colors: { primary: '#66cc8a', secondary: '#377cfb', accent: '#f6d860', base: '#ffffff' } },
+        { name: "emerald", colors: { primary: '#66cc8a', secondary: '#377cfb', accent: '#f6d860', base: '#ffffff' } },
         { name: "corporate", colors: { primary: '#4b6bfb', secondary: '#7b92b2', accent: '#67cba0', base: '#ffffff' } },
-        { name: "synthwave", colors: { primary: '#e779c1', secondary: '#58c7f3', accent: '#f3cc30', base: '#2d2a55' } },
         { name: "retro", colors: { primary: '#ef9995', secondary: '#a4cbb4', accent: '#ebdc99', base: '#e4d8b4' } },
-        { name: "cyberpunk", colors: { primary: '#00bcd4', secondary: '#ff4081', accent: '#7c4dff', base: '#0d0d1a' 
-} },
-        { name: "valentine", colors: { primary: '#e96d7b', secondary: '#a991f7', accent: '#86efac', base: '#f0d6e8' } },
+        { name: "lofi", colors: { primary: '#404040', secondary: '#191919', accent: '#ff0080', base: '#ffffff' } },
+        { name: "pastel", colors: { primary: '#d1c1d7', secondary: '#f6adc4', accent: '#8268d8', base: '#ffffff' } },
+        { name: "fantasy", colors: { primary: '#6e6f6a', secondary: '#d65b70', accent: '#f0d36c', base: '#ffffff' } },
+        { name: "cmyk", colors: { primary: '#009fdb', secondary: '#ff4081', accent: '#7c4dff', base: '#ffffff' } },
+        { name: "garden", colors: { primary: '#1eb854', secondary: '#155e75', accent: '#fde047', base: '#ffffff' } },
+        { name: "acid", colors: { primary: '#00ff00', secondary: '#ff00ff', accent: '#f3ff00', base: '#ffffff' } },
+        
+        // --- Kept Dark Themes ---
+        { name: "dark", colors: { primary: '#793ef9', secondary: '#f000b8', accent: '#37cdbe', base: '#3d4451' } },
+        { name: "synthwave", colors: { primary: '#e779c1', secondary: '#58c7f3', accent: '#f3cc30', base: '#2d2a55' } },
+        { name: "cyberpunk", colors: { primary: '#00bcd4', secondary: '#ff4081', accent: '#7c4dff', base: '#0d0d1a' } },
     ];
 function selectTheme(themeName) {
         $theme = themeName;
