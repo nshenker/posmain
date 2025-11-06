@@ -173,15 +173,4 @@ export const barcodeScanned = writable(null);
 export const chargeMetadata = writable(null);
 
 
-// New store for dashboard layout
-export const dashboardLayout = createPersistentStore("dashboardLayout", {
-    widgets: [
-        { id: 'keyMetrics', name: 'Key Metrics', visible: true },
-        { id: 'recentTransactions', name: 'Recent Transactions', visible: true },
-        { id: 'salesByToken', name: 'Sales by Token', visible: true },
-        { id: 'salesOverTime', name: 'Sales Over Time', visible: true },
-        { id: 'lowStockAlerts', name: 'Low Stock Alerts', visible: true },
-        { id: 'pendingInvoices', name: 'Pending Invoices', visible: true },
-        { id: 'tokenPriceCharts', name: 'Token Price Charts', visible: true }
-    ]
-});
+// Removed dashboardLayout store as it is no longer used for a dynamic grid.
