@@ -236,16 +236,11 @@
                     </div>
                 </div>
             </div>
-        {#else}
-            <main class="min-h-screen">
-                <slot />
-            </main>
-        {/if}
-    {:else}
-    <main class="min-h-screen">
-        <slot />
-    </main>
-{/if}
+        {:else}
+        <main class="min-h-screen">
+            <slot />
+        </main>
+    {/if}
 
 <div 
 class="print-area" style="display: none;">
