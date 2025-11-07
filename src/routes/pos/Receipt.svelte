@@ -75,9 +75,13 @@
         if (createQR && qrCodeElement && transaction.txid) {
             const solscanUrl = `https://solscan.io/tx/${transaction.txid}`;
             
-            // FIX: Pass 'white' for the background and 'null' as the logo image path (4th argument) 
-            // to suppress the default logo image.
-            const qr = createQR(solscanUrl, 120, 'white', null); 
+            // FIX: Pass an options object with 'logo: false' to explicitly remove the logo.
+            const qr = createQR(solscanUrl, { 
+                size: 120, 
+                color: 'black', 
+                background: 'white', 
+                logo: false // <-- THIS IS THE KEY CHANGE TO REMOVE THE LOGO
+            }); 
             
             qrCodeElement.innerHTML = '';
             qr.append(qrCodeElement);
