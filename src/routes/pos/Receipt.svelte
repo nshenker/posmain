@@ -1,24 +1,21 @@
 <script lang="ts">
     import dayjs from 'dayjs';
     import { onMount } from 'svelte'; 
-    import solanaLogo from "../../lib/images/solanaLogoMark.png"; // Import retained for component consistency
-    
-    // Declare dynamic import target for QR code function
-    let createQR: any; 
+    import solanaLogo from "../../lib/images/solanaLogoMark.png"; // RE-ADDED: Used for the QR code logo
 
+    // Declare dynamic import target for QR code function
+    let createQR: any;
     export let transaction;
     export let storeName;
     export let merchantLogo;
     export let businessAddress;
-
     // Use the stored subtotal and taxAmount from the transaction object for pre-discount display.
-    const rawSubtotal = transaction.subtotal; 
+    const rawSubtotal = transaction.subtotal;
     const rawTaxAmount = transaction.taxAmount;
     const loyaltyDiscountAmount = transaction.loyaltyDiscountAmount || 0;
     const pointsRedeemed = transaction.pointsRedeemed || 0;
-    const orderDiscountAmount = transaction.orderDiscountAmount || 0;
+    const orderDiscountAmount = transaction.orderDiscountAmount || null;
     const orderDiscountCode = transaction.orderDiscountCode || null;
-    
     const preTaxSubtotal = (transaction.items || []).reduce((sum, item) => sum + (item.adjustedPrice ?? item.price) * item.quantity, 0) || rawSubtotal;
     const finalPaidAmount = transaction.uiAmount;
     const preDiscountTotal = rawSubtotal + rawTaxAmount;
@@ -28,9 +25,9 @@
         const lineTotal = finalPrice * item.quantity;
         const adjustmentPercent = item.priceAdjustmentPercent ?? 0;
         let nameLine = `${item.quantity} x ${item.name}`;
-        
         if (adjustmentPercent !== 0) {
-            const type = adjustmentPercent > 0 ? 'Markup' : 'Discount';
+            const type = adjustmentPercent > 0 ?
+                'Markup' : 'Discount';
             nameLine += ` (${Math.abs(adjustmentPercent).toFixed(1)}% ${type})`;
         }
         
@@ -61,12 +58,13 @@
     function renderQrCode() {
         const qrCodeElement = document.getElementById('receipt-qr-code-target');
         if (createQR && qrCodeElement && transaction.txid) {
+            
+            // Construct the Solscan URL
             const solscanUrl = `https://solscan.io/tx/${transaction.txid}`;
             
-            // FINAL FIX: Use the three-argument call (URL, size, background). 
-            // This positional signature is the most reliable way to enforce a background 
-            // without triggering or misplacing a logo.
-            const qr = createQR(solscanUrl, 120, 'white'); 
+            // FIX: Use 4 arguments: (URL, size (150), background color, LOGO IMAGE)
+            // The logo image import is automatically converted to a base64 string or path that the library can use.
+            const qr = createQR(solscanUrl, 150, 'white', solanaLogo); 
             
             qrCodeElement.innerHTML = '';
             qr.append(qrCodeElement);
@@ -84,17 +82,13 @@
         background-color: #fff;
     }
     
-    .text-center { text-align: center;
-    }
+    .text-center { text-align: center; }
     .font-bold { font-weight: bold; }
-    .block { display: block;
-    }
+    .block { display: block; }
     .mt-4 { margin-top: 1rem; }
-    .mb-2 { margin-bottom: 0.5rem;
-    }
+    .mb-2 { margin-bottom: 0.5rem; }
     .text-xs { font-size: 11px; }
-    .whitespace-pre-line { white-space: pre-line;
-    }
+    .whitespace-pre-line { white-space: pre-line; }
 
     .header-main {
         font-size: 20px;
@@ -140,19 +134,24 @@
         margin-bottom: 15px;
     }
     
-    /* MODIFIED: Centered and added explicit white background for contrast */
+    /* MODIFIED: Increased size to 150px as requested */
     #receipt-qr-code-target {
         background-color: white;
-        padding: 10px; /* Increased padding slightly */
-        display: block; /* Ensures it takes full width for margin auto to work */
-        margin: 0 auto 10px auto; /* Centers the block element and adds bottom margin */
-        width: 120px; /* Explicit width for the QR code area */
-        height: 120px; /* Explicit height for the QR code area */
+        padding: 0px; 
+        display: block;
+        margin: 0 auto 10px auto;
+        width: 150px; /* Increased size */
+        height: 150px; /* Increased size */
     }
-    /* Ensure the SVG inside the QR target is also centered */
-    #receipt-qr-code-target svg {
+    
+    /* Ensure the generated SVG/Canvas inside the QR target is centered and clean */
+    #receipt-qr-code-target > svg,
+    #receipt-qr-code-target > canvas {
         display: block;
         margin: auto;
+        width: 100% !important; 
+        height: 100% !important;
+        background-color: white !important;
     }
 </style>
 
@@ -160,9 +159,10 @@
     <div class="text-center">
         {#if merchantLogo}
             <img src={merchantLogo} alt="Logo" style="max-width: 120px; margin: 0 auto 10px;"
-            />
+/>
         {/if}
-        <div class="header-main">{storeName || 'GROCERIA MARKET'}</div>
+        <div class="header-main">{storeName ||
+'GROCERIA MARKET'}</div>
         {#if businessAddress}
             <p class="header-sub whitespace-pre-line">{businessAddress}</p>
         {/if}
@@ -188,7 +188,7 @@
                 {@const details = getLineItemDetails(item)}
                 <div class="item-row flex-between text-xs">
        <span>{details.nameLine}</span>
-          
+       
            <span>{details.lineTotal.toFixed(2)}</span>
                 </div>
             {/each}
@@ -196,7 +196,8 @@
              <div class="item-row flex-between text-xs">
       <span>1 x Custom Amount</span>
                 <span>{transaction.uiAmount.toFixed(2)}</span>
-           </div>
+         
+   </div>
   
        {/if}
     </div>
@@ -211,7 +212,7 @@
         
         {#if orderDiscountAmount > 0}
             <div class="flex-between font-bold" style="margin-top: 4px;
-            color: #dc3545;">
+color: #dc3545;">
                 <span>Discount {orderDiscountCode ? `(${orderDiscountCode})` : ''}:</span>
                 <span>- {orderDiscountAmount.toFixed(2)}</span>
             </div>
@@ -220,6 +221,7 @@
         {#if transaction.taxable && rawTaxAmount > 0}
            <div class="flex-between">
                 
+ 
  <span>Sales Tax ({ (transaction.taxRate ||
 0).toFixed(3) }%):</span>
                 <span>{rawTaxAmount.toFixed(2)}</span>
@@ -228,7 +230,7 @@
         
         {#if loyaltyDiscountAmount > 0}
              <div class="flex-between font-bold" style="margin-top: 4px;
-            color: #dc3545;">
+color: #dc3545;">
                 <span>Loyalty Discount ({pointsRedeemed} Pts):</span>
           <span>- {loyaltyDiscountAmount.toFixed(2)}</span>
             </div>
@@ -249,7 +251,8 @@
         {:else if transaction.txid.startsWith('invoice-')}
             <p>Payment Method: Invoice</p>
             <p style="word-break: break-all;">Invoice ID: {transaction.txid}</p>
-        {:else}
+   
+      {:else}
             <p>Payment Method: Solana Wallet</p>
             <p class="text-center" style="margin-bottom: 5px;">Scan for Transaction Details:</p>
             
@@ -257,7 +260,8 @@
 <div id="receipt-qr-code-target"> 
                 </div>
             <p class="text-center">TX Hash: {transaction.txid.substring(0, 4)}...{transaction.txid.substring(transaction.txid.length - 4)}</p>
-            <p class="text-center">Network Fee: ~0.00001 SOL</p>
+            <p class="text-center">Network 
+Fee: ~0.00001 SOL</p>
        {/if}
     </div>
 
