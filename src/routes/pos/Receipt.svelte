@@ -1,6 +1,7 @@
 <script lang="ts">
     import dayjs from 'dayjs';
     import { onMount } from 'svelte'; 
+    import solanaLogo from "../../lib/images/solanaLogoMark.png"; // Import retained for component consistency
     
     // Declare dynamic import target for QR code function
     let createQR: any; 
@@ -11,27 +12,18 @@
     export let businessAddress;
 
     // Use the stored subtotal and taxAmount from the transaction object for pre-discount display.
-    // If the transaction object is from an older version, fall back to approximation (taxable amount).
-    // MODIFIED: Use original subtotal, as loyalty/order discounts are separate
     const rawSubtotal = transaction.subtotal; 
     const rawTaxAmount = transaction.taxAmount;
-    // Extract loyalty details (will be 0 if not present)
     const loyaltyDiscountAmount = transaction.loyaltyDiscountAmount || 0;
     const pointsRedeemed = transaction.pointsRedeemed || 0;
-    // MODIFIED: Extract order discount details
     const orderDiscountAmount = transaction.orderDiscountAmount || 0;
     const orderDiscountCode = transaction.orderDiscountCode || null;
     
-    // The pre-tax subtotal based on items (or approximation if no items/old txn)
     const preTaxSubtotal = (transaction.items || []).reduce((sum, item) => sum + (item.adjustedPrice ?? item.price) * item.quantity, 0) || rawSubtotal;
-    
-    // The actual amount to show as Total Paid is the stored uiAmount
     const finalPaidAmount = transaction.uiAmount;
-    // The pre-discount total (before loyalty discount, but potentially after sales tax)
     const preDiscountTotal = rawSubtotal + rawTaxAmount;
     
     function getLineItemDetails(item) {
-        // Use adjustedPrice if it exists, otherwise use the base price.
         const finalPrice = item.adjustedPrice ?? item.price;
         const lineTotal = finalPrice * item.quantity;
         const adjustmentPercent = item.priceAdjustmentPercent ?? 0;
@@ -47,14 +39,11 @@
 
     onMount(async () => {
         if (typeof window !== 'undefined') {
-            // Check if it's a Solana payment (not Stripe pi_ or Invoice)
             if (transaction.txid && !transaction.txid.startsWith('pi_') && !transaction.txid.startsWith('invoice-')) {
                 try {
-                    // Dynamically import createQR (uses @solana/pay)
                     const solanaPay = await import('@solana/pay');
                     createQR = solanaPay.createQR;
                     
-                    // Wait for the next tick to ensure the DOM element exists
                     await new Promise(resolve => setTimeout(resolve, 0));
                     renderQrCode();
                     
@@ -64,7 +53,6 @@
             }
         }
 
-        // CRITICAL FIX: Delay the print command to ensure the QR SVG/Canvas has been drawn
         setTimeout(() => {
             window.print();
         }, 150); 
@@ -75,13 +63,10 @@
         if (createQR && qrCodeElement && transaction.txid) {
             const solscanUrl = `https://solscan.io/tx/${transaction.txid}`;
             
-            // FIX: Pass an options object with 'logo: false' to explicitly remove the logo.
-            const qr = createQR(solscanUrl, { 
-                size: 120, 
-                color: 'black', 
-                background: 'white', 
-                logo: false // <-- THIS IS THE KEY CHANGE TO REMOVE THE LOGO
-            }); 
+            // FINAL FIX: Use the three-argument call (URL, size, background). 
+            // This positional signature is the most reliable way to enforce a background 
+            // without triggering or misplacing a logo.
+            const qr = createQR(solscanUrl, 120, 'white'); 
             
             qrCodeElement.innerHTML = '';
             qr.append(qrCodeElement);
