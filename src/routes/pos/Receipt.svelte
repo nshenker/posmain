@@ -1,122 +1,179 @@
 <script lang="ts">
     import dayjs from 'dayjs';
+    import { onMount } from 'svelte'; 
+    
+    // Declare dynamic import target for QR code function
+    let createQR: any; 
+
     export let transaction;
     export let storeName;
     export let merchantLogo;
-export let businessAddress;
+    export let businessAddress;
 
     // Use the stored subtotal and taxAmount from the transaction object for pre-discount display.
-// If the transaction object is from an older version, fall back to approximation (taxable amount).
+    // If the transaction object is from an older version, fall back to approximation (taxable amount).
     // MODIFIED: Use original subtotal, as loyalty/order discounts are separate
-const rawSubtotal = transaction.subtotal; 
+    const rawSubtotal = transaction.subtotal; 
     const rawTaxAmount = transaction.taxAmount;
-// Extract loyalty details (will be 0 if not present)
+    // Extract loyalty details (will be 0 if not present)
     const loyaltyDiscountAmount = transaction.loyaltyDiscountAmount || 0;
-const pointsRedeemed = transaction.pointsRedeemed || 0;
+    const pointsRedeemed = transaction.pointsRedeemed || 0;
     // MODIFIED: Extract order discount details
     const orderDiscountAmount = transaction.orderDiscountAmount || 0;
     const orderDiscountCode = transaction.orderDiscountCode || null;
     
     // The pre-tax subtotal based on items (or approximation if no items/old txn)
-    const preTaxSubtotal = (transaction.items || []).reduce((sum, item) => sum + (item.adjustedPrice ?? item.price) * item.quantity, 0) ||
-rawSubtotal;
+    const preTaxSubtotal = (transaction.items || []).reduce((sum, item) => sum + (item.adjustedPrice ?? item.price) * item.quantity, 0) || rawSubtotal;
     
     // The actual amount to show as Total Paid is the stored uiAmount
     const finalPaidAmount = transaction.uiAmount;
-// The pre-discount total (before loyalty discount, but potentially after sales tax)
+    // The pre-discount total (before loyalty discount, but potentially after sales tax)
     const preDiscountTotal = rawSubtotal + rawTaxAmount;
-function getLineItemDetails(item) {
+    
+    function getLineItemDetails(item) {
         // Use adjustedPrice if it exists, otherwise use the base price.
-const finalPrice = item.adjustedPrice ?? item.price;
+        const finalPrice = item.adjustedPrice ?? item.price;
         const lineTotal = finalPrice * item.quantity;
         const adjustmentPercent = item.priceAdjustmentPercent ?? 0;
-let nameLine = `${item.quantity} x ${item.name}`;
+        let nameLine = `${item.quantity} x ${item.name}`;
         
         if (adjustmentPercent !== 0) {
-            const type = adjustmentPercent > 0 ?
-'Markup' : 'Discount';
+            const type = adjustmentPercent > 0 ? 'Markup' : 'Discount';
             nameLine += ` (${Math.abs(adjustmentPercent).toFixed(1)}% ${type})`;
         }
         
         return { nameLine, lineTotal };
-}
+    }
+
+    onMount(async () => {
+        if (typeof window !== 'undefined') {
+            // Check if it's a Solana payment (not Stripe pi_ or Invoice)
+            if (transaction.txid && !transaction.txid.startsWith('pi_') && !transaction.txid.startsWith('invoice-')) {
+                try {
+                    // Dynamically import createQR (uses @solana/pay)
+                    const solanaPay = await import('@solana/pay');
+                    createQR = solanaPay.createQR;
+                    
+                    // Wait for the next tick to ensure the DOM element exists
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                    renderQrCode();
+                    
+                } catch (e) {
+                    console.error("Failed to load createQR for printing:", e);
+                }
+            }
+        }
+
+        // CRITICAL FIX: Delay the print command to ensure the QR SVG/Canvas has been drawn
+        setTimeout(() => {
+            window.print();
+        }, 150); 
+    });
+
+    function renderQrCode() {
+        const qrCodeElement = document.getElementById('receipt-qr-code-target');
+        if (createQR && qrCodeElement && transaction.txid) {
+            const solscanUrl = `https://solscan.io/tx/${transaction.txid}`;
+            
+            // FIX: Pass 'white' for the background and 'null' as the logo image path (4th argument) 
+            // to suppress the default logo image.
+            const qr = createQR(solscanUrl, 120, 'white', null); 
+            
+            qrCodeElement.innerHTML = '';
+            qr.append(qrCodeElement);
+        }
+    }
 </script>
 
 <style>
     /* These styles are scoped to this component and will only be applied for printing */
     .receipt-container {
         font-family: 'monospace', monospace;
-width: 280px;
+        width: 280px;
         padding: 15px;
         color: #000;
         background-color: #fff;
     }
     
     .text-center { text-align: center;
-}
+    }
     .font-bold { font-weight: bold; }
     .block { display: block;
-}
+    }
     .mt-4 { margin-top: 1rem; }
     .mb-2 { margin-bottom: 0.5rem;
-}
+    }
     .text-xs { font-size: 11px; }
     .whitespace-pre-line { white-space: pre-line;
-}
+    }
 
     .header-main {
         font-size: 20px;
         font-weight: bold;
         text-transform: uppercase;
-margin-bottom: 5px;
+        margin-bottom: 5px;
     }
 
     .header-sub {
         font-size: 11px;
         margin: 0;
-}
+    }
 
     .hr {
         border-top: 1px dashed #000;
         margin: 12px 0;
-}
+    }
     
     .flex-between {
         display: flex;
-justify-content: space-between;
+        justify-content: space-between;
     }
 
     .item-row span:first-child {
         text-align: left;
         flex-grow: 1;
-padding-right: 8px;
+        padding-right: 8px;
     }
     .item-row span:last-child {
         text-align: right;
-}
+    }
     
     .total-row {
         font-size: 16px;
-font-weight: bold;
+        font-weight: bold;
     }
 
     .success-banner {
         font-size: 18px;
         font-weight: bold;
-color: #28a745; /* Green color */
+        color: #28a745; /* Green color */
         margin-top: 15px;
         margin-bottom: 15px;
-}
+    }
+    
+    /* MODIFIED: Centered and added explicit white background for contrast */
+    #receipt-qr-code-target {
+        background-color: white;
+        padding: 10px; /* Increased padding slightly */
+        display: block; /* Ensures it takes full width for margin auto to work */
+        margin: 0 auto 10px auto; /* Centers the block element and adds bottom margin */
+        width: 120px; /* Explicit width for the QR code area */
+        height: 120px; /* Explicit height for the QR code area */
+    }
+    /* Ensure the SVG inside the QR target is also centered */
+    #receipt-qr-code-target svg {
+        display: block;
+        margin: auto;
+    }
 </style>
 
 <div class="receipt-container">
     <div class="text-center">
         {#if merchantLogo}
             <img src={merchantLogo} alt="Logo" style="max-width: 120px; margin: 0 auto 10px;"
-/>
+            />
         {/if}
-        <div class="header-main">{storeName ||
-'GROCERIA MARKET'}</div>
+        <div class="header-main">{storeName || 'GROCERIA MARKET'}</div>
         {#if businessAddress}
             <p class="header-sub whitespace-pre-line">{businessAddress}</p>
         {/if}
@@ -132,6 +189,7 @@ color: #28a745; /* Green color */
     </div>
 
  
+   
     <div class="hr"></div>
 
     <div>
@@ -141,7 +199,8 @@ color: #28a745; /* Green color */
                 {@const details = getLineItemDetails(item)}
                 <div class="item-row flex-between text-xs">
        <span>{details.nameLine}</span>
-                    <span>{details.lineTotal.toFixed(2)}</span>
+          
+           <span>{details.lineTotal.toFixed(2)}</span>
                 </div>
             {/each}
         {:else}
@@ -149,7 +208,8 @@ color: #28a745; /* Green color */
       <span>1 x Custom Amount</span>
                 <span>{transaction.uiAmount.toFixed(2)}</span>
            </div>
-        {/if}
+  
+       {/if}
     </div>
 
     <div class="hr"></div>
@@ -161,7 +221,8 @@ color: #28a745; /* Green color */
   </div>
         
         {#if orderDiscountAmount > 0}
-            <div class="flex-between font-bold" style="margin-top: 4px; color: #dc3545;">
+            <div class="flex-between font-bold" style="margin-top: 4px;
+            color: #dc3545;">
                 <span>Discount {orderDiscountCode ? `(${orderDiscountCode})` : ''}:</span>
                 <span>- {orderDiscountAmount.toFixed(2)}</span>
             </div>
@@ -169,14 +230,16 @@ color: #28a745; /* Green color */
 
         {#if transaction.taxable && rawTaxAmount > 0}
            <div class="flex-between">
-                <span>Sales Tax ({ (transaction.taxRate ||
+                
+ <span>Sales Tax ({ (transaction.taxRate ||
 0).toFixed(3) }%):</span>
                 <span>{rawTaxAmount.toFixed(2)}</span>
             </div>
         {/if}
         
         {#if loyaltyDiscountAmount > 0}
-             <div class="flex-between font-bold" style="margin-top: 4px; color: #dc3545;">
+             <div class="flex-between font-bold" style="margin-top: 4px;
+            color: #dc3545;">
                 <span>Loyalty Discount ({pointsRedeemed} Pts):</span>
           <span>- {loyaltyDiscountAmount.toFixed(2)}</span>
             </div>
@@ -185,19 +248,27 @@ color: #28a745; /* Green color */
             <span>Total Paid:</span>
             <span>{finalPaidAmount.toFixed(2)} {transaction.mint}</span>
         </div>
+   
     </div>
     
     <div class="hr"></div>
 
-    <div 
-    class="text-xs">
+    <div class="text-xs">
        {#if transaction.txid.startsWith('pi_')}
             <p>Payment Method: Credit Card</p>
             <p style="word-break: break-all;">Payment ID: {transaction.txid}</p>
+        {:else if transaction.txid.startsWith('invoice-')}
+            <p>Payment Method: Invoice</p>
+            <p style="word-break: break-all;">Invoice ID: {transaction.txid}</p>
         {:else}
             <p>Payment Method: Solana Wallet</p>
-            <p style="word-break: break-all;">Transaction Hash: {transaction.txid}</p>
-            <p>Network Fee: ~0.00001 SOL</p>
+            <p class="text-center" style="margin-bottom: 5px;">Scan for Transaction Details:</p>
+            
+
+<div id="receipt-qr-code-target"> 
+                </div>
+            <p class="text-center">TX Hash: {transaction.txid.substring(0, 4)}...{transaction.txid.substring(transaction.txid.length - 4)}</p>
+            <p class="text-center">Network Fee: ~0.00001 SOL</p>
        {/if}
     </div>
 
