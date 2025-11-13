@@ -1,7 +1,8 @@
 <script lang="ts">
     import dayjs from 'dayjs';
     import { onMount } from 'svelte'; 
-    import solanaLogo from "../../lib/images/solanaLogoMark.png"; // RE-ADDED: Used for the QR code logo
+    import solanaLogo from "../../lib/images/solanaLogoMark.png";
+// RE-ADDED: Used for the QR code logo
 
     // Declare dynamic import target for QR code function
     let createQR: any;
@@ -9,7 +10,7 @@
     export let storeName;
     export let merchantLogo;
     export let businessAddress;
-    // Use the stored subtotal and taxAmount from the transaction object for pre-discount display.
+// Use the stored subtotal and taxAmount from the transaction object for pre-discount display.
     const rawSubtotal = transaction.subtotal;
     const rawTaxAmount = transaction.taxAmount;
     const loyaltyDiscountAmount = transaction.loyaltyDiscountAmount || 0;
@@ -19,7 +20,6 @@
     const preTaxSubtotal = (transaction.items || []).reduce((sum, item) => sum + (item.adjustedPrice ?? item.price) * item.quantity, 0) || rawSubtotal;
     const finalPaidAmount = transaction.uiAmount;
     const preDiscountTotal = rawSubtotal + rawTaxAmount;
-    
     function getLineItemDetails(item) {
         const finalPrice = item.adjustedPrice ?? item.price;
         const lineTotal = finalPrice * item.quantity;
@@ -27,7 +27,7 @@
         let nameLine = `${item.quantity} x ${item.name}`;
         if (adjustmentPercent !== 0) {
             const type = adjustmentPercent > 0 ?
-                'Markup' : 'Discount';
+            'Markup' : 'Discount';
             nameLine += ` (${Math.abs(adjustmentPercent).toFixed(1)}% ${type})`;
         }
         
@@ -36,14 +36,16 @@
 
     onMount(async () => {
         if (typeof window !== 'undefined') {
-            if (transaction.txid && !transaction.txid.startsWith('pi_') && !transaction.txid.startsWith('invoice-')) {
+            if (transaction.txid && !transaction.txid.startsWith('pi_') && !transaction.txid.startsWith('invoice-') && transaction.paymentType !== 'Cash App') {
                 try {
                     const solanaPay = await import('@solana/pay');
-                    createQR = solanaPay.createQR;
+                    createQR 
+= solanaPay.createQR;
                     
                     await new Promise(resolve => setTimeout(resolve, 0));
                     renderQrCode();
                     
+              
                 } catch (e) {
                     console.error("Failed to load createQR for printing:", e);
                 }
@@ -53,6 +55,7 @@
         setTimeout(() => {
             window.print();
         }, 150); 
+ 
     });
 
     function renderQrCode() {
@@ -61,7 +64,6 @@
             
             // Construct the Solscan URL
             const solscanUrl = `https://solscan.io/tx/${transaction.txid}`;
-            
             // FIX: Use 4 arguments: (URL, size (150), background color, LOGO IMAGE)
             // The logo image import is automatically converted to a base64 string or path that the library can use.
             const qr = createQR(solscanUrl, 150, 'white', solanaLogo); 
@@ -82,13 +84,17 @@
         background-color: #fff;
     }
     
-    .text-center { text-align: center; }
+    .text-center { text-align: center;
+    }
     .font-bold { font-weight: bold; }
-    .block { display: block; }
+    .block { display: block;
+    }
     .mt-4 { margin-top: 1rem; }
-    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-2 { margin-bottom: 0.5rem;
+    }
     .text-xs { font-size: 11px; }
-    .whitespace-pre-line { white-space: pre-line; }
+    .whitespace-pre-line { white-space: pre-line;
+    }
 
     .header-main {
         font-size: 20px;
@@ -140,8 +146,10 @@
         padding: 0px; 
         display: block;
         margin: 0 auto 10px auto;
-        width: 150px; /* Increased size */
-        height: 150px; /* Increased size */
+        width: 150px;
+        /* Increased size */
+        height: 150px;
+        /* Increased size */
     }
     
     /* Ensure the generated SVG/Canvas inside the QR target is centered and clean */
@@ -245,13 +253,15 @@ color: #dc3545;">
     <div class="hr"></div>
 
     <div class="text-xs">
-       {#if transaction.txid.startsWith('pi_')}
+       {#if transaction.paymentType === 'Cash App'}
+            <p>Payment Method: Cash App Pay</p>
+            <p style="word-break: break-all;">Payment ID: {transaction.txid}</p>
+        {:else if transaction.txid.startsWith('pi_')}
             <p>Payment Method: Credit Card</p>
             <p style="word-break: break-all;">Payment ID: {transaction.txid}</p>
         {:else if transaction.txid.startsWith('invoice-')}
             <p>Payment Method: Invoice</p>
             <p style="word-break: break-all;">Invoice ID: {transaction.txid}</p>
-   
       {:else}
             <p>Payment Method: Solana Wallet</p>
             <p class="text-center" style="margin-bottom: 5px;">Scan for Transaction Details:</p>
@@ -260,7 +270,8 @@ color: #dc3545;">
 <div id="receipt-qr-code-target"> 
                 </div>
             <p class="text-center">TX Hash: {transaction.txid.substring(0, 4)}...{transaction.txid.substring(transaction.txid.length - 4)}</p>
-            <p class="text-center">Network 
+            <p 
+class="text-center">Network 
 Fee: ~0.00001 SOL</p>
        {/if}
     </div>
