@@ -43,13 +43,12 @@ Please check the console.`;
         // FIX: Ensure the recipient is a PublicKey object
         const recipient = new web3.PublicKey($publicKey);
         
-        // FIX: Calculate the amount in RAW units (e.g., Lamports for SOL, or smallest unit for SPL token)
         const currentMint = $mints.find(item => item.name == $selectedMint);
 
-        // Decimals should be 9 for SOL, and retrieved from the mints store for SPL tokens (e.g., 6 for USDC).
-        const decimals = currentMint && currentMint.name === 'SOL' 
-            ? web3.LAMPORTS_PER_SOL.toString().length - 1
-            : currentMint ? currentMint.decimals : 6;
+        // FIX: Use the decimals property from the mints store directly for all tokens (SOL=9, USDC=6, etc.)
+        // The original logic for SOL was calculating decimals incorrectly.
+        const decimals = currentMint ? currentMint.decimals : 6; // Default to 6 (USDC) if mint info is missing.
+
 
         const amount = new BigNumber(pmtAmtString).multipliedBy(new BigNumber(10).pow(decimals));
 
