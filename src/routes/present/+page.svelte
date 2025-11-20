@@ -37,19 +37,16 @@ Please check the console.`;
         // --- End of 
         // browser-specific setup ---
  
-        
+        // 1. Get UI amount string and clean it
         const pmtAmtString = $pmtAmt ? $pmtAmt.toString().replace(/,/g, '') : '0';
         
-        // FIX: Ensure the recipient is a PublicKey object
+        // 2. Determine Recipient and Mint Info
         const recipient = new web3.PublicKey($publicKey);
-        
         const currentMint = $mints.find(item => item.name == $selectedMint);
 
-        // FIX: Use the decimals property from the mints store directly for all tokens (SOL=9, USDC=6, etc.)
-        // The original logic for SOL was calculating decimals incorrectly.
-        const decimals = currentMint ? currentMint.decimals : 6; // Default to 6 (USDC) if mint info is missing.
-
-
+        // 3. FIX: Calculate the amount in RAW integer units using decimals from the store
+        // The previous issue was passing the UI float amount directly.
+        const decimals = currentMint ? currentMint.decimals : 6; // Default to 6 (USDC)
         const amount = new BigNumber(pmtAmtString).multipliedBy(new BigNumber(10).pow(decimals));
 
         
@@ -63,6 +60,7 @@ Please check the console.`;
         };
 
         
+        // 4. Set splToken public key for non-SOL payments
         if (currentMint && 
         
         currentMint.name !== 'SOL') {
