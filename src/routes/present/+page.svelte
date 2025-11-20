@@ -44,15 +44,20 @@ Please check the console.`;
         const recipient = new web3.PublicKey($publicKey);
         const currentMint = $mints.find(item => item.name == $selectedMint);
 
-        // 3. FIX: Calculate the amount in RAW integer units using decimals from the store
-        // The previous issue was passing the UI float amount directly.
+        // 3. Calculate the amount in RAW integer units
         const decimals = currentMint ? currentMint.decimals : 6; // Default to 6 (USDC)
-        const amount = new BigNumber(pmtAmtString).multipliedBy(new BigNumber(10).pow(decimals));
+        
+        // Calculate the raw amount BigNumber
+        const rawAmountBigNumber = new BigNumber(pmtAmtString).multipliedBy(new BigNumber(10).pow(decimals));
+        
+        // FIX: Force BigNumber to a string without exponential notation to prevent wallet parsing errors.
+        const amountString = rawAmountBigNumber.toString(10); 
+
 
         
         const urlParams: any = {
             recipient,
-            amount,
+            amount: amountString, // <-- PASS THE CORRECT INTEGER STRING
             reference,
             label,
             message,
