@@ -59,8 +59,7 @@
             // Create BigNumber from string
             let rawAmount = new BigNumber(pmtAmtString);
             
-            // CRITICAL FIX: Round DOWN to the exact decimals allowed by the token.
-            // Example: 10.1234567 USDC will be cut to 10.123456
+            // Round DOWN to the exact decimals allowed by the token.
             const safeAmountStr = rawAmount.toFixed(decimals, BigNumber.ROUND_DOWN); 
             const amount = new BigNumber(safeAmountStr);
 
@@ -70,10 +69,10 @@
                 return;
             }
 
-            // 3. Construct URL Parameters (Simplified)
+            // 3. Construct URL Parameters
             const reference = web3.Keypair.generate().publicKey;
             
-            // Sanitize Label: Remove special characters that might break URL parsing
+            // Sanitize Label
             let safeLabel = ($storeName || 'Store').replace(/[^a-zA-Z0-9 ]/g, ""); 
             if (safeLabel.length > 20) safeLabel = safeLabel.substring(0, 20);
 
@@ -82,8 +81,7 @@
                 amount,
                 reference,
                 label: safeLabel,
-                message: 'Payment', // Keep message simple
-                // memo: 'POS', // Removed memo to maximize compatibility
+                message: 'Payment',
             };
 
             // Only add splToken parameter if it is NOT native SOL
@@ -93,7 +91,6 @@
 
             // 4. Generate URL
             const url = encodeURL(urlParams);
-            console.log("Generated Solana Pay URL:", url.toString()); // For debugging
             
             try {
                 // Use 'white' background for maximum contrast
@@ -150,7 +147,7 @@
                         }
 
                         if (uiAmount === 0 || isNaN(uiAmount)) {
-                             uiAmount = parseFloat(safeAmountStr); // Fallback to requested amount
+                             uiAmount = parseFloat(safeAmountStr); // Fallback
                         }
 
                         if (uiAmount > 0) {
@@ -208,9 +205,37 @@
                                 }
                             }
 
-                            if ($currentChargeItems.length > 0) {
-                                inventory.update(inv => inv); 
+                            // --- INVENTORY DEDUCTION LOGIC ---
+                            const chargeItems = get(currentChargeItems);
+                            if (chargeItems && chargeItems.length > 0) {
+                                inventory.update(inv => {
+                                    const newInv = [...inv];
+                                    for (const soldItem of chargeItems) {
+                                        // Skip custom manual items that aren't in inventory
+                                        if (soldItem.id.startsWith('custom-')) continue;
+
+                                        const itemIndex = newInv.findIndex(i => i.id === soldItem.id);
+                                        if (itemIndex > -1) {
+                                            if (newInv[itemIndex].type === 'simple') {
+                                                const newQty = newInv[itemIndex].quantity - soldItem.quantity;
+                                                newInv[itemIndex].quantity = newQty;
+                                                logHistory(soldItem.id, `Sale (Tx: ${signatureInfo.signature.substring(0, 4)}...)`, `-${soldItem.quantity}`, newQty);
+                                            } else if (newInv[itemIndex].type === 'variable' && soldItem.variantId) {
+                                                const variantIndex = newInv[itemIndex].variants.findIndex(v => v.id === soldItem.variantId);
+                                                if (variantIndex > -1) {
+                                                    const newVariantQty = newInv[itemIndex].variants[variantIndex].quantity - soldItem.quantity;
+                                                    newInv[itemIndex].variants[variantIndex].quantity = newVariantQty;
+                                                    // Recalculate total quantity for the parent item
+                                                    newInv[itemIndex].quantity = newInv[itemIndex].variants.reduce((total, v) => total + v.quantity, 0);
+                                                    logHistory(newInv[itemIndex].variants[variantIndex].id, `Sale (Tx: ${signatureInfo.signature.substring(0, 4)}...)`, `-${soldItem.quantity}`, newVariantQty);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    return newInv;
+                                });
                             }
+                            // --- END INVENTORY LOGIC ---
                             
                             mostRecentTxn.set(signatureInfo.signature);
                             currentChargeItems.set([]);
