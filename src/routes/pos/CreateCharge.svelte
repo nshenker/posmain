@@ -1,57 +1,58 @@
 <script lang='ts'>
     import { onMount, onDestroy, tick } from "svelte";
     import { goto } from '$app/navigation';
-import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee, customers, selectedCustomer, savedCarts, loyaltyRedemptionRate, barcodeScanned, cartDiscount } from '../stores.js';
-import { tokenPrices } from '../priceStore.js';
+    import { pmtAmt, selectedMint, currentChargeItems, inventory, taxRate, defaultTaxable, chargeMetadata, successArray, mints, chargeCardFee as defaultChargeCardFee, customers, selectedCustomer, savedCarts, loyaltyRedemptionRate, barcodeScanned, cartDiscount } from '../stores.js';
+    import { tokenPrices } from '../priceStore.js';
     import { showToast } from '../toastStore.js';
     import Keyboard from "svelte-keyboard";
-import { browser } from '$app/environment';
+    import { browser } from '$app/environment';
     import { Html5QrcodeScanner } from 'html5-qrcode';
     import solLogo from "../../lib/images/solanaLogoMark.png";
-    import tetherLogo from "../../lib/images/tether.png"; // ADDED: USDT logo
-import InventoryModal from "./InventoryModal.svelte";
+    import tetherLogo from "../../lib/images/tether.png";
+    // ADDED: USDT logo
+    import InventoryModal from "./InventoryModal.svelte";
     import CustomerSelectModal from "./CustomerSelectModal.svelte";
     import CustomerDetailsModal from '../crm/CustomerDetailsModal.svelte';
     import { stripePublishableKey, stripeSecretKey } from '../stores.js';
-import CardPaymentModal from './CardPaymentModal.svelte';
-    import CashAppModal from './CashAppModal.svelte'; // NEW IMPORT
+    import CardPaymentModal from './CardPaymentModal.svelte';
+    import CashAppModal from './CashAppModal.svelte';
+    // NEW IMPORT
     import LoadCartModal from './LoadCartModal.svelte';
-import { logHistory } from '../../utils/inventory.js';
+    import { logHistory } from '../../utils/inventory.js';
     import { get } from 'svelte/store';
     import dayjs from 'dayjs';
-import { page } from '$app/stores';
+    import { page } from '$app/stores';
     import DiscountModal from './DiscountModal.svelte';
-
     let showCustomerModal = false;
     let showNewCustomerModal = false;
-let showInventoryModal = false;
+    let showInventoryModal = false;
     let showLoadCartModal = false;
     let showDiscountModal = false;
     let chargeItems = [];
     let barcodeInput = '';
-let applyTax = $defaultTaxable;
+    let applyTax = $defaultTaxable;
     let applyCardFee = $defaultChargeCardFee;
 
     let showCardModal = false;
     let paymentClientSecret = null;
     let chargeForCardPayment = {};
-// --- NEW CASH APP STATE ---
+    // --- NEW CASH APP STATE ---
     let showCashAppModal = false;
     let cashAppClientSecret = null;
-let chargeForCashAppPayment = {};
+    let chargeForCashAppPayment = {};
     // --- END NEW CASH APP STATE ---
 
     // --- Loyalty State ---
     let redemptionDiscount = 0;
-let isRedeeming = false;
+    let isRedeeming = false;
     let appliedDiscountValue = 0;
     let appliedPointsRedeemed = 0;
     let appliedOrderDiscountValue = 0;
-// --- Scanner State ---
+    // --- Scanner State ---
     let scanner = null;
     let isScannerVisible = false;
     let lastScanTime = 0;
-let lastScanResult = '';
+    let lastScanResult = '';
     const SCAN_COOLDOWN = 3000;
 
 
@@ -63,7 +64,7 @@ let lastScanResult = '';
             barcodeScanned.set(null); // Reset the store after processing
         }
     });
-// --- END ---
+    // --- END ---
 
 
     const keys = [
@@ -76,62 +77,62 @@ let lastScanResult = '';
 
     row: 3, value: "."}
     ];
-// Numpad state
+    // Numpad state
     let left = "";
     let right = "";
     let decimalsActive = false;
-// --- Functions for adding items ---
+    // --- Functions for adding items ---
     function addItemToCart(itemToAdd) {
         if (!itemToAdd) {
             showToast('Item not found in inventory.', 'error');
-return;
+            return;
         }
 
         if (chargeItems.length === 0) {
             $selectedMint = itemToAdd.currency;
-}
+        }
         else if (itemToAdd.currency !== $selectedMint) {
             showToast('All items in a charge must have the same currency.', 'error');
-return;
+            return;
         }
 
         // Use variantId for uniqueness if it exists, otherwise use the parent item id
         const uniqueId = itemToAdd.variantId ||
-itemToAdd.id;
+        itemToAdd.id;
         const existingItemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === uniqueId);
-if (existingItemIndex > -1) {
+        if (existingItemIndex > -1) {
             chargeItems[existingItemIndex].quantity += 1;
-} else {
+        } else {
             // MODIFIED: Added priceAdjustmentPercent
             chargeItems.push({ ...itemToAdd, quantity: 1, priceAdjustmentPercent: 0 });
-}
+        }
 
         chargeItems = chargeItems;
-// Trigger reactivity
+        // Trigger reactivity
     }
 
 
     function handleAddItemFromModal(event) {
         addItemToCart(event.detail);
-showInventoryModal = false;
+        showInventoryModal = false;
     }
 
     function addItemByBarcode(barcode) {
         let foundItem = null;
-let foundVariant = null;
+        let foundVariant = null;
 
         // Iterate through the inventory to find the item/variant
         for (const item of $inventory) {
             if (item.type === 'simple' && item.barcode === barcode.trim()) {
                 foundItem = item;
-break; // Exit loop once found
+                break; // Exit loop once found
             } else if (item.type === 'variable' && item.variants) {
                 foundVariant = item.variants.find(v => v.barcode === barcode.trim());
-if (foundVariant) {
+                if (foundVariant) {
                     foundItem = item;
-// We found the parent item
+                    // We found the parent item
                     break;
-// Exit loop once found
+                    // Exit loop once found
                 }
             }
         }
@@ -152,57 +153,57 @@ ${foundVariant.name}`,
                     sku: foundVariant.sku,
                     barcode: foundVariant.barcode,
                 
-    currency: foundItem.currency, // Inherit from parent
+                    currency: foundItem.currency, // Inherit from parent
                     category: foundItem.category, // Inherit from parent
                 };
-addItemToCart(itemToAdd);
+                addItemToCart(itemToAdd);
                 showToast(`Added: ${itemToAdd.name}`, 'success');
             } else {
                 // It's a simple product
                 addItemToCart(foundItem);
-showToast(`Added: ${foundItem.name}`, 'success');
+                showToast(`Added: ${foundItem.name}`, 'success');
             }
         } else {
             showToast(`Barcode "${barcode}" not found.`, 'error');
-}
+        }
     }
 
     function handleBarcodeSubmit() {
         if (barcodeInput.trim()) {
             addItemByBarcode(barcodeInput);
-barcodeInput = ''; // Clear input after scan
+            barcodeInput = ''; // Clear input after scan
         }
     }
 
     // --- Camera Scanner Logic ---
     function onScanSuccess(decodedText) {
         const now = Date.now();
-// Cooldown logic: if the same code is scanned within the cooldown period, ignore it.
-if (decodedText === lastScanResult && (now - lastScanTime < SCAN_COOLDOWN)) {
+        // Cooldown logic: if the same code is scanned within the cooldown period, ignore it.
+        if (decodedText === lastScanResult && (now - lastScanTime < SCAN_COOLDOWN)) {
             return;
-}
+        }
 
         lastScanTime = now;
         lastScanResult = decodedText;
 
         addItemByBarcode(decodedText);
-}
+    }
 
     function onScanFailure(error) { /* Ignore failures to allow continuous scanning */ }
 
     async function startScanner() {
         isScannerVisible = true;
-// Wait for the DOM to update so the "reader" div is visible
+        // Wait for the DOM to update so the "reader" div is visible
         await tick();
-// This function makes the scanning box responsive
+        // This function makes the scanning box responsive
         const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
             let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-let qrboxSize = Math.floor(minEdge * 0.8);
+            let qrboxSize = Math.floor(minEdge * 0.8);
             return {
                 width: qrboxSize,
                 height: qrboxSize
             };
-}
+        }
 
         try {
             scanner = new Html5QrcodeScanner(
@@ -218,12 +219,12 @@ let qrboxSize = Math.floor(minEdge * 0.8);
                 },
                 false // verbose
             );
-await scanner.render(onScanSuccess, onScanFailure);
+            await scanner.render(onScanSuccess, onScanFailure);
         } catch (err) {
             console.error("Error rendering scanner:", err);
-showToast("Could not start camera. Check permissions.", "error");
+            showToast("Could not start camera. Check permissions.", "error");
             isScannerVisible = false;
-}
+        }
     }
 
     function stopScanner() {
@@ -231,68 +232,68 @@ showToast("Could not start camera. Check permissions.", "error");
             scanner.clear().catch(error => {
                 console.error("Failed to clear html5-qrcode-scanner.", error);
             });
-scanner = null;
+            scanner = null;
         }
         isScannerVisible = false;
-}
+    }
 
 
     // --- Functions for charge management ---
     function removeItem(itemId) {
         chargeItems = chargeItems.filter(i => (i.variantId || i.id) !== itemId);
-if (chargeItems.length === 0) {
+        if (chargeItems.length === 0) {
             clearCharge();
-}
+        }
     }
 
     function incrementQuantity(itemId) {
         const itemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === itemId);
-if (itemIndex > -1) {
+        if (itemIndex > -1) {
             chargeItems[itemIndex].quantity += 1;
-chargeItems = chargeItems;
+            chargeItems = chargeItems;
         }
     }
 
     function decrementQuantity(itemId) {
         const itemIndex = chargeItems.findIndex(i => (i.variantId || i.id) === itemId);
-if (itemIndex > -1) {
+        if (itemIndex > -1) {
             if (chargeItems[itemIndex].quantity > 1) {
                 chargeItems[itemIndex].quantity -= 1;
-chargeItems = chargeItems;
+                chargeItems = chargeItems;
             } else {
                 removeItem(itemId);
-}
+            }
         }
     }
 
     function clearCharge() {
         chargeItems = [];
-$pmtAmt = "0.00";
+        $pmtAmt = "0.00";
         left = "";
         right = "";
         decimalsActive = false;
         applyTax = $defaultTaxable;
         $currentChargeItems = [];
-$selectedCustomer = null;
+        $selectedCustomer = null;
         isRedeeming = false; // Reset new redemption state
         $cartDiscount = null;
-}
+    }
 
     // --- Save and Load Cart Logic ---
     function saveCart() {
         if (chargeItems.length === 0 && !parseFloat($pmtAmt.replace(/,/g, ''))) {
             showToast("Cannot save an empty cart.", "info");
-return;
+            return;
         }
 
         const cartName = prompt("Enter a name for this cart (optional):", `Cart - ${dayjs().format('MM/DD HH:mm')}`);
-if (cartName === null) return; // User cancelled
+        if (cartName === null) return; // User cancelled
 
         // Handle custom amount: create a pseudo-item
         let itemsToSave = [];
-if (chargeItems.length === 0 && parseFloat($pmtAmt.replace(/,/g, ''))) {
+        if (chargeItems.length === 0 && parseFloat($pmtAmt.replace(/,/g, ''))) {
             const customAmount = parseFloat($pmtAmt.replace(/,/g, ''));
-// Create a temporary item representing the custom amount
+            // Create a temporary item representing the custom amount
             itemsToSave.push({
                 id: `custom-${Date.now()}`,
                 name: `Custom Amount (${$selectedMint})`,
@@ -303,108 +304,108 @@ if (chargeItems.length === 0 && parseFloat($pmtAmt.replace(/,/g, ''))) {
                 // needed, e.g., taxable status
                 taxable: applyTax, // Store whether tax was applied to this amount
             });
-} else {
+        } else {
             itemsToSave = JSON.parse(JSON.stringify(chargeItems));
-// Deep copy
+            // Deep copy
         }
 
 
         const newSavedCart = {
             id: Date.now().toString(),
             name: cartName ||
-`Cart - ${dayjs().format('MM/DD HH:mm')}`,
+            `Cart - ${dayjs().format('MM/DD HH:mm')}`,
             items: itemsToSave,
             customerId: $selectedCustomer ?
-$selectedCustomer.id : null,
+            $selectedCustomer.id : null,
             // Store tax setting applied at save time
             applyTax: applyTax,
         };
-savedCarts.update(carts => [...carts, newSavedCart]);
+        savedCarts.update(carts => [...carts, newSavedCart]);
         showToast(`Cart "${newSavedCart.name}" saved!`, 'success');
         clearCharge(); // Optionally clear after saving
     }
 
     function handleLoadCart(event) {
         const loadedCart = event.detail;
-if (loadedCart) {
+        if (loadedCart) {
             chargeItems = JSON.parse(JSON.stringify(loadedCart.items));
-// Deep copy
+            // Deep copy
             applyTax = loadedCart.applyTax ?? $defaultTaxable;
-// Load saved tax setting or use default
+            // Load saved tax setting or use default
 
             // Check if the loaded cart was a custom amount
             if (chargeItems.length === 1 && chargeItems[0].id.startsWith('custom-')) {
                 const customItem = chargeItems[0];
-$pmtAmt = customItem.price.toLocaleString("en", {
+                $pmtAmt = customItem.price.toLocaleString("en", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 4
                 });
-// Set the currency from the custom item
+                // Set the currency from the custom item
                 $selectedMint = customItem.currency;
-// Set the keypad state (approximation)
+                // Set the keypad state (approximation)
                 const parts = customItem.price.toFixed(4).split('.');
-left = parts[0] === '0' ? '' : parts[0];
+                left = parts[0] === '0' ? '' : parts[0];
                 right = parts[1] ? parts[1].replace(/0+$/, '') : '';
-// Remove trailing zeros
+                // Remove trailing zeros
                 decimalsActive = !!right;
-// Clear chargeItems as it was just a custom amount placeholder
+                // Clear chargeItems as it was just a custom amount placeholder
                 chargeItems = [];
-} else {
+            } else {
                  // For regular carts with items, ensure numpad is cleared
                  left = "";
-right = "";
+                 right = "";
                  decimalsActive = false;
                  // Set currency from first item
                  if(chargeItems.length > 0) {
                     $selectedMint = chargeItems[0].currency;
-}
+                }
             }
 
 
             // Load customer
             if (loadedCart.customerId) {
                 const customer = $customers.find(c => c.id === loadedCart.customerId);
-$selectedCustomer = customer || null;
+                $selectedCustomer = customer || null;
             } else {
                 $selectedCustomer = null;
-}
+            }
 
             // Reset redemption state when loading a cart
             isRedeeming = false;
-$cartDiscount = null; // MODIFIED: Reset cart discount
+            $cartDiscount = null; // MODIFIED: Reset cart discount
         }
         showLoadCartModal = false;
-}
+    }
 
 
     onMount(() => {
         // Clear charge on mount if needed, ensure $currentChargeItems is also cleared
         clearCharge();
     });
-onDestroy(() => {
+    onDestroy(() => {
         stopScanner(); // Ensure camera is released when leaving the page
     });
-// --- Reactive loyalty and total calculation ---
+    // --- Reactive loyalty and total calculation ---
     $: redemptionRate = $loyaltyRedemptionRate;
-// Calculate max available USD discount
+    // Calculate max available USD discount
     $: {
         if ($selectedCustomer && $selectedCustomer.loyaltyPoints > 0) {
             const { points, discount } = redemptionRate;
-redemptionDiscount = Math.floor($selectedCustomer.loyaltyPoints / points) * discount;
+            redemptionDiscount = Math.floor($selectedCustomer.loyaltyPoints / points) * discount;
         } else {
             redemptionDiscount = 0;
-isRedeeming = false;
+            isRedeeming = false;
         }
     }
     
     // NEW REACTIVE VARIABLES FOR DISCOUNT TRACKING
     $: appliedDiscountValue = 0;
-$: appliedPointsRedeemed = 0; 
+    $: appliedPointsRedeemed = 0; 
     $: appliedOrderDiscountValue = 0; // MODIFIED: Added for new cart discount
 
     $: {
         let subtotal = 0;
-// MODIFIED: Calculate subtotal using per-item adjustments
+        // MODIFIED: Calculate subtotal using per-item adjustments
         if (chargeItems.length > 0) {
             subtotal = chargeItems.reduce((acc, item) => {
                 const adjustmentPercent = item.priceAdjustmentPercent || 0;
@@ -415,64 +416,64 @@ $: appliedPointsRedeemed = 0;
                 
                 (adjustedPrice * item.quantity);
             }, 0);
-const firstItem = chargeItems[0];
+            const firstItem = chargeItems[0];
             if (firstItem && $selectedMint !== firstItem.currency) {
                 $selectedMint = firstItem.currency;
-}
+            }
         } else {
              // Only use numpad value if there are no items
             const fullAmount = `${left ||
-'0'}${right ? '.' + right : ''}`;
+            '0'}${right ? '.' + right : ''}`;
             subtotal = parseFloat(fullAmount) || 0;
-}
+        }
         // END MODIFIED SUBTOTAL CALCULATION
 
         // --- MODIFIED: Apply Order Discount (before tax) ---
         let preTaxSubtotal = subtotal;
-let orderDiscountAmount = 0;
+        let orderDiscountAmount = 0;
         if ($cartDiscount) {
             if ($cartDiscount.type === 'percentage') {
                 orderDiscountAmount = preTaxSubtotal * ($cartDiscount.value / 100);
-} else { // 'fixed'
+            } else { // 'fixed'
                 orderDiscountAmount = $cartDiscount.value;
-}
+            }
             // Ensure discount doesn't exceed subtotal
             orderDiscountAmount = Math.min(preTaxSubtotal, orderDiscountAmount);
-preTaxSubtotal -= orderDiscountAmount;
+            preTaxSubtotal -= orderDiscountAmount;
         }
         appliedOrderDiscountValue = orderDiscountAmount;
-// Store the calculated crypto/USD value
+        // Store the calculated crypto/USD value
         // --- END Order Discount ---
 
         const taxAmount = applyTax ?
-preTaxSubtotal * ($taxRate / 100) : 0; // Tax is calculated on the discounted subtotal
+        preTaxSubtotal * ($taxRate / 100) : 0; // Tax is calculated on the discounted subtotal
         let total = preTaxSubtotal + taxAmount;
-// --- LOYALTY REDEMPTION APPLIED HERE (after tax, on the remaining total) ---
+        // --- LOYALTY REDEMPTION APPLIED HERE (after tax, on the remaining total) ---
         if (isRedeeming && redemptionDiscount > 0) {
             const prices = get(tokenPrices);
-const mintInfo = get(mints).find(m => m.name === $selectedMint);
+            const mintInfo = get(mints).find(m => m.name === $selectedMint);
             let cryptoPrice = 1;
-// Default for USDC/USD
+            // Default for USDC/USD
             if ($selectedMint !== 'USDC' && $selectedMint !== 'USD' && mintInfo && prices[mintInfo.coingeckoId]?.usd) {
                 cryptoPrice = prices[mintInfo.coingeckoId].usd;
-}
+            }
             
             // Calculate crypto discount amount
             const cryptoDiscount = redemptionDiscount / cryptoPrice;
-// The discount cannot exceed the total amount due (total)
+            // The discount cannot exceed the total amount due (total)
             // Store this for passing to metadata
             appliedDiscountValue = Math.min(cryptoDiscount, total);
-const pointsPerDiscount = (redemptionRate.discount / redemptionRate.points);
+            const pointsPerDiscount = (redemptionRate.discount / redemptionRate.points);
             appliedPointsRedeemed = Math.ceil(appliedDiscountValue / pointsPerDiscount) * redemptionRate.points;
             appliedPointsRedeemed = Math.min(appliedPointsRedeemed, $selectedCustomer?.loyaltyPoints || 0);
-// Cap points used at actual balance
+            // Cap points used at actual balance
             
             // Recalculate appliedDiscountValue based on the capped appliedPointsRedeemed
             appliedDiscountValue = (appliedPointsRedeemed / redemptionRate.points) * redemptionRate.discount;
-total -= appliedDiscountValue;
+            total -= appliedDiscountValue;
         } else {
              appliedDiscountValue = 0;
-appliedPointsRedeemed = 0;
+            appliedPointsRedeemed = 0;
         }
         // --- END LOYALTY REDEMPTION ---
 
@@ -481,16 +482,16 @@ appliedPointsRedeemed = 0;
             minimumFractionDigits: 2,
             maximumFractionDigits: 4
         });
-}
+    }
 
     function createQRCode() {
         let subtotal = 0;
-let itemsForTx = [];
+        let itemsForTx = [];
         const finalPmtAmt = parseFloat($pmtAmt.replace(/,/g, ''));
         
         if (finalPmtAmt <= 0) {
              if(browser) showToast("Amount must be greater than zero.", "error");
-return;
+            return;
         }
 
         if(chargeItems.length > 0) {
@@ -503,7 +504,7 @@ return;
 
                 return acc + (adjustedPrice * item.quantity);
             }, 0);
-// MODIFIED: Map items to include adjustment details
+            // MODIFIED: Map items to include adjustment details
             itemsForTx = chargeItems.map(item => ({
                 id: item.id, variantId: item.variantId, name: item.name,
                 price: item.price, // original price
@@ -515,11 +516,11 @@ return;
                 cost: item.cost, quantity: item.quantity,
                 sku: item.sku
             }));
-} else {
+        } else {
             // Handle custom amount for QR code payment
             if (finalPmtAmt > 0) {
                 subtotal = finalPmtAmt / (applyTax ? (1 + ($taxRate / 1900)) : 1);
-// Create a representative item for the receipt/metadata
+                // Create a representative item for the receipt/metadata
                 itemsForTx.push({
                     id: `custom-${Date.now()}`,
                     name: `Custom Amount (${$selectedMint})`,
@@ -531,37 +532,37 @@ return;
                     currency: $selectedMint,
                     taxable: applyTax, // Include taxable status
                 });
-} else {
+            } else {
                 subtotal = 0;
-}
+            }
         }
         
         // MODIFIED: Calculate discounts based on the *original* subtotal
         let orderDiscountAmount = 0;
-if ($cartDiscount) {
+        if ($cartDiscount) {
             if ($cartDiscount.type === 'percentage') {
                 orderDiscountAmount = subtotal * ($cartDiscount.value / 100);
-} else { // 'fixed'
+            } else { // 'fixed'
                 orderDiscountAmount = $cartDiscount.value;
-}
+            }
             orderDiscountAmount = Math.min(subtotal, orderDiscountAmount);
-}
+        }
         const subtotalAfterOrderDiscount = subtotal - orderDiscountAmount;
         const taxAmount = applyTax ?
-subtotalAfterOrderDiscount * ($taxRate / 100) : 0;
+        subtotalAfterOrderDiscount * ($taxRate / 100) : 0;
         
         let loyaltyDiscountAmount = 0;
         let pointsRedeemed = 0;
-if (isRedeeming) {
+        if (isRedeeming) {
             loyaltyDiscountAmount = appliedDiscountValue;
             pointsRedeemed = appliedPointsRedeemed;
-}
+        }
 
 
         if (finalPmtAmt > 0) { // Check finalPmtAmt which already includes all discounts
             // Use itemsForTx which handles both item lists and custom amounts
             $currentChargeItems = itemsForTx;
-$pmtAmt = finalPmtAmt.toString(); // Ensure store reflects final amount
+            $pmtAmt = finalPmtAmt.toString(); // Ensure store reflects final amount
             chargeMetadata.set({ 
                 subtotal, // Original subtotal
                 taxAmount, 
@@ -579,40 +580,40 @@ $pmtAmt = finalPmtAmt.toString(); // Ensure store reflects final amount
        orderDiscountAmount: orderDiscountAmount,
                 orderDiscountCode: $cartDiscount ? $cartDiscount.code : null
             });
-goto('/present');
+            goto('/present');
         } else {
             if(browser) showToast("Please enter an amount greater than zero.", "error");
-}
+        }
 	}
 
     async function payWithCard() {
         if (!$stripePublishableKey || !$stripeSecretKey) {
             showToast("Stripe is not configured. Please add your API keys in the settings.", "error");
-return;
+            return;
         }
 
         const totalInCrypto = parseFloat($pmtAmt.replace(/,/g, ''));
-if (totalInCrypto <= 0) {
+        if (totalInCrypto <= 0) {
             showToast("Please enter an amount greater than zero.", "error");
-return;
+            return;
         }
 
         let totalInUSD = totalInCrypto;
         const prices = get(tokenPrices);
-const mintInfo = get(mints).find(m => m.name === $selectedMint);
+        const mintInfo = get(mints).find(m => m.name === $selectedMint);
         let currentPrice = 1;
-if ($selectedMint !== 'USDC' && $selectedMint !== 'USD') {
+        if ($selectedMint !== 'USDC' && $selectedMint !== 'USD') {
              if (!mintInfo || !prices[mintInfo.coingeckoId]?.usd) {
                 showToast(`Could not get live price for ${$selectedMint}. Please try again in a moment.`, 'error');
-return;
+                return;
             }
             currentPrice = prices[mintInfo.coingeckoId].usd;
-totalInUSD = totalInCrypto * currentPrice;
+            totalInUSD = totalInCrypto * currentPrice;
         }
 
         // --- Start Card-specific calculation block ---
         let subtotal = 0;
-let itemsForTx = [];
+        let itemsForTx = [];
         if(chargeItems.length > 0) {
             subtotal = chargeItems.reduce((acc, item) => {
                 const adjustmentPercent = item.priceAdjustmentPercent || 0;
@@ -623,7 +624,7 @@ let itemsForTx = [];
 
           return acc + (adjustedPrice * item.quantity);
             }, 0);
-itemsForTx = chargeItems.map(item => ({
+            itemsForTx = chargeItems.map(item => ({
                 ...item,
                 price: item.price,
                 adjustedPrice: item.price * (1 + (item.priceAdjustmentPercent || 0) / 100),
@@ -634,7 +635,7 @@ itemsForTx = chargeItems.map(item => ({
      }));
         } else {
             subtotal = totalInCrypto / (applyTax ? (1 + ($taxRate / 100)) : 1);
-itemsForTx.push({
+            itemsForTx.push({
                 id: `custom-${Date.now()}`,
                 name: `Custom Amount (${$selectedMint})`,
                 price: totalInCrypto, // Store original crypto amount
@@ -645,35 +646,35 @@ itemsForTx.push({
 
                 taxable: applyTax,
             });
-}
+        }
         
         let orderDiscountAmountUSD = 0;
-if ($cartDiscount) {
+        if ($cartDiscount) {
             if ($cartDiscount.type === 'percentage') {
                 orderDiscountAmountUSD = (subtotal * currentPrice) * ($cartDiscount.value / 100);
-} else { // 'fixed'
+            } else { // 'fixed'
                 orderDiscountAmountUSD = $cartDiscount.value;
-}
+            }
             orderDiscountAmountUSD = Math.min((subtotal * currentPrice), orderDiscountAmountUSD);
-}
+        }
 
         const subtotalAfterOrderDiscountUSD = (subtotal * currentPrice) - orderDiscountAmountUSD;
-const taxAmountUSD = applyTax ? subtotalAfterOrderDiscountUSD * ($taxRate / 100) : 0;
+        const taxAmountUSD = applyTax ? subtotalAfterOrderDiscountUSD * ($taxRate / 100) : 0;
         
         let totalAfterOrderDiscountAndTax = subtotalAfterOrderDiscountUSD + taxAmountUSD;
-let loyaltyDiscountAmountUSD = 0;
+        let loyaltyDiscountAmountUSD = 0;
         let pointsRedeemed = 0;
         if (isRedeeming) {
             loyaltyDiscountAmountUSD = appliedDiscountValue * currentPrice;
-loyaltyDiscountAmountUSD = Math.min(totalAfterOrderDiscountAndTax, loyaltyDiscountAmountUSD);
+            loyaltyDiscountAmountUSD = Math.min(totalAfterOrderDiscountAndTax, loyaltyDiscountAmountUSD);
             pointsRedeemed = appliedPointsRedeemed;
         }
 
         // This is the final pre-fee total
         let finalTotalUSD = totalAfterOrderDiscountAndTax - loyaltyDiscountAmountUSD;
-if (applyCardFee) {
+        if (applyCardFee) {
             finalTotalUSD *= 1.03;
-// Apply 3% Fee
+            // Apply 3% Fee
         }
 
         chargeForCardPayment = {
@@ -696,9 +697,9 @@ pointsRedeemed,
             // Order Discount Data
             orderDiscountAmount: orderDiscountAmountUSD,
             orderDiscountCode: $cartDiscount ?
-$cartDiscount.code : null
+            $cartDiscount.code : null
         };
-// --- End Card-specific calculation block ---
+        // --- End Card-specific calculation block ---
         
         try {
             const response = await fetch('/api/create-payment-intent', {
@@ -714,49 +715,49 @@ $cartDiscount.code : null
        
          })
             });
-const data = await response.json();
+            const data = await response.json();
 
             if (data.error) {
                 throw new Error(data.error);
-}
+            }
 
             paymentClientSecret = data.clientSecret;
             showCardModal = true;
-} catch (error) {
+        } catch (error) {
             console.error("Failed to create Payment Intent:", error);
-showToast("Could not initiate card payment. Please check the console.", "error");
-}
+            showToast("Could not initiate card payment. Please check the console.", "error");
+        }
     }
 
     // --- NEW FUNCTION: Pay with Cash App ---
     async function payWithCashApp() {
         if (!$stripePublishableKey || !$stripeSecretKey) {
             showToast("Stripe is not configured. Please add your API keys in the settings.", "error");
-return;
+            return;
         }
 
         const totalInCrypto = parseFloat($pmtAmt.replace(/,/g, ''));
-if (totalInCrypto <= 0) {
+        if (totalInCrypto <= 0) {
             showToast("Please enter an amount greater than zero.", "error");
-return;
+            return;
         }
         
         let totalInUSD = totalInCrypto;
-const prices = get(tokenPrices);
+        const prices = get(tokenPrices);
         const mintInfo = get(mints).find(m => m.name === $selectedMint);
         let currentPrice = 1;
-if ($selectedMint !== 'USDC' && $selectedMint !== 'USD') {
+        if ($selectedMint !== 'USDC' && $selectedMint !== 'USD') {
              if (!mintInfo || !prices[mintInfo.coingeckoId]?.usd) {
                 showToast(`Could not get live price for ${$selectedMint}. Please try again in a moment.`, 'error');
-return;
+                return;
             }
             currentPrice = prices[mintInfo.coingeckoId].usd;
-totalInUSD = totalInCrypto * currentPrice;
+            totalInUSD = totalInCrypto * currentPrice;
         }
 
         // --- Start Cash App-specific calculation block (NO 3% FEE) ---
         let subtotal = 0;
-let itemsForTx = [];
+        let itemsForTx = [];
         if(chargeItems.length > 0) {
             subtotal = chargeItems.reduce((acc, item) => {
                 const adjustmentPercent = item.priceAdjustmentPercent || 0;
@@ -771,9 +772,9 @@ let itemsForTx = [];
                 adjustedPrice: item.price * (1 + (item.priceAdjustmentPercent || 0) / 100),
                 priceAdjustmentPercent: item.priceAdjustmentPercent || 0,
             }));
-} else {
+        } else {
             subtotal = totalInCrypto / (applyTax ? (1 + ($taxRate / 100)) : 1);
-itemsForTx.push({
+            itemsForTx.push({
                 id: `custom-${Date.now()}`,
                 name: `Custom Amount (${$selectedMint})`,
                 price: totalInCrypto,
@@ -783,33 +784,33 @@ itemsForTx.push({
 
    taxable: applyTax,
             });
-}
+        }
         
         let orderDiscountAmountUSD = 0;
-if ($cartDiscount) {
+        if ($cartDiscount) {
             if ($cartDiscount.type === 'percentage') {
                 orderDiscountAmountUSD = (subtotal * currentPrice) * ($cartDiscount.value / 100);
-} else { 
+            } else { 
                 orderDiscountAmountUSD = $cartDiscount.value;
-}
+            }
             orderDiscountAmountUSD = Math.min((subtotal * currentPrice), orderDiscountAmountUSD);
-}
+        }
 
         const subtotalAfterOrderDiscountUSD = (subtotal * currentPrice) - orderDiscountAmountUSD;
-const taxAmountUSD = applyTax ? subtotalAfterOrderDiscountUSD * ($taxRate / 100) : 0;
+        const taxAmountUSD = applyTax ? subtotalAfterOrderDiscountUSD * ($taxRate / 100) : 0;
         
         let totalAfterOrderDiscountAndTax = subtotalAfterOrderDiscountUSD + taxAmountUSD;
-let loyaltyDiscountAmountUSD = 0;
+        let loyaltyDiscountAmountUSD = 0;
         let pointsRedeemed = 0;
         if (isRedeeming) {
             loyaltyDiscountAmountUSD = appliedDiscountValue * currentPrice;
-loyaltyDiscountAmountUSD = Math.min(totalAfterOrderDiscountAndTax, loyaltyDiscountAmountUSD);
+            loyaltyDiscountAmountUSD = Math.min(totalAfterOrderDiscountAndTax, loyaltyDiscountAmountUSD);
             pointsRedeemed = appliedPointsRedeemed;
         }
 
         // NO 3% FEE APPLIED
         let finalTotalUSD = totalAfterOrderDiscountAndTax - loyaltyDiscountAmountUSD;
-chargeForCashAppPayment = {
+        chargeForCashAppPayment = {
             total: finalTotalUSD, // Final USD amount charged
             subtotal: subtotal * currentPrice, 
             taxAmount: taxAmountUSD, 
@@ -825,9 +826,9 @@ chargeForCashAppPayment = {
             // Order Discount Data
             orderDiscountAmount: orderDiscountAmountUSD,
             orderDiscountCode: $cartDiscount ?
-$cartDiscount.code : null
+            $cartDiscount.code : null
         };
-// --- End Cash App-specific calculation block ---
+        // --- End Cash App-specific calculation block ---
 
         try {
             const response = await fetch('/api/create-payment-intent', {
@@ -845,23 +846,23 @@ $cartDiscount.code : null
 
     });
             const data = await response.json();
-if (data.error) {
+            if (data.error) {
                 throw new Error(data.error);
-}
+            }
 
             cashAppClientSecret = data.clientSecret;
             showCashAppModal = true;
-} catch (error) {
+        } catch (error) {
             console.error("Failed to create Payment Intent for Cash App:", error);
-showToast("Could not initiate Cash App payment. Check Stripe keys and console.", "error");
-}
+            showToast("Could not initiate Cash App payment. Check Stripe keys and console.", "error");
+        }
     }
     
     // --- MODIFIED SUCCESS HANDLER: for Cash App Payments ---
     function handleCashAppPaymentSuccess(paymentIntentId) {
         
         const chargeData = chargeForCashAppPayment;
-const new_entry = {
+        const new_entry = {
             txnId: Date.now().toString(),
             timestamp: Math.floor(Date.now() / 1000),
             txid: paymentIntentId,
@@ -877,32 +878,32 @@ const new_entry = {
             taxRate: chargeData.taxRate,
             taxable: chargeData.taxable,
             customerId: $selectedCustomer ?
-$selectedCustomer.id : null,
+            $selectedCustomer.id : null,
             loyaltyDiscountAmount: chargeData.loyaltyDiscountAmount,
             pointsRedeemed: chargeData.pointsRedeemed,
             orderDiscountAmount: chargeData.orderDiscountAmount,
             orderDiscountCode: chargeData.orderDiscountCode,
             paymentType: 'Cash App' // CRITICAL: Identify payment method
         };
-successArray.update(items => [...items, new_entry]);
+        successArray.update(items => [...items, new_entry]);
         
         // --- Loyalty and Inventory logic (Copied from existing implementation) ---
         if ($selectedCustomer) {
             let pointsChange = 0;
-if (new_entry.loyaltyDiscountAmount > 0 && new_entry.pointsRedeemed > 0) {
+            if (new_entry.loyaltyDiscountAmount > 0 && new_entry.pointsRedeemed > 0) {
                 pointsChange -= new_entry.pointsRedeemed;
-showToast(`Redeemed ${new_entry.pointsRedeemed} points for $${new_entry.loyaltyDiscountAmount.toFixed(2)} discount!`, 'info');
+                showToast(`Redeemed ${new_entry.pointsRedeemed} points for $${new_entry.loyaltyDiscountAmount.toFixed(2)} discount!`, 'info');
             }
             let usdValueForAward = new_entry.subtotal - new_entry.orderDiscountAmount + new_entry.taxAmount - new_entry.loyaltyDiscountAmount;
-const pointsAwarded = Math.floor(Math.max(0, usdValueForAward));
+            const pointsAwarded = Math.floor(Math.max(0, usdValueForAward));
             pointsChange += pointsAwarded;
             if (pointsAwarded > 0) {
                  showToast(`Awarded ${pointsAwarded} loyalty points!`, 'success');
-}
+            }
             if (pointsChange !== 0) {
                 customers.update(allCustomers => allCustomers.map(cust => cust.id === $selectedCustomer.id ? { ...cust, loyaltyPoints: Math.max(0, (cust.loyaltyPoints || 0) + pointsChange) } : cust));
-selectedCustomer.update(cust => ({...cust, loyaltyPoints: Math.max(0, (cust.loyaltyPoints || 0) + pointsChange) }));
-}
+                selectedCustomer.update(cust => ({...cust, loyaltyPoints: Math.max(0, (cust.loyaltyPoints || 0) + pointsChange) }));
+            }
         }
         if (chargeData.items && chargeData.items.length > 0 && !chargeData.items[0].id.startsWith('custom-')) {
             inventory.update(inv => {
@@ -924,20 +925,20 @@ selectedCustomer.update(cust => ({...cust, loyaltyPoints: Math.max(0, (cust.loya
            const variantIndex = newInv[itemIndex].variants.findIndex(v => v.id === soldItem.variantId);
                             if (variantIndex > -1) {
                                 const newVariantQty = newInv[itemIndex].variants[variantIndex].quantity - soldItem.quantity;
-newInv[itemIndex].variants[variantIndex].quantity = newVariantQty;
+                                newInv[itemIndex].variants[variantIndex].quantity = newVariantQty;
                                 newInv[itemIndex].quantity = newInv[itemIndex].variants.reduce((total, v) => total + v.quantity, 0);
                                 logHistory(newInv[itemIndex].variants[variantIndex].id, `Sale (Cash App: ${paymentIntentId.slice(-6)})`, `-${soldItem.quantity}`, newVariantQty);
-}
+                            }
                         }
                     }
                 }
                 return newInv;
-});
+            });
         }
         // --- End Loyalty and Inventory logic ---
         
         showToast("Cash App payment successful!", "success");
-clearCharge();
+        clearCharge();
     }
     // --- END MODIFIED SUCCESS HANDLER ---
 
@@ -945,32 +946,32 @@ clearCharge();
     const onKeydown = (event) => {
         // Disable keypad if items are in the cart
         if (chargeItems.length > 0) return;
-const detail = event.detail;
+        const detail = event.detail;
         if ($pmtAmt === "0.00" && detail !== ".") left = "";
-if (detail === "<") {
+        if (detail === "<") {
             if (decimalsActive) {
                 right = right.slice(0, -1);
-if (right === "") decimalsActive = false;
+                if (right === "") decimalsActive = false;
             } else {
                 left = left.slice(0, -1);
-}
+            }
         } else if (detail === ".") {
             if (!decimalsActive) decimalsActive = true;
-} else {
+        } else {
             if (!decimalsActive) {
                 left += detail;
-} else if (right.length < 4) {
+            } else if (right.length < 4) {
                 right += detail;
-}
+            }
         }
     }
     
     function calculateLineTotal(item) {
         const adjustmentPercent = item.priceAdjustmentPercent ||
-0;
+        0;
         const adjustedPrice = item.price * (1 + adjustmentPercent / 100);
         return adjustedPrice * item.quantity;
-}
+    }
 </script>
 
 {#if showCardModal}
@@ -980,7 +981,7 @@ if (right === "") decimalsActive = false;
         on:close={() => showCardModal = false}
         on:success={(e) => {
             showCardModal = false;
-handleCardPaymentSuccess(e.detail.paymentIntentId);
+            handleCardPaymentSuccess(e.detail.paymentIntentId);
         }}
     />
 {/if}
@@ -994,7 +995,7 @@ handleCardPaymentSuccess(e.detail.paymentIntentId);
         on:close={() => showCashAppModal = false}
         on:success={(e) => {
             showCashAppModal = false;
-handleCashAppPaymentSuccess(e.detail.paymentIntentId);
+            handleCashAppPaymentSuccess(e.detail.paymentIntentId);
         }}
     />
 {/if}
@@ -1002,7 +1003,7 @@ handleCashAppPaymentSuccess(e.detail.paymentIntentId);
 {#if showInventoryModal}
     <InventoryModal
         currentCurrency={chargeItems.length > 0 ?
-$selectedMint : null}
+        $selectedMint : null}
         on:addItem={handleAddItemFromModal}
         on:close={() => showInventoryModal = false}
     />
@@ -1011,10 +1012,10 @@ $selectedMint : null}
 {#if showCustomerModal}
     <CustomerSelectModal
         on:select={(e) => { $selectedCustomer = e.detail;
-showCustomerModal = false; }}
+        showCustomerModal = false; }}
         on:close={() => showCustomerModal = false}
         on:new={() => { showCustomerModal = false;
-showNewCustomerModal = true; }}
+        showNewCustomerModal = true; }}
     />
 {/if}
 
@@ -1022,7 +1023,7 @@ showNewCustomerModal = true; }}
     <CustomerDetailsModal
         on:close={() => showNewCustomerModal = false}
         on:save={(e) => { $selectedCustomer = e.detail;
-showNewCustomerModal = false; }}
+        showNewCustomerModal = false; }}
     />
 {/if}
 
@@ -1073,7 +1074,7 @@ showNewCustomerModal = false; }}
 
       
                     <span>Discount: {$cartDiscount.code} (-{$cartDiscount.type === 'percentage' ?
-`${$cartDiscount.value}%` : `$${$cartDiscount.value.toFixed(2)}`})</span>
+                        `${$cartDiscount.value}%` : `$${$cartDiscount.value.toFixed(2)}`})</span>
                            <button class="btn btn-xs btn-ghost" on:click={() => $cartDiscount = null}>✕</button>
                         </div>
                     </div>
@@ -1159,7 +1160,7 @@ class="w-16 mr-2">Qty</span>
          <div class="flex items-center 
 justify-center space-x-2">
                                         <button on:click={() => decrementQuantity(item.variantId ||
-item.id)} class="btn btn-xs btn-ghost">-</button>
+                                        item.id)} class="btn btn-xs btn-ghost">-</button>
     
                                     <span>{item.quantity}</span>
                                         <button on:click={() => incrementQuantity(item.variantId || item.id)} class="btn btn-xs btn-ghost">+</button>
@@ -1247,7 +1248,7 @@ space-x-2">
 
  
                        {#if chargeItems.length > 0 ||
-parseFloat($pmtAmt.replace(/,/g, ''))}
+                        parseFloat($pmtAmt.replace(/,/g, ''))}
                         <button on:click={clearCharge} class="btn btn-warning normal-case btn-sm">Clear</button>
                     {/if}
                  </div>
@@ -1259,10 +1260,7 @@ parseFloat($pmtAmt.replace(/,/g, ''))}
                      <button on:click={createQRCode} class="btn btn-primary text-white font-greycliffbold normal-case flex-1">Pay with Crypto</button>
                      <button on:click={payWithCard} class="btn btn-secondary text-white font-greycliffbold normal-case flex-1">Pay with Card</button>
                 </div>
-                 <button on:click={payWithCashApp} class="btn btn-success w-full font-greycliffbold normal-case">Pay 
-
-with Cash App</button>
-            </div>
+                 </div>
         </div>
 
         <div id="pos-input-section" class="flex flex-col md:w-1/2 
@@ -1298,7 +1296,8 @@ d="M1000 2000c554.17 0 1000-445.83 1000-1000S1554.17
 
   <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 
 font-bold">?</div>
-                {/if}
+               
+ {/if}
               
                 <input bind:value={$pmtAmt}
                     class="input input-ghost w-full text-right text-2xl md:text-3xl 
@@ -1309,21 +1308,24 @@ font-bold">?</div>
             </div>
 
      
-            <div class="space-y-2 mb-2">
+ 
+           <div class="space-y-2 mb-2">
                 
                 <form on:submit|preventDefault={handleBarcodeSubmit} class="input-group">
                     <input type="text" placeholder="Scan Barcode..." class="input input-bordered w-full 
 
 input-sm" bind:value={barcodeInput} />
                     <button type="submit" class="btn 
-                    btn-square 
+ 
+                   btn-square 
 btn-sm">
     
                      
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
 
 viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    </button>
+       
+             </button>
                 </form>
 
            
@@ -1334,7 +1336,8 @@ viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-li
         
 
         <button on:click={startScanner} class="btn btn-outline btn-xs w-full">
-                        Camera Scan
+             
+           Camera Scan
                     </button>
              
                 {/if}
@@ -1345,7 +1348,8 @@ viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-li
      
 
            <div class:hidden={!isScannerVisible}>
-                    <div id="reader" class="w-full border-2 border-dashed rounded-lg overflow-hidden"></div>
+              
+      <div id="reader" class="w-full border-2 border-dashed rounded-lg overflow-hidden"></div>
                     <button on:click={stopScanner} class="btn btn-error btn-xs mt-1 w-full">End Scan</button>
                 </div>
    
@@ -1358,7 +1362,8 @@ viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-li
  
             <div
     class="flex-grow" class:hidden={chargeItems.length > 0}>
-   
+  
+ 
                 <Keyboard custom="{keys}" on:keydown="{onKeydown}" />
             </div>
 
