@@ -7,8 +7,8 @@ import { tokenPrices } from '../priceStore.js';
     import Keyboard from "svelte-keyboard";
 import { browser } from '$app/environment';
     import { Html5QrcodeScanner } from 'html5-qrcode';
-    import bonkLogo from "../../lib/images/BonkLogo.png";
     import solLogo from "../../lib/images/solanaLogoMark.png";
+    import tetherLogo from "../../lib/images/tether.png"; // ADDED: USDT logo
 import InventoryModal from "./InventoryModal.svelte";
     import CustomerSelectModal from "./CustomerSelectModal.svelte";
     import CustomerDetailsModal from '../crm/CustomerDetailsModal.svelte';
@@ -72,6 +72,7 @@ let lastScanResult = '';
         { row: 2, value: "7"}, { row: 2, value: "8"}, { row: 2, value: "9"},
         { row: 3, value: "<" }, { row: 3, value: "0"}, {
      
+
 
     row: 3, value: "."}
     ];
@@ -140,15 +141,18 @@ if (foundVariant) {
                 // It's a variant, construct the specific object for the cart
           
 
+
                 const itemToAdd = {
                     id: foundItem.id, // Parent ID is still the main reference
                     variantId: foundVariant.id, // Variant ID is crucial for stock depletion
-                    name: `${foundItem.name} - ${foundVariant.name}`,
+                    name: `${foundItem.name} - 
+${foundVariant.name}`,
                     price: foundVariant.price,
                     cost: foundVariant.cost,
                     sku: foundVariant.sku,
                     barcode: foundVariant.barcode,
-                    currency: foundItem.currency, // Inherit from parent
+                
+    currency: foundItem.currency, // Inherit from parent
                     category: foundItem.category, // Inherit from parent
                 };
 addItemToCart(itemToAdd);
@@ -208,6 +212,7 @@ let qrboxSize = Math.floor(minEdge * 0.8);
                     qrbox: qrboxFunction,
  
  
+
 
                     useBarCodeDetectorIfSupported: true // Improves performance
                 },
@@ -293,6 +298,7 @@ if (chargeItems.length === 0 && parseFloat($pmtAmt.replace(/,/g, ''))) {
                 name: `Custom Amount (${$selectedMint})`,
                 price: customAmount, // Store the final amount directly
                 // Add other properties if 
+
 
                 // needed, e.g., taxable status
                 taxable: applyTax, // Store whether tax was applied to this amount
@@ -405,6 +411,7 @@ $: appliedPointsRedeemed = 0;
                 const adjustedPrice = item.price * (1 + adjustmentPercent / 100);
                 return acc + 
 
+
                 
                 (adjustedPrice * item.quantity);
             }, 0);
@@ -493,6 +500,7 @@ return;
                 const adjustedPrice = item.price * (1 + adjustmentPercent / 100);
        
 
+
                 return acc + (adjustedPrice * item.quantity);
             }, 0);
 // MODIFIED: Map items to include adjustment details
@@ -502,6 +510,7 @@ return;
                 adjustedPrice: item.price * (1 + (item.priceAdjustmentPercent || 0) / 100),
            
 
+
                 priceAdjustmentPercent: item.priceAdjustmentPercent || 0,
                 cost: item.cost, quantity: item.quantity,
                 sku: item.sku
@@ -509,13 +518,14 @@ return;
 } else {
             // Handle custom amount for QR code payment
             if (finalPmtAmt > 0) {
-                subtotal = finalPmtAmt / (applyTax ? (1 + ($taxRate / 100)) : 1);
+                subtotal = finalPmtAmt / (applyTax ? (1 + ($taxRate / 1900)) : 1);
 // Create a representative item for the receipt/metadata
                 itemsForTx.push({
                     id: `custom-${Date.now()}`,
                     name: `Custom Amount (${$selectedMint})`,
                     price: finalPmtAmt, // Use the final total for the single item price
   
+
 
                     quantity: 1,
                     currency: $selectedMint,
@@ -559,12 +569,14 @@ $pmtAmt = finalPmtAmt.toString(); // Ensure store reflects final amount
                 applyTax,
          
 
+
                 // Pass new loyalty data
                 isRedeeming: isRedeeming, 
                 loyaltyDiscountAmount: loyaltyDiscountAmount,
                 pointsRedeemed: pointsRedeemed,
                 // Order Discount Data
-                orderDiscountAmount: orderDiscountAmount,
+         
+       orderDiscountAmount: orderDiscountAmount,
                 orderDiscountCode: $cartDiscount ? $cartDiscount.code : null
             });
 goto('/present');
@@ -608,6 +620,7 @@ let itemsForTx = [];
             
             
       
+
           return acc + (adjustedPrice * item.quantity);
             }, 0);
 itemsForTx = chargeItems.map(item => ({
@@ -617,6 +630,7 @@ itemsForTx = chargeItems.map(item => ({
                 priceAdjustmentPercent: item.priceAdjustmentPercent || 
             0,
        
+
      }));
         } else {
             subtotal = totalInCrypto / (applyTax ? (1 + ($taxRate / 100)) : 1);
@@ -627,6 +641,7 @@ itemsForTx.push({
                 quantity: 1,
                 currency: $selectedMint,
         
+
 
                 taxable: applyTax,
             });
@@ -667,6 +682,7 @@ if (applyCardFee) {
             taxAmount: taxAmountUSD, // Tax amount in USD (post-order-discount)
             taxable: applyTax,
      
+
        taxRate: $taxRate,
    
             originalAmount: totalInCrypto, 
@@ -675,6 +691,7 @@ if (applyCardFee) {
             // Loyalty Data
             loyaltyDiscountAmount: loyaltyDiscountAmountUSD, // USD value of discount applied
             pointsRedeemed: 
+
 pointsRedeemed,
             // Order Discount Data
             orderDiscountAmount: orderDiscountAmountUSD,
@@ -688,12 +705,14 @@ $cartDiscount.code : null
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    amount: finalTotalUSD, // MODIFIED: Pass the final calculated USD total
+      
+              amount: finalTotalUSD, // MODIFIED: Pass the final calculated USD total
                     stripeSecretKey: $stripeSecretKey,
                     currency: 'usd',
                
      paymentMethodType: 'card' // CRITICAL: Explicitly set payment method type
-                })
+       
+         })
             });
 const data = await response.json();
 
@@ -744,6 +763,7 @@ let itemsForTx = [];
                 const adjustedPrice = item.price * (1 + adjustmentPercent / 100);
                 return acc + (adjustedPrice * item.quantity);
          
+
    }, 0);
             itemsForTx = chargeItems.map(item => ({
                 ...item,
@@ -760,6 +780,7 @@ itemsForTx.push({
                 quantity: 1,
                 currency: $selectedMint,
              
+
    taxable: applyTax,
             });
 }
@@ -796,6 +817,7 @@ chargeForCashAppPayment = {
             taxRate: $taxRate,
             originalAmount: totalInCrypto, 
           
+
   originalMint: $selectedMint,
             items: itemsForTx,
             loyaltyDiscountAmount: loyaltyDiscountAmountUSD,
@@ -813,12 +835,14 @@ $cartDiscount.code : null
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
              
+
        amount: finalTotalUSD,
                     stripeSecretKey: $stripeSecretKey,
                     currency: 'usd',
                     paymentMethodType: 'cashapp' // NEW: Explicitly send 'cashapp'
                 })
         
+
     });
             const data = await response.json();
 if (data.error) {
@@ -845,6 +869,7 @@ const new_entry = {
             mint: 'USD', // Record as USD transaction
             originalAmount: chargeData.originalAmount, 
        
+
      originalMint: chargeData.originalMint,
             items: chargeData.items,
             subtotal: chargeData.subtotal, 
@@ -884,15 +909,18 @@ selectedCustomer.update(cust => ({...cust, loyaltyPoints: Math.max(0, (cust.loya
                 const newInv = [...inv];
             for (const soldItem of chargeData.items) {
                     const itemIndex = newInv.findIndex(i => i.id 
+
 === soldItem.id);
                     if (itemIndex > -1) {
                         if (newInv[itemIndex].type === 'simple') {
                              const newQty = newInv[itemIndex].quantity - soldItem.quantity;
              
+
                newInv[itemIndex].quantity = newQty;
                             logHistory(soldItem.id, `Sale (Cash App: ${paymentIntentId.slice(-6)})`, `-${soldItem.quantity}`, newQty);
                         } else if (newInv[itemIndex].type === 'variable' && soldItem.variantId) {
                  
+
            const variantIndex = newInv[itemIndex].variants.findIndex(v => v.id === soldItem.variantId);
                             if (variantIndex > -1) {
                                 const newVariantQty = newInv[itemIndex].variants[variantIndex].quantity - soldItem.quantity;
@@ -1018,6 +1046,7 @@ showNewCustomerModal = false; }}
 
    
 
+
              <div class="flex-grow 
  
     overflow-y-auto pr-2 -mr-2 mb-2">
@@ -1026,11 +1055,13 @@ showNewCustomerModal = false; }}
                     <div class="alert alert-info shadow-lg mb-2 py-1 px-3 text-sm">
                         <div class="flex justify-between items-center w-full">
      
+
     
                     <span>Cust: {$selectedCustomer.name} (Pts: {$selectedCustomer.loyaltyPoints || 0})</span>
                            <button class="btn btn-xs btn-ghost" on:click={() => $selectedCustomer = null}>✕</button>
                         </div>
             
+
      
     </div>
                 {/if}
@@ -1039,6 +1070,7 @@ showNewCustomerModal = false; }}
                     <div class="alert alert-success shadow-lg mb-2 py-1 px-3 text-sm">
                         <div class="flex justify-between items-center w-full">
    
+
       
                     <span>Discount: {$cartDiscount.code} (-{$cartDiscount.type === 'percentage' ?
 `${$cartDiscount.value}%` : `$${$cartDiscount.value.toFixed(2)}`})</span>
@@ -1048,15 +1080,18 @@ showNewCustomerModal = false; }}
                 {/if}
    
 
+
               
                 {#if redemptionDiscount > 0 && !$cartDiscount} <div class="form-control mb-2">
                         <label class="label cursor-pointer py-1 bg-success/20 rounded-lg">
                             <span class="label-text font-bold text-success">
   
+
  
                               Redeem {$loyaltyRedemptionRate.points} Pts = ${$loyaltyRedemptionRate.discount.toFixed(2)} Off (Max: ${redemptionDiscount.toFixed(2)})
                             </span>
                             <input type="checkbox" class="toggle toggle-success toggle-sm" bind:checked={isRedeeming} 
+
 />
   
                         </label>
@@ -1064,6 +1099,7 @@ showNewCustomerModal = false; }}
                 {:else if redemptionDiscount > 0 && $cartDiscount}
                     <div class="alert alert-warning shadow-lg mb-2 py-1 px-3 text-xs">
      
+
     
                 Loyalty redemption is disabled when an order discount is applied.
 </div>
@@ -1073,43 +1109,53 @@ showNewCustomerModal = false; }}
                         
                    
 
+
                         <div class="hidden sm:flex justify-end 
                         text-xs font-bold text-base-content/70 pb-1 border-b border-base-200">
                              <span class="w-16 mr-2">Adj %</span>
            
+
                   <span 
 class="w-16 mr-2">Qty</span>
                              <span class="w-20 text-right">Total</span>
                         </div>
                         
  
+
                    
                         {#each chargeItems as item (item.variantId ||
                         item.id)}
                             
+
 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
                                
                             <span class="flex-grow truncate font-greycliffmed">{item.name}</span>
                              
  
+
                                <div class="flex items-center justify-end gap-2">
                                
                                   
+
   <div class="w-16 flex items-center">
                                          <input type="number" 
              
                                        
+
   
                                              bind:value={item.priceAdjustmentPercent} 
                      
                                
+
               min="-99.9" max="999.9" step="0.1"
                                                class="input input-bordered 
                        
             
+
                                  input-xs w-full text-center font-mono" />
                                     </div>
                            
+
          <div class="flex items-center 
 justify-center space-x-2">
                                         <button on:click={() => decrementQuantity(item.variantId ||
@@ -1121,10 +1167,12 @@ item.id)} class="btn btn-xs btn-ghost">-</button>
        
   
 
+
                                     </div>
                                     <span class="w-20 text-right font-mono">{calculateLineTotal(item).toFixed(2)}</span>
 
                          
+
        </div>
        
     
@@ -1132,11 +1180,13 @@ item.id)} class="btn btn-xs btn-ghost">-</button>
                         {/each}
                     </div>
           
+
       {:else}
                 
                     {#if !parseFloat($pmtAmt.replace(/,/g, ''))}
                         <div class="h-full flex items-center justify-center text-center text-base-content/50">
                         <p>Add items, 
+
 load a cart, or use the keypad.</p>
      
                     </div>
@@ -1147,6 +1197,7 @@ load a cart, or use the keypad.</p>
 
 
             <div 
+
 class="mt-auto pt-2 space-y-2">
                 <div class="form-control">
                     
@@ -1154,6 +1205,7 @@ class="mt-auto pt-2 space-y-2">
                   <label class="label cursor-pointer py-1">
          
                         
+
     <span class="label-text">Apply Tax ({$taxRate}%)</span>
         
                         <input type="checkbox" bind:checked={applyTax} class="toggle toggle-primary toggle-sm" />
@@ -1163,11 +1215,13 @@ class="mt-auto pt-2 space-y-2">
                
  
   
+
               <div class="form-control">
                         <label class="label cursor-pointer py-1">
       
                       <span class="label-text">Apply 3% Credit Card Fee</span>
                         <input 
+
 type="checkbox" bind:checked={applyCardFee} class="toggle toggle-secondary toggle-sm" />
             
                 </label>
@@ -1175,12 +1229,14 @@ type="checkbox" bind:checked={applyCardFee} class="toggle toggle-secondary toggl
    
                <div class="flex space-x-2">
                     <button on:click={() => showCustomerModal = true} class="btn btn-info normal-case flex-1 btn-sm">{$selectedCustomer 
+
 ?
                         'Change' : 'Add'} Cust.</button>
                     <button on:click={() => showDiscountModal = true} class="btn btn-accent normal-case flex-1 btn-sm">Discount</button>
                     <button on:click={() => showInventoryModal = true} class="btn btn-secondary normal-case flex-1 btn-sm">Add Item</button>
                  </div>
                  <div 
+
 class="flex 
 space-x-2">
                      <button on:click={saveCart} class="btn btn-accent normal-case flex-1 btn-sm" disabled={chargeItems.length === 
@@ -1188,6 +1244,7 @@ space-x-2">
                     0 && !parseFloat($pmtAmt.replace(/,/g, ''))}>Save Cart</button>
                      <button on:click={() => showLoadCartModal = true} class="btn btn-accent normal-case flex-1 btn-sm">Load Cart</button>
             
+
  
                        {#if chargeItems.length > 0 ||
 parseFloat($pmtAmt.replace(/,/g, ''))}
@@ -1198,10 +1255,12 @@ parseFloat($pmtAmt.replace(/,/g, ''))}
  
             
 
+
                      <button on:click={createQRCode} class="btn btn-primary text-white font-greycliffbold normal-case flex-1">Pay with Crypto</button>
                      <button on:click={payWithCard} class="btn btn-secondary text-white font-greycliffbold normal-case flex-1">Pay with Card</button>
                 </div>
                  <button on:click={payWithCashApp} class="btn btn-success w-full font-greycliffbold normal-case">Pay 
+
 with Cash App</button>
             </div>
         </div>
@@ -1214,6 +1273,7 @@ h-full">
 
                 {#if $selectedMint === "USDC"}
                     <svg 
+
 class="h-8
 w-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000">
                         <path 
@@ -1221,6 +1281,7 @@ d="M1000 2000c554.17 0 1000-445.83 1000-1000S1554.17
 0 1000 0 0 445.83 0 1000s445.83 1000 1000 1000z" 
                     fill="#2775ca"/>
                         <path d="M1275 1158.33c0-145.83-87.5-195.83-262.5-216.66-125-16.67-150-50-150-108.34s41.67-95.83 125-95.83c75 0 116.67 25 137.5 87.5 4.17 12.5 
+
 16.67 20.83 29.17 20.83h66.66c16.67 0 29.17-12.5 29.17-29.16v-4.17c-16.67-91.67-91.67-162.5-187.5-170.83v-100c0-16.67-12.5-29.17-33.33-33.34h-62.5c-16.67 0-29.17 12.5-33.34 33.34v95.83c-125 16.67-204.16 100-204.16 204.17 0 137.5 83.33 191.66 258.33 212.5 116.67
 20.83 154.17 45.83 154.17 112.5s-58.34 112.5-137.5 112.5c-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 
 12.5-29.16 29.17v4.17c16.66 104.16 83.33 179.16 220.83 200v100c0 
@@ -1228,12 +1289,13 @@ d="M1000 2000c554.17 0 1000-445.83 1000-1000S1554.17
                     </svg>
                 {:else if $selectedMint === "SOL"}
                
+
      <img src="{solLogo}" class="w-9" alt="SOL" />
-                {:else if $selectedMint === "BONK"}
-      
-                    <img src="{bonkLogo}" class="w-9 rounded-full" alt="BONK" />
-                    {:else}
+                {:else if $selectedMint === "USDT"}
+                    <img src="{tetherLogo}" class="w-9 rounded-full" alt="USDT" />
+{:else}
                     
+
   <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 
 font-bold">?</div>
                 {/if}
@@ -1241,6 +1303,7 @@ font-bold">?</div>
                 <input bind:value={$pmtAmt}
                     class="input input-ghost w-full text-right text-2xl md:text-3xl 
                 
+
     font-mono" placeholder="0.00" readonly />
  
             </div>
@@ -1250,6 +1313,7 @@ font-bold">?</div>
                 
                 <form on:submit|preventDefault={handleBarcodeSubmit} class="input-group">
                     <input type="text" placeholder="Scan Barcode..." class="input input-bordered w-full 
+
 input-sm" bind:value={barcodeInput} />
                     <button type="submit" class="btn 
                     btn-square 
@@ -1257,6 +1321,7 @@ btn-sm">
     
                      
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+
 viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     </button>
                 </form>
@@ -1267,6 +1332,7 @@ viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-li
    
      
         
+
         <button on:click={startScanner} class="btn btn-outline btn-xs w-full">
                         Camera Scan
                     </button>
@@ -1277,6 +1343,7 @@ viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-li
  
  
      
+
            <div class:hidden={!isScannerVisible}>
                     <div id="reader" class="w-full border-2 border-dashed rounded-lg overflow-hidden"></div>
                     <button on:click={stopScanner} class="btn btn-error btn-xs mt-1 w-full">End Scan</button>
@@ -1284,6 +1351,7 @@ viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-li
    
             
     
+
 </div>
 
     
